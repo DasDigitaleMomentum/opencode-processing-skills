@@ -1,0 +1,1 @@
+../../templates/module-documentation.md

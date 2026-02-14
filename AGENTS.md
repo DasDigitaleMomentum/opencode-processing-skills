@@ -69,7 +69,8 @@ project-root/
 ├── docs/
 │   ├── overview.md
 │   ├── modules/<module-name>.md
-│   └── features/<feature-name>.md
+│   ├── features/<feature-name>.md
+│   └── handovers/session-YYYY-MM-DD.md  (standalone, without plan)
 ├── plans/
 │   └── <plan-name>/
 │       ├── plan.md
