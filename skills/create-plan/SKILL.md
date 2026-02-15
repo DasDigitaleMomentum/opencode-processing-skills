@@ -28,6 +28,13 @@ Creates a complete implementation plan with all associated artifacts:
 
 Do NOT use for simple, one-shot tasks that don't need formal planning.
 
+## Execution Model (Recommended)
+
+- Preferred: the primary agent runs this skill and writes artifacts under `plans/<name>/`.
+- Rationale: plans are conversation-anchored (requirements, trade-offs, sequencing, DoD). Moving authorship to a subagent risks losing intent and introducing gaps.
+- Use `doc-explorer` for codebase impact/symbol analysis when the plan touches existing code (doc-explorer writes findings to `docs/`, keeping analysis out of the primary's context).
+- Optional (edge cases): use `doc-explorer` only to materialize/format a large set of plan files after the primary has finalized content and structure.
+
 ## Workflow
 
 ### Step 1: Understand the Objective
@@ -47,7 +54,7 @@ If the user provided a detailed brief, extract these from the brief and confirm 
 
 If the plan involves changes to existing code:
 
-- Use the Task tool with `explore` subagents to understand the affected modules
+- Use the Task tool with `doc-explorer` to analyze the affected modules and symbols (results are written to `docs/`)
 - Read existing project documentation (`docs/overview.md`, module docs) if available
 - Identify dependencies and potential risks
 
@@ -102,12 +109,13 @@ For each phase, create `plans/<name>/implementation/phase-N-impl.md`:
 
 - Technical approach (How)
 - Affected modules with expected changes
+- **Required Context**: list files the implementing agent must read before starting (module docs, relevant code files, API specs). This is critical for session continuity.
 - Implementation steps (ordered, each with what/where/why)
 - Testing plan for this phase
 - Rollback strategy
 - Open technical decisions
 
-If project documentation exists (`docs/modules/`), reference it in the affected modules section.
+If project documentation exists (`docs/modules/`), reference it in both the affected modules section and the Required Context section.
 
 ### Step 7: Create the Todo List
 
@@ -115,6 +123,7 @@ Create `plans/<name>/todo.md`:
 
 - Populate with items from Phase 1 (the starting phase)
 - All items start as "Pending"
+- Fill in the Phase Context section with links to phase doc, implementation plan, and relevant module docs
 - Initialize the changelog with the plan creation entry
 
 ### Step 8: Create the Handover Directory
@@ -138,14 +147,15 @@ Use the `question` tool to confirm the plan or gather adjustments.
 3. **Phase describes scope, implementation plan describes approach**: Keep these concerns separated. The phase says what/why, the implementation plan says how.
 4. **Reference, don't duplicate**: Implementation plans reference module docs and phase docs. Don't repeat requirements from the plan in each phase.
 5. **Realistic sizing**: Phases must be completable in a single session. When in doubt, make phases smaller.
-6. **Use subagents for codebase analysis**: Delegate large exploration to `explore` subagents via the Task tool.
-7. **Always ask for confirmation**: Use the `question` tool to validate requirements, phase structure, and scope with the user before creating artifacts.
-8. **Initialize changelog**: The plan's changelog should document its creation with the current date.
-9. **Create all directories**: Ensure the full directory structure exists: `plans/<name>/`, `phases/`, `implementation/`, `handovers/`.
+6. **No built-in explore agent**: Do NOT use the built-in `explore` subagent type in this framework.
+7. **Use `doc-explorer` for codebase analysis**: Delegate deep symbol/dependency analysis via the Task tool. Results are written to `docs/`, not returned as text.
+8. **Always ask for confirmation**: Use the `question` tool to validate requirements, phase structure, and scope with the user before creating artifacts.
+9. **Initialize changelog**: The plan's changelog should document its creation with the current date.
+10. **Create all directories**: Ensure the full directory structure exists: `plans/<name>/`, `phases/`, `implementation/`, `handovers/`.
 
 ## Templates
 
-This skill includes reference templates as bundled files. Use them as structural guides when creating plan artifacts:
+This skill includes normative templates as bundled files. Output MUST follow the template headings and frontmatter keys:
 
 - `tpl-plan.md` - Structure for the plan document
 - `tpl-phase.md` - Structure for phase documents

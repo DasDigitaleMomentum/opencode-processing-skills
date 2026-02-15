@@ -31,6 +31,12 @@ Creates a session handover document (`plans/<name>/handovers/session-<date>.md`)
 
 Do NOT generate handovers automatically. This skill is invoked manually by the user.
 
+## Execution Model (Recommended)
+
+- Preferred: the primary agent runs this skill and writes the handover under `plans/<name>/handovers/`.
+- Rationale: a handover is a distilled session narrative (decisions, rationale, state). It should be authored where the session context lives.
+- Optional: delegate `git status`/`git diff --stat` interpretation or bulk file listing to `doc-explorer`, but keep narrative/decisions in the primary.
+
 ## Workflow
 
 ### Step 1: Identify the Context
@@ -117,6 +123,6 @@ If there is no formal plan but a handover is needed:
 
 ## Templates
 
-This skill includes the reference template as a bundled file:
+This skill includes a normative template as a bundled file. Output MUST follow the template headings and frontmatter keys:
 
 - `tpl-session-handover.md` - Structure for handover documents

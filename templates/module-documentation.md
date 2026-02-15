@@ -27,22 +27,19 @@ version: 1.0
 
 ## Structure
 
-<!-- Key directories and files with descriptions (curated, not exhaustive) -->
+<!-- Exhaustive inventory of directories and files in this module. -->
 
-| Path | Purpose |
-|------|---------|
-| {{file_path}} | {{description}} |
+| Path | Type | Purpose |
+|------|------|---------|
+| {{path}} | file/dir | {{purpose}} |
 
 ## Key Symbols
 
-<!-- Important exported functions, classes, types - described, not just listed -->
+<!-- Exhaustive symbol inventory for this module (best-effort without language plugins). -->
 
-### {{symbol_name}}
-
-- **Type**: function/class/type/interface
-- **Location**: `{{file_path}}:{{line}}`
-- **Purpose**: {{what_it_does_and_why}}
-- **Usage**: {{how_and_where_it_is_used}}
+| Symbol | Kind | Visibility | Location | Purpose |
+|--------|------|------------|----------|---------|
+| {{symbol_name}} | function/class/type/interface/const/enum | public/internal | `{{file_path}}:{{line}}` | {{what_it_does_and_why}} |
 
 ## Data Flow
 
@@ -52,11 +49,9 @@ version: 1.0
 
 <!-- Environment variables, config files, feature flags relevant to this module -->
 
-## Detail Sections
+## Inventory Notes
 
-<!-- Optional deep-dive sections, added as needed -->
-<!-- These keep the overview section loadable while allowing depth -->
+<!-- Describe inventory coverage/limits and how it was derived. -->
 
-<!-- ### {{topic}}
-Detailed information about a specific aspect of this module.
-Only create these sections when the overview is insufficient. -->
+- **Coverage**: full | best-effort
+- **Notes**: {{notes}}

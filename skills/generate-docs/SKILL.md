@@ -1,6 +1,6 @@
 ---
 name: generate-docs
-description: Generate project documentation from an existing codebase. Creates a project overview, module documentation, and feature documentation following a standardized two-tier structure. Use this skill when onboarding a new project or creating initial documentation for an undocumented codebase.
+description: Generate project documentation from an existing codebase. Creates a project overview, module documentation, and feature documentation with explicit inventories (files/dirs + symbols) for each module. Use this skill when onboarding a new project or creating initial documentation for an undocumented codebase.
 license: MIT
 compatibility: opencode
 metadata:
@@ -15,7 +15,7 @@ metadata:
 Creates structured project documentation from an existing codebase. Produces three artifact types:
 
 1. **Project Overview** (`docs/overview.md`) - High-level architecture, module listing, feature listing
-2. **Module Documentation** (`docs/modules/<name>.md`) - Two-tier: curated overview + optional detail sections
+2. **Module Documentation** (`docs/modules/<name>.md`) - Overview + exhaustive inventories (files/dirs + symbols)
 3. **Feature Documentation** (`docs/features/<name>.md`) - How features work, with implementation references
 
 ## When to Use
@@ -26,11 +26,28 @@ Creates structured project documentation from an existing codebase. Produces thr
 
 Do NOT use this skill to update existing documentation - use `update-docs` instead.
 
+## Execution Model
+
+- The primary agent spawns `doc-explorer`. `doc-explorer` explores the repo and writes artifacts under `docs/`.
+- Rationale: documentation is primarily anchored in the codebase (not in the conversation). Keeping exploration + writing in the same subagent session reduces context loss.
+- For large codebases with multiple modules, `doc-explorer` self-delegates: it spawns additional `doc-explorer` instances scoped to individual modules (see Self-Delegation below).
+- The primary agent should keep chat output minimal (paths changed + any open questions).
+
+## Self-Delegation
+
+For projects with 3+ modules or modules with 50+ files, doc-explorer SHOULD delegate per-module work to separate doc-explorer instances via the Task tool:
+
+1. **Orchestrator instance**: Identifies modules, creates `docs/overview.md`, spawns per-module instances
+2. **Per-module instance**: Receives scoped task ("document module X in directory Y"), explores only that module, writes `docs/modules/<name>.md`
+3. **Orchestrator**: Collects status, writes cross-cutting feature docs
+
+This prevents token bloat from accumulating the entire codebase analysis in a single context.
+
 ## Workflow
 
 ### Step 1: Assess the Project
 
-Use the Task tool with an `explore` subagent to gather information:
+Gather information using read/glob/grep and git history.
 
 - Identify the project type, language, framework
 - Find the entry points, main modules, key directories
@@ -46,7 +63,7 @@ A module is a self-contained part of the project. Criteria for module boundaries
 - Could theoretically be replaced independently
 - For single-module projects: the entire project is one module
 
-Use the Task tool for large codebases - delegate symbol analysis to subagents.
+For large codebases, self-delegate per-module analysis to separate doc-explorer instances.
 
 ### Step 3: Create the Project Overview
 
@@ -62,12 +79,12 @@ Create `docs/overview.md` following the template structure:
 
 For each identified module, create `docs/modules/<module-name>.md`:
 
-- **Overview section** (always): Responsibility, dependencies, structure
-- **Key Symbols**: Document the most important exported symbols (functions, classes, types). Focus on what matters - not an exhaustive listing
+- **Overview section** (always): Responsibility, dependencies, boundaries
+- **Structure**: Exhaustive directory/file inventory for the module (each entry has a purpose)
+- **Key Symbols**: Exhaustive symbol inventory for the module (each entry has a purpose + location)
 - **Data Flow**: How data moves through this module
-- For large modules: use the two-tier approach. Keep the overview concise, add Detail Sections only for complex subsystems
 
-Use the Task tool to analyze large modules - delegate file reading and symbol extraction to `explore` subagents.
+For large modules, self-delegate: spawn a separate doc-explorer instance scoped to that module's directory.
 
 ### Step 5: Create Feature Documentation
 
@@ -83,24 +100,23 @@ Feature docs are inherently incomplete - document what is discoverable and note 
 ### Step 6: Verify and Report
 
 - Ensure all cross-references between documents are valid
-- Present a summary of created documents to the user
-- Use the `question` tool to ask if any modules or features were missed
+- Present a summary of created documents
+- Flag any gaps or areas that need manual enrichment
 
 ## Rules
 
 1. **File-based interface**: All output goes into `docs/` directory files. Do not return documentation as chat messages.
-2. **Two-tier documentation**: Module docs must have a concise overview. Detail sections are optional and should only be added for complex subsystems.
-3. **No redundancy**: Don't duplicate information between overview and module/feature docs. Use references.
-4. **Stack-agnostic**: Do not assume any specific language or framework. Discover everything from the codebase.
-5. **Curated, not exhaustive**: Document what matters. A symbol listing without explanation is useless.
-6. **Use subagents for exploration**: Delegate large codebase analysis to Task tool with `explore` subagents. The primary agent should focus on writing and structuring.
-7. **Ask, don't assume**: Use the `question` tool when uncertain about module boundaries, feature grouping, or scope.
-8. **Create directories**: Ensure `docs/`, `docs/modules/`, and `docs/features/` exist before writing.
+2. **No redundancy**: Don't duplicate information between overview and module/feature docs. Use references.
+3. **Stack-agnostic**: Do not assume any specific language or framework. Discover everything from the codebase.
+4. **Inventories are explained**: File/dir and symbol listings MUST include a purpose; listings without explanation are not acceptable.
+5. **No built-in explore agent**: Do NOT use the built-in `explore` subagent type. Self-delegate to `doc-explorer` instead.
+6. **Self-delegate for scale**: For large codebases, spawn additional `doc-explorer` instances per module via the Task tool.
+7. **Create directories**: Ensure `docs/`, `docs/modules/`, and `docs/features/` exist before writing.
 
 ## Templates
 
-This skill includes reference templates as bundled files. Use them as structural guides - adapt content to the actual project:
+This skill includes normative templates as bundled files. Output MUST follow the template headings and frontmatter keys:
 
 - `tpl-project-overview.md` - Structure for the project overview
-- `tpl-module-documentation.md` - Structure for module documentation (two-tier)
+- `tpl-module-documentation.md` - Structure for module documentation
 - `tpl-feature-documentation.md` - Structure for feature documentation

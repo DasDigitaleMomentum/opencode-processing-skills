@@ -29,6 +29,23 @@ Updates existing project documentation to reflect code changes. Handles:
 
 Do NOT use this skill to create documentation from scratch - use `generate-docs` instead.
 
+## Execution Model
+
+- The primary agent spawns `doc-explorer`. `doc-explorer` maps code changes to docs and updates files under `docs/`.
+- Rationale: doc updates are grounded in repo state; exploration + edits belong together to avoid losing "why this section changed".
+- For large change sets affecting multiple modules, `doc-explorer` self-delegates per module (see Self-Delegation below).
+- The primary agent should keep chat output minimal (what docs changed + any gaps).
+
+## Self-Delegation
+
+When changes span multiple modules, doc-explorer SHOULD delegate per-module updates to separate doc-explorer instances via the Task tool:
+
+1. **Orchestrator instance**: Identifies affected modules from git diff, spawns per-module instances
+2. **Per-module instance**: Receives scoped task ("update docs for module X, changes: ..."), reads existing doc, updates it
+3. **Orchestrator**: Updates cross-cutting artifacts (overview, feature docs), validates cross-references
+
+This prevents token bloat from accumulating analysis of all changed modules in a single context.
+
 ## Workflow
 
 ### Step 1: Identify What Changed
@@ -42,7 +59,7 @@ Determine the scope of changes using one or more methods:
 **If changes are from git history:**
 - Use `git log --oneline -N` to see recent commits
 - Use `git diff <commit>..HEAD --stat` to see affected files
-- Delegate detailed analysis to a Task tool `explore` subagent
+- For large diffs, self-delegate per-module analysis
 
 **If the user specifies what changed:**
 - Focus on the modules/features the user mentions
@@ -55,7 +72,7 @@ For each changed file, determine:
 2. Which **features** does it affect? → Update `docs/features/<feature>.md`
 3. Does it change the project structure? → Update `docs/overview.md`
 
-Use the Task tool to analyze large change sets.
+For changes spanning multiple modules, self-delegate per-module updates.
 
 ### Step 3: Read Existing Documentation
 
@@ -76,7 +93,7 @@ Update each affected document:
 - Update Structure if files were added/removed/moved
 - Update Dependencies if new dependencies were introduced
 - Update Data Flow if processing logic changed
-- Add/remove Detail Sections as complexity warrants
+ - Keep inventories in sync (files/dirs + symbols)
 
 **Feature Documentation:**
 - Update User Flow if user-facing behavior changed
@@ -99,12 +116,10 @@ Update each affected document:
 
 ### Step 6: Report Changes
 
-Present a summary to the user:
+Present a summary:
 - Which documents were updated
 - What sections changed
 - Any gaps found (new code that has no documentation)
-
-Use the `question` tool to ask if the updates are complete or if areas were missed.
 
 ## Rules
 
@@ -112,15 +127,15 @@ Use the `question` tool to ask if the updates are complete or if areas were miss
 2. **Preserve manual additions**: If a section was manually enriched beyond what auto-generation would produce, preserve those additions.
 3. **Incremental updates**: Only update what changed. Don't regenerate entire documents.
 4. **Track the update**: Update the frontmatter `version` or add a note if the template supports it.
-5. **Use subagents for large diffs**: Delegate analysis of large change sets to `explore` subagents via the Task tool.
-6. **Ask when unsure**: Use the `question` tool when the impact of a change on documentation is unclear.
+5. **No built-in explore agent**: Do NOT use the built-in `explore` subagent type. Self-delegate to `doc-explorer` instead.
+6. **Self-delegate for scale**: For large change sets spanning multiple modules, spawn additional `doc-explorer` instances per module via the Task tool.
 7. **Flag gaps**: If new code lacks documentation, notify the user rather than silently ignoring it.
 8. **File-based interface**: All updates are written to files in the `docs/` directory. Do not return updated content as chat messages.
 
 ## Templates
 
-This skill includes reference templates as bundled files. Use them to understand the expected document structure when applying updates:
+This skill includes normative templates as bundled files. Output MUST preserve template headings/frontmatter keys when updating docs:
 
 - `tpl-project-overview.md` - Expected structure for project overview
-- `tpl-module-documentation.md` - Expected structure for module documentation (two-tier)
+- `tpl-module-documentation.md` - Expected structure for module documentation
 - `tpl-feature-documentation.md` - Expected structure for feature documentation

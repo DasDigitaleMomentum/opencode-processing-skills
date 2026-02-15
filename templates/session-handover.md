@@ -1,14 +1,17 @@
 ---
 type: planning
 entity: session-handover
-plan: "{{plan_name}}"
+plan: "{{plan_name}}"          # omit for standalone handovers (no plan)
 session_date: "{{date}}"
-phase: {{phase_number}}
+phase: {{phase_number}}        # omit for standalone handovers (no plan)
 ---
 
 # Session Handover: {{date}}
 
+<!-- For plan-bound handovers: -->
 > [{{plan_name}}](../plan.md) - [Phase {{phase_number}}](../phases/phase-{{phase_number}}.md)
+
+<!-- For standalone handovers (docs/handovers/): remove the plan/phase reference above -->
 
 ## Session Summary
 

@@ -24,6 +24,15 @@ updated: "{{date}}"
 |--------|-------------|-------------|
 | [{{module_name}}](../../docs/modules/{{module_name}}.md) | modify/create/delete | {{what_changes}} |
 
+## Required Context
+
+<!-- Files the implementing agent MUST read before starting this phase.
+     This section bridges the gap between planning and implementation. -->
+
+| File | Why |
+|------|-----|
+| {{path}} | {{reason}} |
+
 ## Implementation Steps
 
 <!-- Ordered steps, each above code level. Not line-by-line but also not hand-wavy -->

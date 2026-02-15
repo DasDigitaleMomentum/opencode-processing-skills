@@ -41,7 +41,7 @@ Three domains describe all relevant artifacts:
 | Entity | Description |
 |--------|-------------|
 | **Project Overview** | High-level architecture, modules, references to detail docs |
-| **Module Documentation** | Two-tier: curated overview + optional deep-dive per module |
+| **Module Documentation** | Overview + exhaustive inventories (files/dirs + symbols) |
 | **Feature Documentation** | How features work, with references to implementation |
 
 ### Target Project File Convention
@@ -76,24 +76,87 @@ project-root/
 ### Integration Model
 
 ```
-User Request (1 Premium Request)
-  -> Primary Agent (extended via Skills)
-     -> Subagent: Doc-Explorer (inclusive)
-     -> Subagent: Code-Analyzer (inclusive)
-     -> question Tool for follow-ups (no extra request)
-     -> Writes results to defined file structure
+User Request
+  -> Primary Agent (provider prompt)
+     -> Subagent: Doc-Explorer (writes docs/ + plans/)
+        -> Self-delegates per module for large codebases
+     -> question Tool for follow-ups
 ```
 
-The primary agent is extended through skills from this project. Subagents handle large exploration and analysis tasks. All communication with the user goes through the `question` tool to avoid unnecessary premium requests.
+The primary agent is extended through skills from this project. Doc-explorer handles exploration, analysis, and artifact writing. For large codebases, doc-explorer self-delegates by spawning additional doc-explorer instances scoped to individual modules. All communication with the user goes through the `question` tool to avoid unnecessary premium requests.
 
 ### Design Principles
 
 - **Stack-agnostic** - No assumptions about language or framework
-- **Two-tier documentation** - Overview with references + detail docs, deliberately curated
+- **Documentation as interface** - Docs and plans are the persistent interface between sessions
 - **Redundancy-free** - Templates reference each other instead of duplicating content
 - **Session-resilient** - Everything persisted, handover on demand
 - **Context-aware** - Documents structured for partial loading (not everything at once)
 - **File-based interface** - Subagents write to the defined file structure, skills define what and how
+- **Write-path AND read-path** - Skills cover both creating/updating artifacts and bootstrapping context from them
+
+### Design Decisions
+
+See [AGENTS.md](AGENTS.md#design-decisions) for detailed rationale behind key architectural decisions, including:
+
+- Why Phase (What/Why) is separate from Implementation Plan (How)
+- Why the primary agent authors plans, not doc-explorer
+- Why one subagent (doc-explorer) instead of separate analysis and writing agents
+- Why doc-explorer self-delegates instead of the primary spawning per-module instances
+- Why templates are duplicated in each skill directory
+- Why the question tool is used for all user interaction
+- Why there is no "implementation" skill
+
+## Installation
+
+### Quick Install (Global)
+
+```bash
+git clone git@github.com:DasDigitaleMomentum/opencode-processing-skills.git
+cd opencode-processing-skills
+./install.sh
+```
+
+### What the Installer Does
+
+1. **Skills** (global) - Copies all skills to `~/.config/opencode/skills/`
+2. **Agents** (global) - Copies all agent definitions to `~/.config/opencode/agents/`
+
+### Manual Setup
+
+If you prefer manual installation:
+
+1. Copy `skills/*/` directories to `~/.config/opencode/skills/`
+2. Copy `agents/*.md` to `~/.config/opencode/agents/`
+
+### After Installation
+
+In your project, open OpenCode and:
+
+1. Select the `maintainer` agent for documentation/planning work
+2. Load `generate-docs` to create initial documentation
+3. Load `create-plan` / `update-plan` to manage multi-session workplans
+4. Load `resume-plan` at the start of a new session to continue a plan
+5. Load `update-docs` after code changes
+6. Load `generate-handover` when you need a session handover
+
+## Available Skills
+
+| Skill | Description |
+|-------|-------------|
+| `generate-docs` | Generates project, module, and feature documentation from codebase analysis |
+| `update-docs` | Updates existing documentation after code changes |
+| `create-plan` | Creates structured implementation plans with phases, todos, and DoD |
+| `update-plan` | Updates plan status, todos, and handles phase transitions |
+| `resume-plan` | Bootstraps a new session to continue working on an existing plan |
+| `generate-handover` | Creates session handover documents for continuity |
+
+## Available Agents (Subagents)
+
+| Agent | Mode | Description |
+|-------|------|-------------|
+| `maintainer` | primary | Uses provider prompt; restricts Task usage to framework subagents (no built-in `explore`) |
+| `doc-explorer` | subagent | Writes/updates `docs/` and `plans/`; self-delegates per module for large codebases |
 
 ## Project Structure
 
@@ -101,23 +164,40 @@ The primary agent is extended through skills from this project. Subagents handle
 .
 ├── AGENTS.md              # OpenCode agent instructions for this project
 ├── README.md              # This file
-├── skills/                # Reusable skill definitions (.md files)
-├── agents/                # Agent configurations
-├── templates/             # Document and plan templates
-└── docs/                  # Project documentation
+├── install.sh             # Global installer script
+├── skills/                # Skill definitions (SKILL.md + templates)
+│   ├── generate-docs/     # Generate project documentation
+│   ├── update-docs/       # Update existing documentation
+│   ├── create-plan/       # Create implementation plans
+│   ├── update-plan/       # Update plan status and todos
+│   ├── resume-plan/       # Bootstrap session for plan continuation
+│   └── generate-handover/ # Generate session handover documents
+├── agents/                # Agent definitions (primary + subagents)
+│   ├── maintainer.md      # Primary agent for docs/plans maintenance
+│   └── doc-explorer.md    # Writes docs/plans, self-delegates per module
+├── templates/             # All templates and config references
+│   ├── project-overview.md
+│   ├── module-documentation.md
+│   ├── feature-documentation.md
+│   ├── plan.md
+│   ├── phase.md
+│   ├── implementation-plan.md
+│   ├── todo.md
+│   ├── session-handover.md
+└── docs/                  # Documentation for this project
 ```
 
 ## Roadmap
 
-| Phase | What |
-|-------|------|
-| 1 | **Templates** for all entities |
-| 2 | **Skills** (Generate Docs, Update Docs, Create Plan, Update Plan, Handover) |
-| 3 | **Subagents** (Doc-Explorer, Code-Analyzer) |
-| 4 | **Integration** (AGENTS.md instructions, opencode.json config) |
-| 5 | **Plugin** (optional convenience extension for the primary agent) |
-| 6 | **Retrospective** (Git/log analysis for documentation reconstruction) |
+| Phase | What | Status |
+|-------|------|--------|
+| 1 | **Templates** for all entities | Done |
+| 2 | **Skills** (Generate Docs, Update Docs, Create Plan, Update Plan, Handover) | Done |
+| 3 | **Subagents** (Doc-Explorer, Code-Analyzer) | Done |
+| 4 | **Integration** (global installer + agents) | Done |
+| 5 | **Plugin** (optional convenience extension for the primary agent) | Planned |
+| 6 | **Retrospective** (Git/log analysis for documentation reconstruction) | Planned |
 
 ## License
 
-TBD
+MIT

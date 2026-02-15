@@ -28,6 +28,13 @@ Keeps planning artifacts synchronized with actual progress:
 - When the implementation approach changes: to update the implementation plan
 - When the user asks to "update the plan" or "mark phase as done"
 
+## Execution Model (Recommended)
+
+- Preferred: the primary agent runs this skill and updates artifacts under `plans/<name>/`.
+- Rationale: plan updates encode session decisions and current intent; the primary has the best access to that context.
+- Use `doc-explorer` only if verifying acceptance criteria requires codebase analysis (results are written to `docs/`).
+- Optional (edge cases): delegate mechanical edits (bulk todo moves, large reshuffles) to `doc-explorer` if needed.
+
 ## Workflow
 
 ### Step 1: Identify the Plan
@@ -103,7 +110,8 @@ updated: "2025-02-14"
 
 In `plan.md`:
 ```markdown
-| 2025-02-14 | Phase 1 completed, Phase 2 started |
+### 2025-02-14
+- Phase 1 completed, Phase 2 started
 ```
 
 ### Step 4: Phase Transition
@@ -114,8 +122,9 @@ When a phase is completed and the next phase begins:
 2. Mark next phase as `in_progress`
 3. Read the next phase's implementation plan
 4. Populate the todo list with the next phase's implementation steps
-5. Update plan status in `plan.md` if needed
-6. Add changelog entry documenting the transition
+5. Update the todo list's Phase Context section: update phase/implementation links, relevant docs, and latest handover reference
+6. Update plan status in `plan.md` if needed
+7. Add changelog entry documenting the transition
 
 **When the final phase is completed (Plan Completion):**
 
@@ -146,8 +155,9 @@ Summarize what was updated. If the phase is complete, highlight:
 
 ## Templates
 
-This skill includes reference templates as bundled files. Use them to understand the expected structure when updating plan artifacts:
+This skill includes normative templates as bundled files. Output MUST preserve template headings/frontmatter keys when updating plan artifacts:
 
 - `tpl-todo.md` - Expected structure for the todo list
 - `tpl-phase.md` - Expected structure for phase documents
 - `tpl-implementation-plan.md` - Expected structure for implementation plans
+- `tpl-plan.md` - Expected structure for the plan document (reference for changelog/phases table updates)
