@@ -55,8 +55,10 @@ project-root/
 │   ├── overview.md
 │   ├── modules/
 │   │   └── <module-name>.md
-│   └── features/
-│       └── <feature-name>.md
+│   ├── features/
+│   │   └── <feature-name>.md
+│   └── handovers/
+│       └── session-YYYY-MM-DD.md
 ├── plans/
 │   └── <plan-name>/
 │       ├── plan.md
@@ -78,9 +80,10 @@ project-root/
 ```
 User Request
   -> Primary Agent (provider prompt)
-     -> Subagent: Doc-Explorer (writes docs/ + plans/)
-        -> Self-delegates per module for large codebases
-     -> question Tool for follow-ups
+      -> Subagent: Doc-Explorer (writes docs/ + plans/)
+         -> Self-delegates per module for large codebases
+      -> Subagent: general (read-only research/exploration when needed)
+      -> question Tool for follow-ups
 ```
 
 The primary agent is extended through skills from this project. Doc-explorer handles exploration, analysis, and artifact writing. For large codebases, doc-explorer self-delegates by spawning additional doc-explorer instances scoped to individual modules. All communication with the user goes through the `question` tool to avoid unnecessary premium requests.
@@ -155,7 +158,7 @@ In your project, open OpenCode and:
 
 | Agent | Mode | Description |
 |-------|------|-------------|
-| `maintainer` | primary | Uses provider prompt; restricts Task usage to framework subagents (no built-in `explore`) |
+| `maintainer` | primary | Uses provider prompt; allows Task only for `doc-explorer` + `general` (blocks built-in `explore`) |
 | `doc-explorer` | subagent | Writes/updates `docs/` and `plans/`; self-delegates per module for large codebases |
 
 ## Project Structure
@@ -192,8 +195,8 @@ In your project, open OpenCode and:
 | Phase | What | Status |
 |-------|------|--------|
 | 1 | **Templates** for all entities | Done |
-| 2 | **Skills** (Generate Docs, Update Docs, Create Plan, Update Plan, Handover) | Done |
-| 3 | **Subagents** (Doc-Explorer, Code-Analyzer) | Done |
+| 2 | **Skills** (Generate Docs, Update Docs, Create Plan, Update Plan, Resume Plan, Generate Handover) | Done |
+| 3 | **Subagents** (Doc-Explorer) | Done |
 | 4 | **Integration** (global installer + agents) | Done |
 | 5 | **Plugin** (optional convenience extension for the primary agent) | Planned |
 | 6 | **Retrospective** (Git/log analysis for documentation reconstruction) | Planned |

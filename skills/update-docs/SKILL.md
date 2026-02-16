@@ -134,7 +134,7 @@ Present a summary:
 
 ## Templates
 
-This skill includes normative templates as bundled files. Output MUST preserve template headings/frontmatter keys when updating docs:
+This skill includes normative templates as bundled files. Only read the templates when processing them. Output MUST preserve template headings/frontmatter keys when updating docs:
 
 - `tpl-project-overview.md` - Expected structure for project overview
 - `tpl-module-documentation.md` - Expected structure for module documentation

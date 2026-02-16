@@ -4,19 +4,6 @@
 
 This is a meta-project for creating agents, skills, tools, and templates that standardize documentation and planning workflows for AI-assisted software development using OpenCode.
 
-## Language
-
-- Code, Git commits, and technical documentation: **English**
-- Communication with the user: **German** (unless otherwise requested)
-
-## Critical: Context Cost Management
-
-**IMPORTANT**: Due to GitHub's Premium Request billing model, every full response from the primary agent counts as a premium request. Therefore:
-
-- **Always use the `question` tool** for follow-up questions, clarifications, and offering choices to the user. NEVER ask follow-up questions as plain text responses.
-- **Use subagents (Task tool)** for exploration, research, and multi-step operations. Subagent usage is included and does not incur additional premium request costs.
-- This rule applies to all primary agents created by this project. Subagents are exempt (their cost is included).
-
 ## Project Structure
 
 ```
@@ -54,7 +41,7 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 - **File-based interface**: Subagents write to the defined file structure (templates). The file structure IS the interface, not return values. Every subagent that produces artifacts writes them to disk; the primary agent receives only a short status summary.
 - **One subagent per output domain**: Subagents are organized by what they WRITE, not by what they do. `doc-explorer` writes to `docs/` and `plans/`. There is no separate analysis agent -- analysis is an intermediate step within the writing agent's workflow.
 - **Self-delegation for scale**: When a subagent's workload would exceed comfortable context limits (e.g., documenting a project with many modules), it spawns additional instances of itself, each scoped to a smaller unit of work.
-- **Agent extension over commands**: Skills extend the primary agent's behavior. Subagents handle expensive exploration. No slash commands (each would be a separate premium request)
+- **Agent extension over commands**: Skills extend the primary agent's behavior. Subagents handle expensive exploration.
 - **Stack-agnostic**: No assumptions about language or framework
 - **Two-tier documentation**: Overview with references + detail docs, deliberately curated to manage complexity
 - **Redundancy-free**: Templates reference each other instead of duplicating content
@@ -84,10 +71,6 @@ The primary agent should not need to know the internal module structure of a pro
 ### Why duplicate templates in each skill directory?
 
 OpenCode skills are self-contained units. A skill loaded into an agent session must have all its resources available without depending on external paths. The `templates/` directory serves as the canonical reference for humans; the `tpl-*` files in each skill are the operational copies. This is a deliberate trade-off: we accept file-level redundancy to ensure skills work independently of the project directory structure after installation.
-
-### Why use the question tool for all user interaction?
-
-GitHub Copilot's Premium Request billing counts each full agent response. The `question` tool allows structured interaction (confirmations, choices, clarifications) within a single response turn, avoiding additional premium request charges. This is an economic constraint that shapes the interaction model.
 
 ### Why no "implementation" skill?
 

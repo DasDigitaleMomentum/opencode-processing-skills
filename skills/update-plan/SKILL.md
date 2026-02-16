@@ -155,7 +155,7 @@ Summarize what was updated. If the phase is complete, highlight:
 
 ## Templates
 
-This skill includes normative templates as bundled files. Output MUST preserve template headings/frontmatter keys when updating plan artifacts:
+This skill includes normative templates as bundled files. Only read the templates when processing them. Output MUST preserve template headings/frontmatter keys when updating plan artifacts:
 
 - `tpl-todo.md` - Expected structure for the todo list
 - `tpl-phase.md` - Expected structure for phase documents

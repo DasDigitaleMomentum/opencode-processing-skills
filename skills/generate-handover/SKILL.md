@@ -1,6 +1,6 @@
 ---
 name: generate-handover
-description: Generate a session handover document that captures progress, decisions, and context for seamless session continuity. Use this skill at the end of a work session or when context transfer to a new session is needed.
+description: Generate a session handover document that captures progress, decisions, and context for seamless session continuity. This documentation shall serve Agents and Humans when working in consecutive sessions with the project. Use this skill at the end of a work session or when context transfer to a new session is needed.
 license: MIT
 compatibility: opencode
 metadata:
@@ -12,6 +12,7 @@ metadata:
 
 ## What This Skill Does
 
+This documentation shall serve Agents and Humans when working in consecutive sessions with the project.
 Creates a session handover document (`plans/<name>/handovers/session-<date>.md`) that captures everything a new session needs to continue work seamlessly:
 
 - What was accomplished in this session
@@ -123,6 +124,6 @@ If there is no formal plan but a handover is needed:
 
 ## Templates
 
-This skill includes a normative template as a bundled file. Output MUST follow the template headings and frontmatter keys:
+This skill includes a normative template as a bundled file. Only read the templates when processing them. Output MUST follow the template headings and frontmatter keys:
 
 - `tpl-session-handover.md` - Structure for handover documents

@@ -1,6 +1,6 @@
 ---
 name: generate-docs
-description: Generate project documentation from an existing codebase. Creates a project overview, module documentation, and feature documentation with explicit inventories (files/dirs + symbols) for each module. Use this skill when onboarding a new project or creating initial documentation for an undocumented codebase.
+description: Generate project documentation from an existing codebase. This documentation shall serve Agents and Humans. Creates a project overview, module documentation, and feature documentation with explicit inventories (files/dirs + symbols) for each module. Use this skill when onboarding a new project or creating initial documentation for an undocumented codebase.
 license: MIT
 compatibility: opencode
 metadata:
@@ -12,7 +12,9 @@ metadata:
 
 ## What This Skill Does
 
-Creates structured project documentation from an existing codebase. Produces three artifact types:
+Creates structured project documentation from an existing codebase. This documentation shall serve Agents and Humans when working in consecutive sessions with the project.
+
+Produces three artifact types:
 
 1. **Project Overview** (`docs/overview.md`) - High-level architecture, module listing, feature listing
 2. **Module Documentation** (`docs/modules/<name>.md`) - Overview + exhaustive inventories (files/dirs + symbols)
@@ -115,7 +117,7 @@ Feature docs are inherently incomplete - document what is discoverable and note 
 
 ## Templates
 
-This skill includes normative templates as bundled files. Output MUST follow the template headings and frontmatter keys:
+This skill includes normative templates as bundled files. Only read the templates when processing them. Output MUST follow the template headings and frontmatter keys:
 
 - `tpl-project-overview.md` - Structure for the project overview
 - `tpl-module-documentation.md` - Structure for module documentation

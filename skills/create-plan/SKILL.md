@@ -1,6 +1,6 @@
 ---
 name: create-plan
-description: Create a structured implementation plan for a feature or change. Produces a plan with requirements, phases, implementation steps, todo list, and Definition of Done. Use this skill when the user wants to plan a non-trivial feature before implementing it.
+description: Create a structured implementation plan for a feature or change. This documentation shall serve Agents and Humans. Produces a plan with requirements, phases, implementation steps, todo list, and Definition of Done. Use this skill when the user wants to plan a non-trivial feature before implementing it.
 license: MIT
 compatibility: opencode
 metadata:
@@ -12,7 +12,8 @@ metadata:
 
 ## What This Skill Does
 
-Creates a complete implementation plan with all associated artifacts:
+
+Creates a complete implementation plan with all associated artifacts. This documentation shall serve Agents and Humans when working in consecutive sessions with the project:
 
 1. **Plan** (`plans/<name>/plan.md`) - Objective, requirements, DoD, phases overview
 2. **Phases** (`plans/<name>/phases/phase-N.md`) - Scope definition per phase (what/why)
@@ -155,7 +156,7 @@ Use the `question` tool to confirm the plan or gather adjustments.
 
 ## Templates
 
-This skill includes normative templates as bundled files. Output MUST follow the template headings and frontmatter keys:
+This skill includes normative templates as bundled files. Only read the templates when processing them. Output MUST follow the template headings and frontmatter keys:
 
 - `tpl-plan.md` - Structure for the plan document
 - `tpl-phase.md` - Structure for phase documents
