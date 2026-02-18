@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# install.sh - Install OpenCode Processing Skills globally
+# install.sh - Install or uninstall OpenCode Processing Skills globally
 #
 # Usage:
-#   ./install.sh
+#   ./install.sh             # Install / update all skills and agents
+#   ./install.sh --uninstall # Remove all installed skills and agents
 #
 # What it does:
 #   1. Copies skills to ~/.config/opencode/skills/ (global)
@@ -12,6 +13,42 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# --- Uninstall Mode ---
+if [[ "${1:-}" == "--uninstall" ]]; then
+    echo "OpenCode Processing Skills - Uninstaller"
+    echo "========================================="
+    echo ""
+
+    SKILLS_DEST="$HOME/.config/opencode/skills"
+    AGENTS_DEST="$HOME/.config/opencode/agents"
+
+    echo "Removing skills..."
+    for skill_dir in "$SCRIPT_DIR/skills"/*/; do
+        skill_name="$(basename "$skill_dir")"
+        dest="$SKILLS_DEST/$skill_name"
+        if [ -d "$dest" ]; then
+            rm -rf "$dest"
+            echo "  Removed: $skill_name"
+        fi
+    done
+
+    echo ""
+    echo "Removing agents..."
+    for agent_file in "$SCRIPT_DIR/agents"/*.md; do
+        agent_name="$(basename "$agent_file")"
+        dest="$AGENTS_DEST/$agent_name"
+        if [ -f "$dest" ]; then
+            rm -f "$dest"
+            echo "  Removed: $agent_name"
+        fi
+    done
+
+    echo ""
+    echo "✅ Uninstall complete."
+    exit 0
+fi
+
+# --- Install Mode ---
 echo "OpenCode Processing Skills - Installer"
 echo "======================================="
 echo ""
@@ -60,10 +97,14 @@ for agent_file in "$SCRIPT_DIR/agents"/*.md; do
 done
 
 echo ""
-echo "Installation complete!"
+echo "✅ Installation complete!"
+echo ""
+echo "Installed:"
+printf "  Skills:  %d\n" "$(find "$SCRIPT_DIR/skills" -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')"
+printf "  Agents:  %d\n" "$(find "$SCRIPT_DIR/agents" -name '*.md' | wc -l | tr -d ' ')"
 echo ""
 echo "Next steps:"
-echo "  1. In OpenCode, select the new primary agent (e.g. '@maintainer')"
-echo "  2. Generate project documentation: load the 'generate-docs' skill"
-echo "  3. Create an implementation plan: load the 'create-plan' skill"
+echo "  1. In OpenCode, select the primary agent: @maintainer"
+echo "  2. Start a session: load the 'smart-start' skill"
+echo "  3. Or generate docs: load the 'generate-docs' skill"
 echo ""

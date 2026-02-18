@@ -1,17 +1,16 @@
 ---
 name: cross-repo-plan
-description: "EXPERIMENTAL: Creates and tracks implementation plans that span multiple repositories. Extends the single-repo plan model with a coordinator document that tracks per-repo progress, cross-repo dependencies, and execution order."
+description: Creates and tracks implementation plans that span multiple repositories. Extends the single-repo plan model with a coordinator document that tracks per-repo progress, cross-repo dependencies, and execution order.
 license: MIT
 compatibility: opencode
 metadata:
   category: planning
   phase: coordination
-  status: experimental
 ---
 
 # Skill: Cross-Repo Plan
 
-> ⚠️ **Experimental**: This skill extends the plan model beyond single repositories. The execution is inherently serial (one repo at a time in OpenCode), which limits real-time coordination. Use this for planning and tracking, not for simultaneous multi-repo execution.
+> **Note**: This skill extends the plan model beyond single repositories. The execution is inherently serial (one repo at a time in OpenCode). Use this for planning and tracking, not for simultaneous multi-repo execution.
 
 ## What This Skill Does
 
@@ -95,12 +94,13 @@ Each phase is tagged with its target repository:
 
 ### Step 4: Create Coordinator Plan
 
-Write the coordinator plan to `plans/<name>/plan.md` in the hub repo, using the standard plan template with these additions:
+Write the coordinator plan to `plans/<name>/plan.md` in the hub repo, using the **coordinator-plan template** (`tpl-coordinator-plan.md`). The template provides:
 
 1. **Repositories section**: list all involved repos with their roles
 2. **Dependency graph**: visual representation of repo relationships
 3. **Per-repo phases**: each phase tagged with its target repo
 4. **Cross-repo acceptance criteria**: conditions that span repositories
+5. **Execution order**: step-by-step checklist per phase/repo
 
 ### Step 5: Create Per-Repo Phase Documents
 

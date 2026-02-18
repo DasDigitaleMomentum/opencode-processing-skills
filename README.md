@@ -241,7 +241,9 @@ generate-agents-md → generate-docs → retrospective (optional)
 .
 ├── AGENTS.md              # OpenCode agent instructions for this project
 ├── README.md              # This file
-├── install.sh             # Global installer script
+├── opencode.json          # Plugin manifest (machine-readable skill/agent registry)
+├── Makefile               # Developer convenience commands (make check, make list, ...)
+├── install.sh             # Global installer (--uninstall supported)
 ├── scripts/               # CI and maintenance scripts
 │   └── check-template-sync.sh
 ├── skills/                # Skill definitions (SKILL.md + templates)
@@ -258,7 +260,7 @@ generate-agents-md → generate-docs → retrospective (optional)
 │   ├── execute-work-packet/ # Gated execution (steps -> gate -> digest)
 │   ├── analyze-impact/    # Pre-implementation impact analysis
 │   ├── diff-review/       # Structured code review
-│   └── cross-repo-plan/   # Multi-repo plan coordination (experimental)
+│   └── cross-repo-plan/   # Multi-repo plan coordination
 ├── agents/                # Agent definitions (primary + subagents)
 │   ├── maintainer.md      # Primary agent for docs/plans maintenance
 │   ├── doc-explorer.md    # Writes docs/plans, self-delegates per module
@@ -270,6 +272,7 @@ generate-agents-md → generate-docs → retrospective (optional)
 │   ├── plan.md
 │   ├── phase.md
 │   ├── implementation-plan.md
+│   ├── coordinator-plan.md
 │   ├── todo.md
 │   └── session-handover.md
 ```
@@ -303,7 +306,7 @@ generate-agents-md → generate-docs → retrospective (optional)
 | 11 | `resume-plan` | Session bootstrap for plan continuation | ✅ Done |
 | 12 | `generate-handover` | Session handover documents for continuity | ✅ Done |
 | 13 | `analyze-impact` | Pre-implementation impact analysis | ✅ Done |
-| 14 | `cross-repo-plan` | Multi-repository plan coordination | ⚠️ Experimental |
+| 14 | `cross-repo-plan` | Multi-repository plan coordination | ✅ Done |
 
 ### Workflow Skills
 
@@ -324,7 +327,7 @@ generate-agents-md → generate-docs → retrospective (optional)
 |---|------|--------|
 | 18 | CI pipeline (Markdown Lint, Template Sync, ShellCheck) | ✅ Done |
 | 19 | Enterprise readiness (LICENSE, CONTRIBUTING, SECURITY, CoC) | ✅ Done |
-| 20 | Plugin (optional convenience extension for the primary agent) | 📋 Planned |
+| 20 | Plugin — `opencode.json` manifest, `Makefile`, installer with `--uninstall` | ✅ Done |
 
 ## License
 

@@ -1,0 +1,117 @@
+{
+    "name": "opencode-processing-skills",
+    "version": "2.0.0",
+    "description": "Skills, agents, and templates for structured documentation and planning workflows with AI coding agents.",
+    "author": "Martin Klein",
+    "license": "MIT",
+    "repository": "https://github.com/flitzrrr/opencode-processing-skills",
+    "upstream": "https://github.com/DasDigitaleMomentum/opencode-processing-skills",
+    "compatibility": {
+        "opencode": ">=0.1.0"
+    },
+    "skills": [
+        {
+            "name": "smart-start",
+            "path": "skills/smart-start/SKILL.md",
+            "category": "workflow",
+            "description": "Intelligent session bootstrap with auto-detection"
+        },
+        {
+            "name": "validate-docs",
+            "path": "skills/validate-docs/SKILL.md",
+            "category": "documentation",
+            "description": "Git-based documentation staleness detection"
+        },
+        {
+            "name": "generate-docs",
+            "path": "skills/generate-docs/SKILL.md",
+            "category": "documentation",
+            "description": "Generate project documentation from codebase"
+        },
+        {
+            "name": "update-docs",
+            "path": "skills/update-docs/SKILL.md",
+            "category": "documentation",
+            "description": "Update existing documentation after code changes"
+        },
+        {
+            "name": "generate-agents-md",
+            "path": "skills/generate-agents-md/SKILL.md",
+            "category": "documentation",
+            "description": "Generate project-specific AGENTS.md"
+        },
+        {
+            "name": "retrospective",
+            "path": "skills/retrospective/SKILL.md",
+            "category": "documentation",
+            "description": "Reconstruct docs from git history"
+        },
+        {
+            "name": "create-plan",
+            "path": "skills/create-plan/SKILL.md",
+            "category": "planning",
+            "description": "Create structured implementation plans"
+        },
+        {
+            "name": "update-plan",
+            "path": "skills/update-plan/SKILL.md",
+            "category": "planning",
+            "description": "Update plan status and phase transitions"
+        },
+        {
+            "name": "resume-plan",
+            "path": "skills/resume-plan/SKILL.md",
+            "category": "planning",
+            "description": "Bootstrap session for plan continuation"
+        },
+        {
+            "name": "generate-handover",
+            "path": "skills/generate-handover/SKILL.md",
+            "category": "planning",
+            "description": "Generate session handover documents"
+        },
+        {
+            "name": "analyze-impact",
+            "path": "skills/analyze-impact/SKILL.md",
+            "category": "planning",
+            "description": "Pre-implementation impact analysis"
+        },
+        {
+            "name": "cross-repo-plan",
+            "path": "skills/cross-repo-plan/SKILL.md",
+            "category": "planning",
+            "description": "Multi-repository plan coordination"
+        },
+        {
+            "name": "diff-review",
+            "path": "skills/diff-review/SKILL.md",
+            "category": "review",
+            "description": "Structured code review with impact assessment"
+        }
+    ],
+    "agents": [
+        {
+            "name": "maintainer",
+            "path": "agents/maintainer.md",
+            "mode": "primary",
+            "description": "Primary agent for docs/plans maintenance"
+        },
+        {
+            "name": "doc-explorer",
+            "path": "agents/doc-explorer.md",
+            "mode": "subagent",
+            "description": "Writes/updates docs/ and plans/"
+        }
+    ],
+    "templates": [
+        "templates/project-overview.md",
+        "templates/module-documentation.md",
+        "templates/feature-documentation.md",
+        "templates/plan.md",
+        "templates/phase.md",
+        "templates/implementation-plan.md",
+        "templates/todo.md",
+        "templates/session-handover.md",
+        "templates/coordinator-plan.md"
+    ]
+}

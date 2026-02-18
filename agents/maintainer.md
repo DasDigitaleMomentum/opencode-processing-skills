@@ -45,9 +45,12 @@ If the required documentation context does not exist yet (or is stale), generate
 
 ## Workflow Defaults depending on skills
 
-- Session start: `smart-start` (auto-detects state, recommends next action). This is the recommended entry point for every session.
-- Documentation loop: `generate-docs` (first time) -> `validate-docs` (check staleness) -> `update-docs` (targeted, after code changes).
-- Planning loop: `create-plan` -> `resume-plan` (new session) -> `update-plan` (progress/phase transitions) -> `generate-handover` (end of session).
+- **Session start**: `smart-start` (auto-detects state, recommends next action). This is the recommended entry point for every session.
+- **Documentation loop**: `generate-docs` (first time) -> `validate-docs` (check staleness) -> `update-docs` (targeted, after code changes).
+- **Planning loop**: `create-plan` -> `analyze-impact` (pre-implementation check) -> `resume-plan` (new session) -> `update-plan` (progress/phase transitions) -> `generate-handover` (end of session).
+- **Review**: `diff-review` (structured code review of diffs/PRs with impact and doc-staleness assessment).
+- **Onboarding**: `generate-agents-md` (project conventions) -> `generate-docs` (current state) -> `retrospective` (history/ADRs, optional).
+- **Multi-repo**: `cross-repo-plan` (coordinator plan spanning multiple repositories).
 
 ## Execution (Implementation) Loop
 
