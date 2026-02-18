@@ -11,7 +11,7 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 ├── AGENTS.md              # This file - agent instructions
 ├── README.md              # Project overview (English)
 ├── skills/                # Reusable skill definitions
-├── agents/                # Agent configurations  
+├── agents/                # Agent configurations
 ├── templates/             # Document and plan templates
 └── docs/                  # Project documentation
 ```
@@ -47,6 +47,9 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 - **Redundancy-free**: Templates reference each other instead of duplicating content
 - **Session-resilient**: Everything persisted, handover on demand
 - **Context-aware**: Documents structured for partial loading (not everything into context at once)
+- **Three-path coverage**: Skills cover creating (write-path), checking (validate-path), and updating artifacts, plus bootstrapping context from them (read-path). The validate-path is critical: without it, every update requires a full-scan to discover what changed.
+- **Git as source of truth for freshness**: Use git metadata (timestamps, diffs, log) to detect documentation staleness instead of re-reading source files. This is the key optimization that makes validation cheap.
+- **Token-conscious design**: Every skill is designed to minimize context consumption. Validation and bootstrap skills use metadata over content reads. Partial section reads (frontmatter, structure tables) are preferred over full file reads.
 
 ## Design Decisions
 
@@ -84,6 +87,14 @@ Instead of a generic "implementation" skill that tries to plan-and-code, this fr
 - A dedicated execution-only **subagent** (`implementer`) that reduces primary context bloat by returning compact digests
 
 This keeps planning and execution responsibilities separated while still standardizing implementation as a repeatable workflow.
+
+### Why does validate-docs use git metadata instead of reading source files?
+
+The naive approach to documentation validation is: read every doc, read every source file it describes, compare them. This is O(n×m) and costs 20-50k tokens for a medium project — often wasting 80% because most modules haven't changed. Git already tracks exactly which files changed and when. By comparing `git log -1 --format=%aI -- docs/modules/<name>.md` (when the doc was last updated) against `git log --since=<timestamp> -- <source_path>` (what changed since then), we get precise staleness detection for ~2-3k tokens total. The trade-off is reduced precision: a source file commit doesn't guarantee the doc is stale (the change might not affect documented behavior). We accept false positives over false negatives — it's better to flag a module for review than to miss a genuinely stale doc.
+
+### Why does smart-start run in the primary agent, not a subagent?
+
+`smart-start` is a context-building skill: its output (the state assessment and recommended action) must live in the primary agent's context to guide the rest of the session. Delegating to a subagent would build context in the wrong place — the subagent's findings would need to be serialized back, adding overhead that exceeds the skill's own cost (~3-5k tokens). This is the same rationale as `resume-plan`: session bootstrap is fundamentally a primary-agent activity.
 
 ## Target Project File Convention
 

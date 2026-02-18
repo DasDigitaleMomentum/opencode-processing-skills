@@ -6,10 +6,11 @@ A collection of agents, skills, and templates for standardizing project document
 
 This project addresses key challenges when working with AI agents in software development:
 
-1. **Standardized Documentation** - Consistent project and module documentation that can be generated and updated
+1. **Standardized Documentation** - Consistent project and module documentation that can be generated, validated, and updated
 2. **Structured Planning** - Plans with phases, implementation details, and persistent todo tracking across sessions
 3. **Session Continuity** - Seamless handover between sessions despite limited context windows
 4. **Quality Onboarding** - Fast, consistent onboarding of new agent sessions with the right context
+5. **Token Efficiency** - Lightweight staleness detection and intelligent session bootstrap to minimize wasted context budget
 
 ## Core Concepts
 
@@ -96,7 +97,9 @@ The primary agent is extended through skills from this project. Doc-explorer han
 - **Session-resilient** - Everything persisted, handover on demand
 - **Context-aware** - Documents structured for partial loading (not everything at once)
 - **File-based interface** - Subagents write to the defined file structure, skills define what and how
-- **Write-path AND read-path** - Skills cover both creating/updating artifacts and bootstrapping context from them
+- **Three-path coverage** - Skills cover creating (write), checking (validate), and updating artifacts, plus bootstrapping context from them (read)
+- **Git as source of truth for freshness** - Use git metadata (timestamps, diffs, log) to detect documentation staleness instead of re-reading source files
+- **Token-conscious design** - Every skill is designed to minimize context consumption; validation and bootstrap skills use metadata over content reads
 
 ### Design Decisions
 
@@ -109,7 +112,9 @@ See [AGENTS.md](AGENTS.md#design-decisions) for detailed rationale behind key ar
 - Why templates are duplicated in each skill directory
 - Why the question tool is used for all user interaction
 - Why there is no "implementation" skill
- - How execution is handled via a gated work-packet protocol
+- How execution is handled via a gated work-packet protocol
+- Why validate-docs uses git metadata instead of source file reads
+- Why smart-start runs in the primary agent, not a subagent
 
 ## Installation
 
@@ -138,23 +143,70 @@ If you prefer manual installation:
 In your project, open OpenCode and:
 
 1. Select the `maintainer` agent for documentation/planning work
-2. Load `generate-docs` to create initial documentation
-3. Load `create-plan` / `update-plan` to manage multi-session workplans
-4. Load `resume-plan` at the start of a new session to continue a plan
-5. Load `update-docs` after code changes
-6. Load `generate-handover` when you need a session handover
+2. Load `smart-start` at the beginning of any session — it auto-detects project state and recommends the right next action
+3. Load `generate-docs` to create initial documentation (or follow `smart-start`'s recommendation)
+4. Load `validate-docs` to check if documentation is still in sync with code
+5. Load `create-plan` / `update-plan` to manage multi-session workplans
+6. Load `resume-plan` at the start of a new session to continue a plan
+7. Load `update-docs` after code changes (use `validate-docs` first to target only stale modules)
+8. Load `generate-handover` when you need a session handover
+
+## Skill Lifecycle
+
+The skills form two interconnected workflows — **documentation** and **planning** — with `smart-start` as the unified entry point.
+
+### Session Entry
+
+```
+User opens project
+    │
+    ▼
+smart-start
+    ├── Checks docs/ → runs validate-docs internally
+    ├── Checks plans/ → finds active plan + handover
+    ├── Checks git log → recent activity
+    │
+    ▼
+State assessment + recommended action
+    │
+    ├── No docs?          → recommend generate-docs
+    ├── Active plan?      → recommend resume-plan
+    ├── Stale docs?       → recommend update-docs (targeted)
+    └── Everything current → ready for new work
+```
+
+### Documentation Workflow
+
+```
+generate-docs          validate-docs          update-docs
+ (CREATE)        →       (CHECK)        →      (UPDATE)
+  First time          Git-based, ~2-3k       Targeted to stale
+  Full scan           tokens, no source      modules only
+  20-50k tokens       file reads             5-10k tokens
+```
+
+**Without `validate-docs`**, `update-docs` must perform a full-scan of all docs and source files to discover what changed — typically 20-50k tokens, 80% wasted because only a few modules are stale. **With `validate-docs`**, `update-docs` receives a precise staleness report and targets only the affected modules.
+
+### Planning Workflow
+
+```
+create-plan → resume-plan → update-plan → generate-handover
+ (CREATE)     (BOOTSTRAP)    (TRACK)       (TRANSFER)
+```
 
 ## Available Skills
 
-| Skill | Description |
-|-------|-------------|
-| `generate-docs` | Generates project, module, and feature documentation from codebase analysis |
-| `update-docs` | Updates existing documentation after code changes |
-| `create-plan` | Creates structured implementation plans with phases, todos, and DoD |
-| `update-plan` | Updates plan status, todos, and handles phase transitions |
-| `resume-plan` | Bootstraps a new session to continue working on an existing plan |
-| `generate-handover` | Creates session handover documents for continuity |
-| `execute-work-packet` | Executes a gated implementation unit via step list -> gate -> digest (no new artifacts) |
+| Skill | Category | Description |
+|-------|----------|-------------|
+| `smart-start` | Workflow | Intelligent session bootstrap — auto-detects project state and recommends the right next action |
+| `validate-docs` | Documentation | Checks documentation staleness using git metadata — no source file reads, ~2-3k tokens |
+| `generate-docs` | Documentation | Generates project, module, and feature documentation from codebase analysis |
+| `update-docs` | Documentation | Updates existing documentation after code changes |
+| `create-plan` | Planning | Creates structured implementation plans with phases, todos, and DoD |
+| `update-plan` | Planning | Updates plan status, todos, and handles phase transitions |
+| `resume-plan` | Planning | Bootstraps a new session to continue working on an existing plan |
+| `generate-handover` | Planning | Creates session handover documents for continuity |
+| `execute-work-packet` | Execution | Executes a gated implementation unit via step list -> gate -> digest (no new artifacts) |
 
 ## Available Agents (Subagents)
 
@@ -172,6 +224,8 @@ In your project, open OpenCode and:
 ├── README.md              # This file
 ├── install.sh             # Global installer script
 ├── skills/                # Skill definitions (SKILL.md + templates)
+│   ├── smart-start/       # Intelligent session bootstrap
+│   ├── validate-docs/     # Documentation staleness detection
 │   ├── generate-docs/     # Generate project documentation
 │   ├── update-docs/       # Update existing documentation
 │   ├── create-plan/       # Create implementation plans
@@ -191,8 +245,7 @@ In your project, open OpenCode and:
 │   ├── phase.md
 │   ├── implementation-plan.md
 │   ├── todo.md
-│   ├── session-handover.md
-└── docs/                  # Documentation for this project
+│   └── session-handover.md
 ```
 
 ## Roadmap
@@ -203,6 +256,8 @@ In your project, open OpenCode and:
 | 2 | **Skills** (Generate Docs, Update Docs, Create Plan, Update Plan, Resume Plan, Generate Handover) | Done |
 | 3 | **Subagents** (Doc-Explorer) | Done |
 | 4 | **Integration** (global installer + agents) | Done |
+| 4.1 | **Validate Docs** (git-based staleness detection for documentation) | Done |
+| 4.2 | **Smart Start** (intelligent session bootstrap with auto-detection) | Done |
 | 5 | **Plugin** (optional convenience extension for the primary agent) | Planned |
 | 6 | **Retrospective** (Git/log analysis for documentation reconstruction) | Planned |
 | 7 | **Execution Layer** (work-packet protocol + implementer subagent) | Done |

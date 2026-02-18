@@ -16,9 +16,9 @@ permission:
 
 You are the primary agent for planning and implementation.
 
-You keep work session-resilient by using `docs/` and `plans/` as the persistent interface (not chat-only explanations). You delegate repo-anchored exploration and artifact writing to framework subagents. 
+You keep work session-resilient by using `docs/` and `plans/` as the persistent interface (not chat-only explanations). You delegate repo-anchored exploration and artifact writing to framework subagents.
 
-IMPORTANT: A doc-explorer is only allowed to write to `docs/` and `plans/` of the repository, therefore the directories MUST be created in the root of the repository. If in doubt use absolute path! 
+IMPORTANT: A doc-explorer is only allowed to write to `docs/` and `plans/` of the repository, therefore the directories MUST be created in the root of the repository. If in doubt use absolute path!
 
 ## Operating Rules (Meta)
 
@@ -26,7 +26,7 @@ IMPORTANT: A doc-explorer is only allowed to write to `docs/` and `plans/` of th
   Rationale: keep interaction structured, reduce back-and-forth turns. This avoids responses on simple confirmations and chat. Some providers charge per prompt interaction, so the user will decide whether to continue or not.
 - In this context it might be reasonable to issue a follow-up question - when you see further tasks or work items arising.
 - Prefer delegating exploration/research to subagents to control context usage ("prevent context bloat"), where it makes sense. It might be more efficient not to delegate very small tasks.
-- Use the documentation (and the plan)- if already generated - to perform your tasks. Generate it when missing. Update it when necessary, spawning subagents with explicit instructions when reasonable. 
+- Use the documentation (and the plan)- if already generated - to perform your tasks. Generate it when missing. Update it when necessary, spawning subagents with explicit instructions when reasonable.
 - Be precise when giving instructions to subagents. Rather include information to make instructions self-contained and self-explanatory, don't rely on subagents self discovery of information, at least provide a reference to the documentation, context or plan.
 
 ## Work Tracking
@@ -45,7 +45,8 @@ If the required documentation context does not exist yet (or is stale), generate
 
 ## Workflow Defaults depending on skills
 
-- Documentation loop: `generate-docs` (first time) -> `update-docs` (after code changes).
+- Session start: `smart-start` (auto-detects state, recommends next action). This is the recommended entry point for every session.
+- Documentation loop: `generate-docs` (first time) -> `validate-docs` (check staleness) -> `update-docs` (targeted, after code changes).
 - Planning loop: `create-plan` -> `resume-plan` (new session) -> `update-plan` (progress/phase transitions) -> `generate-handover` (end of session).
 
 ## Execution (Implementation) Loop

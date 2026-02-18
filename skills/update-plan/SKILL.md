@@ -49,12 +49,14 @@ Find the active plan:
 ### Step 2: Determine What to Update
 
 **Option A: Todo updates (most common)**
+
 - Mark completed items: move from Pending/In Progress to Completed
 - Add new items discovered during work
 - Mark blocked items with reason
 - Move next items to In Progress
 
 **Option B: Phase completion**
+
 - Verify all acceptance criteria from the phase document are met
 - Update phase status in `phases/phase-N.md` frontmatter
 - Update the phases table in `plan.md`
@@ -62,12 +64,14 @@ Find the active plan:
 - Add changelog entry
 
 **Option C: Implementation plan revision**
+
 - If the technical approach changed during implementation
 - Update the affected `implementation/phase-N-impl.md`
 - Document the reason for the change
 - Update any affected todo items
 
 **Option D: Plan-level updates**
+
 - Requirements changed → update `plan.md`
 - New risks identified → add to risks table
 - Scope adjustment → update scope section
@@ -91,6 +95,7 @@ Find the active plan:
 ```
 
 Always add a changelog entry:
+
 ```markdown
 ### 2025-02-14
 - Completed: Implement user authentication endpoint
@@ -101,6 +106,7 @@ Always add a changelog entry:
 #### Updating Phase Status
 
 In `phases/phase-N.md` frontmatter:
+
 ```yaml
 status: completed  # was: in_progress
 updated: "2025-02-14"
@@ -109,6 +115,7 @@ updated: "2025-02-14"
 #### Updating Plan Changelog
 
 In `plan.md`:
+
 ```markdown
 ### 2025-02-14
 - Phase 1 completed, Phase 2 started
@@ -138,6 +145,7 @@ When a phase is completed and the next phase begins:
 ### Step 5: Report
 
 Summarize what was updated. If the phase is complete, highlight:
+
 - What was achieved
 - Whether all acceptance criteria were met
 - What comes next

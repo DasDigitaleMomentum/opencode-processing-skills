@@ -93,7 +93,7 @@ Update each affected document:
 - Update Structure if files were added/removed/moved
 - Update Dependencies if new dependencies were introduced
 - Update Data Flow if processing logic changed
- - Keep inventories in sync (files/dirs + symbols)
+- Keep inventories in sync (files/dirs + symbols)
 
 **Feature Documentation:**
 - Update User Flow if user-facing behavior changed
@@ -102,6 +102,7 @@ Update each affected document:
 - Update Edge Cases if new limitations discovered
 
 **Project Overview:**
+
 - Update Modules table if modules were added/removed
 - Update Features table if features were added/removed
 - Update Architecture if high-level structure changed
@@ -117,6 +118,7 @@ Update each affected document:
 ### Step 6: Report Changes
 
 Present a summary:
+
 - Which documents were updated
 - What sections changed
 - Any gaps found (new code that has no documentation)
