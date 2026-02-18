@@ -104,7 +104,7 @@ printf "  Skills:  %d\n" "$(find "$SCRIPT_DIR/skills" -maxdepth 1 -mindepth 1 -t
 printf "  Agents:  %d\n" "$(find "$SCRIPT_DIR/agents" -name '*.md' | wc -l | tr -d ' ')"
 echo ""
 echo "Next steps:"
-echo "  1. In OpenCode, select the primary agent: @maintainer"
+echo "  1. In OpenCode, select the primary agent: @engineer"
 echo "  2. Start a session: load the 'smart-start' skill"
 echo "  3. Or generate docs: load the 'generate-docs' skill"
 echo ""

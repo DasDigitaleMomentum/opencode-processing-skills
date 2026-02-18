@@ -181,10 +181,10 @@
     ],
     "agents": [
         {
-            "name": "maintainer",
-            "path": "agents/maintainer.md",
+            "name": "engineer",
+            "path": "agents/engineer.md",
             "mode": "primary",
-            "description": "Primary agent for docs/plans maintenance"
+            "description": "Primary agent for planning, implementation, and maintenance"
         },
         {
             "name": "doc-explorer",

@@ -52,7 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `resume-plan`: session bootstrap for plan continuation
   - `generate-handover`: session handover document generation
 - Agent definitions:
-  - `maintainer`: primary agent for documentation and planning workflows
+  - `engineer`: primary agent for planning, implementation, and maintenance
   - `doc-explorer`: subagent for writing docs and plans
 - 8 canonical templates for all entity types
 - Global installer (`install.sh`)
