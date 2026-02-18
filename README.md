@@ -276,21 +276,55 @@ generate-agents-md → generate-docs → retrospective (optional)
 
 ## Roadmap
 
-| Phase | What | Status |
-|-------|------|--------|
-| 1 | **Templates** for all entities | Done |
-| 2 | **Skills** (Generate Docs, Update Docs, Create Plan, Update Plan, Resume Plan, Generate Handover) | Done |
-| 3 | **Subagents** (Doc-Explorer) | Done |
-| 4 | **Integration** (global installer + agents) | Done |
-| 4.1 | **Validate Docs** (git-based staleness detection for documentation) | Done |
-| 4.2 | **Smart Start** (intelligent session bootstrap with auto-detection) | Done |
-| 4.3 | **Generate AGENTS.md** (project-specific agent instructions) | Done |
-| 4.4 | **Diff Review** (structured PR/diff code review) | Done |
-| 4.5 | **Analyze Impact** (pre-implementation impact analysis) | Done |
-| 5 | **Plugin** (optional convenience extension for the primary agent) | Planned |
-| 6 | **Retrospective** (Git/log analysis for documentation reconstruction) | Done |
-| 7 | **Execution Layer** (work-packet protocol + implementer subagent) | Done |
-| 8 | **Cross-Repo Plan** (multi-repository plan coordination) | Experimental |
+### Foundation
+
+| # | What | Status |
+|---|------|--------|
+| 1 | **Templates** — entity templates for all document types | ✅ Done |
+| 2 | **Subagents** — Doc-Explorer for writing docs and plans | ✅ Done |
+| 3 | **Integration** — global installer + agent definitions | ✅ Done |
+
+### Documentation Skills
+
+| # | Skill | Description | Status |
+|---|-------|-------------|--------|
+| 4 | `generate-docs` | Full project, module, and feature documentation | ✅ Done |
+| 5 | `update-docs` | Targeted documentation updates after code changes | ✅ Done |
+| 6 | `validate-docs` | Git-based staleness detection (CHECK path) | ✅ Done |
+| 7 | `generate-agents-md` | Project-specific AGENTS.md from conventions | ✅ Done |
+| 8 | `retrospective` | ADRs and module chronology from git history | ✅ Done |
+
+### Planning Skills
+
+| # | Skill | Description | Status |
+|---|-------|-------------|--------|
+| 9 | `create-plan` | Structured implementation plans with phases | ✅ Done |
+| 10 | `update-plan` | Plan status tracking and phase transitions | ✅ Done |
+| 11 | `resume-plan` | Session bootstrap for plan continuation | ✅ Done |
+| 12 | `generate-handover` | Session handover documents for continuity | ✅ Done |
+| 13 | `analyze-impact` | Pre-implementation impact analysis | ✅ Done |
+| 14 | `cross-repo-plan` | Multi-repository plan coordination | ⚠️ Experimental |
+
+### Workflow Skills
+
+| # | Skill | Description | Status |
+|---|-------|-------------|--------|
+| 15 | `smart-start` | Intelligent session bootstrap with auto-detection | ✅ Done |
+| 16 | `diff-review` | Structured PR/diff code review | ✅ Done |
+
+### Execution Skills
+
+| # | Skill | Description | Status |
+|---|-------|-------------|--------|
+| 17 | `execute-work-packet` | Gated execution protocol (steps -> gate -> execute -> digest) | ✅ Done |
+
+### Infrastructure
+
+| # | What | Status |
+|---|------|--------|
+| 18 | CI pipeline (Markdown Lint, Template Sync, ShellCheck) | ✅ Done |
+| 19 | Enterprise readiness (LICENSE, CONTRIBUTING, SECURITY, CoC) | ✅ Done |
+| 20 | Plugin (optional convenience extension for the primary agent) | 📋 Planned |
 
 ## License
 
