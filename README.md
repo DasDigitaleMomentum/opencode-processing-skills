@@ -190,8 +190,22 @@ generate-docs          validate-docs          update-docs
 ### Planning Workflow
 
 ```
-create-plan → resume-plan → update-plan → generate-handover
- (CREATE)     (BOOTSTRAP)    (TRACK)       (TRANSFER)
+create-plan → analyze-impact → resume-plan → update-plan → generate-handover
+ (CREATE)     (PRE-CHECK)     (BOOTSTRAP)    (TRACK)       (TRANSFER)
+```
+
+### Review Workflow
+
+```
+diff-review → update-docs (if doc impact detected)
+ (REVIEW)      (UPDATE)
+```
+
+### Onboarding Workflow
+
+```
+generate-agents-md → generate-docs → retrospective (optional)
+ (CONVENTIONS)        (CURRENT STATE)   (HISTORY / WHY)
 ```
 
 ## Available Skills
@@ -202,11 +216,16 @@ create-plan → resume-plan → update-plan → generate-handover
 | `validate-docs` | Documentation | Checks documentation staleness using git metadata — no source file reads, ~2-3k tokens |
 | `generate-docs` | Documentation | Generates project, module, and feature documentation from codebase analysis |
 | `update-docs` | Documentation | Updates existing documentation after code changes |
+| `generate-agents-md` | Documentation | Generates a project-specific AGENTS.md capturing conventions, build commands, and module rules |
+| `retrospective` | Documentation | Reconstructs ADRs, module timelines, and pattern evolution from git history |
 | `create-plan` | Planning | Creates structured implementation plans with phases, todos, and DoD |
 | `update-plan` | Planning | Updates plan status, todos, and handles phase transitions |
 | `resume-plan` | Planning | Bootstraps a new session to continue working on an existing plan |
 | `generate-handover` | Planning | Creates session handover documents for continuity |
 | `execute-work-packet` | Execution | Executes a gated implementation unit via step list -> gate -> digest (no new artifacts) |
+| `analyze-impact` | Planning | Pre-implementation impact analysis — dependencies, breaking changes, test gaps |
+| `cross-repo-plan` | Planning | ⚠️ Experimental — plans spanning multiple repositories with dependency tracking |
+| `diff-review` | Review | Structured code review with impact assessment, risk matrix, and doc impact |
 
 ## Available Agents (Subagents)
 
@@ -223,16 +242,23 @@ create-plan → resume-plan → update-plan → generate-handover
 ├── AGENTS.md              # OpenCode agent instructions for this project
 ├── README.md              # This file
 ├── install.sh             # Global installer script
+├── scripts/               # CI and maintenance scripts
+│   └── check-template-sync.sh
 ├── skills/                # Skill definitions (SKILL.md + templates)
 │   ├── smart-start/       # Intelligent session bootstrap
 │   ├── validate-docs/     # Documentation staleness detection
 │   ├── generate-docs/     # Generate project documentation
 │   ├── update-docs/       # Update existing documentation
+│   ├── generate-agents-md/ # Generate project-specific AGENTS.md
+│   ├── retrospective/     # Reconstruct docs from git history
 │   ├── create-plan/       # Create implementation plans
 │   ├── update-plan/       # Update plan status and todos
 │   ├── resume-plan/       # Bootstrap session for plan continuation
 │   ├── generate-handover/ # Generate session handover documents
-│   └── execute-work-packet/ # Gated execution (steps -> gate -> digest)
+│   ├── execute-work-packet/ # Gated execution (steps -> gate -> digest)
+│   ├── analyze-impact/    # Pre-implementation impact analysis
+│   ├── diff-review/       # Structured code review
+│   └── cross-repo-plan/   # Multi-repo plan coordination (experimental)
 ├── agents/                # Agent definitions (primary + subagents)
 │   ├── maintainer.md      # Primary agent for docs/plans maintenance
 │   ├── doc-explorer.md    # Writes docs/plans, self-delegates per module
@@ -258,9 +284,13 @@ create-plan → resume-plan → update-plan → generate-handover
 | 4 | **Integration** (global installer + agents) | Done |
 | 4.1 | **Validate Docs** (git-based staleness detection for documentation) | Done |
 | 4.2 | **Smart Start** (intelligent session bootstrap with auto-detection) | Done |
+| 4.3 | **Generate AGENTS.md** (project-specific agent instructions) | Done |
+| 4.4 | **Diff Review** (structured PR/diff code review) | Done |
+| 4.5 | **Analyze Impact** (pre-implementation impact analysis) | Done |
 | 5 | **Plugin** (optional convenience extension for the primary agent) | Planned |
-| 6 | **Retrospective** (Git/log analysis for documentation reconstruction) | Planned |
+| 6 | **Retrospective** (Git/log analysis for documentation reconstruction) | Done |
 | 7 | **Execution Layer** (work-packet protocol + implementer subagent) | Done |
+| 8 | **Cross-Repo Plan** (multi-repository plan coordination) | Experimental |
 
 ## License
 
