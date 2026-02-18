@@ -46,10 +46,18 @@ If the required documentation context does not exist yet (or is stale), generate
 ## Workflow Defaults depending on skills
 
 - **Session start**: `smart-start` (auto-detects state, recommends next action). This is the recommended entry point for every session.
+- **Mid-session**: `context-compress` (compress context when conversation is long, saves tokens).
 - **Documentation loop**: `generate-docs` (first time) -> `validate-docs` (check staleness) -> `update-docs` (targeted, after code changes).
 - **Planning loop**: `create-plan` -> `analyze-impact` (pre-implementation check) -> `resume-plan` (new session) -> `update-plan` (progress/phase transitions) -> `generate-handover` (end of session).
-- **Review**: `diff-review` (structured code review of diffs/PRs with impact and doc-staleness assessment).
-- **Onboarding**: `generate-agents-md` (project conventions) -> `generate-docs` (current state) -> `retrospective` (history/ADRs, optional).
+- **Implementation loop**: `implement-phase` (execute plan phase step by step) -> `add-tests` (generate tests) -> `pr-ready` (prepare PR).
+- **Scaffolding**: `scaffold` (generate convention-aware boilerplate for new modules/features).
+- **Refactoring**: `refactor` (safe refactoring with test verification before and after).
+- **Testing**: `coverage-check` (quick check) -> `test-strategy` (plan) -> `add-tests` (generate).
+- **Review**: `diff-review` (structured code review) -> `pr-ready` (prepare PR) -> `release-notes` (after merge).
+- **Debugging**: `debug-assist` (structured debugging) -> `fix-ci` (CI failures specifically).
+- **Architecture**: `adr-create` (document decisions as they happen).
+- **Onboarding**: `generate-agents-md` (conventions) -> `generate-docs` (current state) -> `retrospective` (history) -> `onboard-developer` (getting started guide).
+- **DevOps**: `ci-setup` (generate CI pipeline) -> `dependency-audit` (audit dependencies).
 - **Multi-repo**: `cross-repo-plan` (coordinator plan spanning multiple repositories).
 
 ## Execution (Implementation) Loop

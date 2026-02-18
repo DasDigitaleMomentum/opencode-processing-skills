@@ -1,7 +1,7 @@
 {
     "name": "opencode-processing-skills",
-    "version": "2.0.0",
-    "description": "Skills, agents, and templates for structured documentation and planning workflows with AI coding agents.",
+    "version": "3.0.0",
+    "description": "Skills, agents, and templates for structured documentation, planning, implementation, testing, and release workflows with AI coding agents.",
     "author": "Martin Klein",
     "license": "MIT",
     "repository": "https://github.com/flitzrrr/opencode-processing-skills",
@@ -47,6 +47,12 @@
             "description": "Reconstruct docs from git history"
         },
         {
+            "name": "onboard-developer",
+            "path": "skills/onboard-developer/SKILL.md",
+            "category": "documentation",
+            "description": "Generate developer onboarding guide"
+        },
+        {
             "name": "create-plan",
             "path": "skills/create-plan/SKILL.md",
             "category": "planning",
@@ -83,10 +89,94 @@
             "description": "Multi-repository plan coordination"
         },
         {
+            "name": "implement-phase",
+            "path": "skills/implement-phase/SKILL.md",
+            "category": "implementation",
+            "description": "Execute plan phases step by step with test verification"
+        },
+        {
+            "name": "scaffold",
+            "path": "skills/scaffold/SKILL.md",
+            "category": "implementation",
+            "description": "Generate convention-aware boilerplate for new modules"
+        },
+        {
+            "name": "refactor",
+            "path": "skills/refactor/SKILL.md",
+            "category": "implementation",
+            "description": "Safe refactoring with test verification before and after"
+        },
+        {
+            "name": "fix-ci",
+            "path": "skills/fix-ci/SKILL.md",
+            "category": "implementation",
+            "description": "Diagnose and fix CI pipeline failures"
+        },
+        {
+            "name": "add-tests",
+            "path": "skills/add-tests/SKILL.md",
+            "category": "testing",
+            "description": "Generate tests matching project conventions"
+        },
+        {
+            "name": "test-strategy",
+            "path": "skills/test-strategy/SKILL.md",
+            "category": "testing",
+            "description": "Generate test strategy with coverage gap analysis"
+        },
+        {
+            "name": "coverage-check",
+            "path": "skills/coverage-check/SKILL.md",
+            "category": "testing",
+            "description": "Lightweight test coverage heuristic via file matching"
+        },
+        {
             "name": "diff-review",
             "path": "skills/diff-review/SKILL.md",
             "category": "review",
             "description": "Structured code review with impact assessment"
+        },
+        {
+            "name": "pr-ready",
+            "path": "skills/pr-ready/SKILL.md",
+            "category": "workflow",
+            "description": "Prepare branch for PR with checks and description"
+        },
+        {
+            "name": "debug-assist",
+            "path": "skills/debug-assist/SKILL.md",
+            "category": "workflow",
+            "description": "Structured debugging with hypothesis logging"
+        },
+        {
+            "name": "context-compress",
+            "path": "skills/context-compress/SKILL.md",
+            "category": "session",
+            "description": "Mid-session context compression to save tokens"
+        },
+        {
+            "name": "adr-create",
+            "path": "skills/adr-create/SKILL.md",
+            "category": "architecture",
+            "description": "Create Architecture Decision Records"
+        },
+        {
+            "name": "release-notes",
+            "path": "skills/release-notes/SKILL.md",
+            "category": "release",
+            "description": "Generate release notes from git log"
+        },
+        {
+            "name": "ci-setup",
+            "path": "skills/ci-setup/SKILL.md",
+            "category": "devops",
+            "description": "Generate CI pipeline tailored to project stack"
+        },
+        {
+            "name": "dependency-audit",
+            "path": "skills/dependency-audit/SKILL.md",
+            "category": "quality",
+            "description": "Audit dependencies for staleness and vulnerabilities"
         }
     ],
     "agents": [

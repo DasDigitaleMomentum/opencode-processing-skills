@@ -15,6 +15,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`cross-repo-plan`** skill: multi-repository plan coordination with dependency tracking and coordinator-plan template
 - **`validate-docs`** skill: git-based documentation staleness detection (~2-3k tokens vs. 20-50k full scan)
 - **`smart-start`** skill: intelligent session bootstrap with auto-detection of project state
+- **`implement-phase`** skill: execute plan phases step by step with test verification and auto status updates
+- **`fix-ci`** skill: diagnose and fix CI pipeline failures with structured root cause analysis
+- **`pr-ready`** skill: prepare branch for PR with checks, description, changelog, and labels
+- **`add-tests`** skill: generate tests matching project conventions (framework, patterns, style)
+- **`test-strategy`** skill: generate test strategy with coverage gap analysis and priority matrix
+- **`coverage-check`** skill: lightweight test coverage heuristic via source-to-test file matching
+- **`adr-create`** skill: create Architecture Decision Records with context, alternatives, consequences
+- **`scaffold`** skill: generate convention-aware boilerplate for new modules and features
+- **`refactor`** skill: safe refactoring with test verification before and after, incremental changes
+- **`release-notes`** skill: generate structured release notes from git log between tags
+- **`ci-setup`** skill: generate production-ready CI pipeline (GitHub Actions) tailored to project stack
+- **`dependency-audit`** skill: audit dependencies for staleness, vulnerabilities, and license issues
+- **`context-compress`** skill: mid-session context compression to save tokens in long conversations
+- **`debug-assist`** skill: structured debugging with hypothesis logging (Reproduce → Isolate → Fix)
+- **`onboard-developer`** skill: generate developer onboarding guide (setup, workflows, conventions)
 - **Plugin**: `opencode.json` manifest, `Makefile` with developer commands, installer `--uninstall` support
 - CI pipeline with template sync check, markdown lint, and ShellCheck
 - `coordinator-plan.md` template for cross-repo plans

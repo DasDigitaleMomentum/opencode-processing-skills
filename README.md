@@ -1,6 +1,8 @@
 # OpenCode Processing Skills
 
-A collection of agents, skills, and templates for standardizing project documentation and planning workflows when working with AI coding agents (OpenCode).
+> **Fork of [DasDigitaleMomentum/opencode-processing-skills](https://github.com/DasDigitaleMomentum/opencode-processing-skills)** — extended with additional skills, CI pipeline, and enterprise-readiness.
+
+A collection of agents, skills, and templates for standardizing project documentation and planning workflows when working with AI coding agents ([OpenCode](https://github.com/sst/opencode)).
 
 ## Purpose
 
@@ -81,7 +83,7 @@ project-root/
 ```
 User Request
   -> Primary Agent (provider prompt)
-      -> Subagent: Doc-Explorer (writes docs/ + plans/)
+      -> Subagent: Doc-Explorer (writes docs/; plan files only on explicit delegation)
          -> Self-delegates per module for large codebases
       -> Subagent: general (read-only research/exploration when needed)
       -> question Tool for follow-ups
@@ -111,8 +113,7 @@ See [AGENTS.md](AGENTS.md#design-decisions) for detailed rationale behind key ar
 - Why doc-explorer self-delegates instead of the primary spawning per-module instances
 - Why templates are duplicated in each skill directory
 - Why the question tool is used for all user interaction
-- Why there is no "implementation" skill
-- How execution is handled via a gated work-packet protocol
+- Why `implement-phase` is process-oriented (not autonomous coding)
 - Why validate-docs uses git metadata instead of source file reads
 - Why smart-start runs in the primary agent, not a subagent
 
@@ -121,15 +122,16 @@ See [AGENTS.md](AGENTS.md#design-decisions) for detailed rationale behind key ar
 ### Quick Install (Global)
 
 ```bash
-git clone git@github.com:DasDigitaleMomentum/opencode-processing-skills.git
+git clone git@github.com:flitzrrr/opencode-processing-skills.git
 cd opencode-processing-skills
 ./install.sh
 ```
 
 ### What the Installer Does
 
-1. **Skills** (global) - Copies all skills to `~/.config/opencode/skills/`
-2. **Agents** (global) - Copies all agent definitions to `~/.config/opencode/agents/`
+1. **Skills** (global) - Installs/updates managed skills in `~/.config/opencode/skills/` using ownership markers
+2. **Agents** (global) - Installs/updates managed agents in `~/.config/opencode/agents/` using ownership markers
+3. **Safety guard** - Skips unmanaged name collisions by default (use `--force` to override)
 
 ### Manual Setup
 
@@ -142,7 +144,7 @@ If you prefer manual installation:
 
 In your project, open OpenCode and:
 
-1. Select the `maintainer` agent for documentation/planning work
+1. Select the `engineer` agent as your primary agent
 2. Load `smart-start` at the beginning of any session — it auto-detects project state and recommends the right next action
 3. Load `generate-docs` to create initial documentation (or follow `smart-start`'s recommendation)
 4. Load `validate-docs` to check if documentation is still in sync with code
@@ -194,141 +196,184 @@ create-plan → analyze-impact → resume-plan → update-plan → generate-hand
  (CREATE)     (PRE-CHECK)     (BOOTSTRAP)    (TRACK)       (TRANSFER)
 ```
 
-### Review Workflow
+### Implementation Workflow
 
 ```
-diff-review → update-docs (if doc impact detected)
- (REVIEW)      (UPDATE)
+create-plan → analyze-impact → implement-phase → add-tests → pr-ready → diff-review
+ (PLAN)        (PRE-CHECK)      (BUILD)          (TEST)      (PREP)     (REVIEW)
+```
+
+### Testing Workflow
+
+```
+coverage-check → test-strategy → add-tests → implement (run tests)
+ (CHECK)          (PLAN)          (GENERATE)   (VERIFY)
+```
+
+### Review & Release Workflow
+
+```
+pr-ready → diff-review → release-notes
+ (PREP)     (REVIEW)      (PUBLISH)
+```
+
+### Debugging Workflow
+
+```
+debug-assist → fix-ci (if CI) → add-tests (regression test)
+ (DIAGNOSE)     (FIX)            (PREVENT)
 ```
 
 ### Onboarding Workflow
 
 ```
-generate-agents-md → generate-docs → retrospective (optional)
- (CONVENTIONS)        (CURRENT STATE)   (HISTORY / WHY)
+generate-agents-md → generate-docs → retrospective → onboard-developer
+ (CONVENTIONS)        (CURRENT STATE)   (HISTORY)      (GETTING STARTED)
 ```
 
-## Available Skills
+## Available Skills (28)
 
-| Skill | Category | Description |
-|-------|----------|-------------|
-| `smart-start` | Workflow | Intelligent session bootstrap — auto-detects project state and recommends the right next action |
-| `validate-docs` | Documentation | Checks documentation staleness using git metadata — no source file reads, ~2-3k tokens |
-| `generate-docs` | Documentation | Generates project, module, and feature documentation from codebase analysis |
-| `update-docs` | Documentation | Updates existing documentation after code changes |
-| `generate-agents-md` | Documentation | Generates a project-specific AGENTS.md capturing conventions, build commands, and module rules |
-| `retrospective` | Documentation | Reconstructs ADRs, module timelines, and pattern evolution from git history |
-| `create-plan` | Planning | Creates structured implementation plans with phases, todos, and DoD |
-| `update-plan` | Planning | Updates plan status, todos, and handles phase transitions |
-| `resume-plan` | Planning | Bootstraps a new session to continue working on an existing plan |
-| `generate-handover` | Planning | Creates session handover documents for continuity |
-| `execute-work-packet` | Execution | Executes a gated implementation unit via step list -> gate -> digest (no new artifacts) |
-| `analyze-impact` | Planning | Pre-implementation impact analysis — dependencies, breaking changes, test gaps |
-| `cross-repo-plan` | Planning | ⚠️ Experimental — plans spanning multiple repositories with dependency tracking |
-| `diff-review` | Review | Structured code review with impact assessment, risk matrix, and doc impact |
+### Documentation (6)
+
+| Skill | Description |
+|-------|-------------|
+| `generate-docs` | Generates project, module, and feature documentation from codebase analysis |
+| `update-docs` | Updates existing documentation after code changes |
+| `validate-docs` | Checks documentation staleness using git metadata (~2-3k tokens) |
+| `generate-agents-md` | Generates a project-specific AGENTS.md from conventions and config |
+| `retrospective` | Reconstructs ADRs, module timelines, and pattern evolution from git history |
+| `onboard-developer` | Generates developer onboarding guide (setup, workflows, conventions) |
+
+### Planning (6)
+
+| Skill | Description |
+|-------|-------------|
+| `create-plan` | Creates structured implementation plans with phases, todos, and DoD |
+| `update-plan` | Updates plan status, todos, and handles phase transitions |
+| `resume-plan` | Bootstraps a new session to continue working on an existing plan |
+| `generate-handover` | Creates session handover documents for continuity |
+| `analyze-impact` | Pre-implementation impact analysis — dependencies, breaking changes, test gaps |
+| `cross-repo-plan` | Plans spanning multiple repositories with dependency tracking |
+
+### Implementation (4)
+
+| Skill | Description |
+|-------|-------------|
+| `implement-phase` | Executes plan phases step by step with test verification and auto status updates |
+| `scaffold` | Generates convention-aware boilerplate for new modules/features |
+| `refactor` | Safe refactoring — tests before, incremental changes, tests after |
+| `fix-ci` | Diagnoses and fixes CI failures with structured root cause analysis |
+
+### Testing (3)
+
+| Skill | Description |
+|-------|-------------|
+| `add-tests` | Generates tests matching project conventions (framework, patterns, style) |
+| `test-strategy` | Generates test strategy with coverage gap analysis and priority matrix |
+| `coverage-check` | Lightweight test coverage heuristic via file matching (no execution) |
+
+### Review & Release (3)
+
+| Skill | Description |
+|-------|-------------|
+| `diff-review` | Structured code review with impact assessment, risk matrix, and doc impact |
+| `pr-ready` | Prepares branch for PR — checks, description, changelog, labels |
+| `release-notes` | Generates structured release notes from git log between tags |
+
+### Architecture (1)
+
+| Skill | Description |
+|-------|-------------|
+| `adr-create` | Creates Architecture Decision Records with context, alternatives, consequences |
+
+### DevOps & Quality (3)
+
+| Skill | Description |
+|-------|-------------|
+| `ci-setup` | Generates CI pipeline (GitHub Actions) tailored to project stack |
+| `dependency-audit` | Audits dependencies for staleness, vulnerabilities, and license issues |
+| `debug-assist` | Structured debugging with hypothesis logging (Reproduce → Isolate → Fix) |
+
+### Session (2)
+
+| Skill | Description |
+|-------|-------------|
+| `smart-start` | Intelligent session bootstrap — auto-detects state and recommends next action |
+| `context-compress` | Mid-session context compression to save tokens in long conversations |
 
 ## Available Agents (Subagents)
 
+> **Important:** For a detailed breakdown of which agent is authorized to execute which skill and why, please refer to the [**Skill Matrix**](SKILL_MATRIX.md).
+
 | Agent | Mode | Description |
 |-------|------|-------------|
-| `maintainer` | primary | Uses provider prompt; allows Task only for `doc-explorer` + `general` (blocks built-in `explore`) |
-| `doc-explorer` | subagent | Writes/updates `docs/` and `plans/`; self-delegates per module for large codebases |
-| `implementer` | subagent | Execution-only: step list -> gate -> execute -> digest; no Git operations |
+| `engineer` | primary | Uses provider prompt; allows Task only for `doc-explorer` + `general` (blocks built-in `explore`) |
+| `doc-explorer` | subagent | Writes/updates `docs/`; may materialize `plans/` files only when explicitly delegated |
 
 ## Project Structure
 
 ```
 .
-├── AGENTS.md              # OpenCode agent instructions for this project
-├── README.md              # This file
-├── opencode.json          # Plugin manifest (machine-readable skill/agent registry)
-├── Makefile               # Developer convenience commands (make check, make list, ...)
-├── install.sh             # Global installer (--uninstall supported)
-├── scripts/               # CI and maintenance scripts
-│   └── check-template-sync.sh
-├── skills/                # Skill definitions (SKILL.md + templates)
-│   ├── smart-start/       # Intelligent session bootstrap
-│   ├── validate-docs/     # Documentation staleness detection
-│   ├── generate-docs/     # Generate project documentation
-│   ├── update-docs/       # Update existing documentation
-│   ├── generate-agents-md/ # Generate project-specific AGENTS.md
-│   ├── retrospective/     # Reconstruct docs from git history
-│   ├── create-plan/       # Create implementation plans
-│   ├── update-plan/       # Update plan status and todos
-│   ├── resume-plan/       # Bootstrap session for plan continuation
-│   ├── generate-handover/ # Generate session handover documents
-│   ├── execute-work-packet/ # Gated execution (steps -> gate -> digest)
-│   ├── analyze-impact/    # Pre-implementation impact analysis
-│   ├── diff-review/       # Structured code review
-│   └── cross-repo-plan/   # Multi-repo plan coordination
-├── agents/                # Agent definitions (primary + subagents)
-│   ├── maintainer.md      # Primary agent for docs/plans maintenance
-│   ├── doc-explorer.md    # Writes docs/plans, self-delegates per module
-│   └── implementer.md     # Execution-only subagent (no Git)
-├── templates/             # All templates and config references
-│   ├── project-overview.md
-│   ├── module-documentation.md
-│   ├── feature-documentation.md
-│   ├── plan.md
-│   ├── phase.md
-│   ├── implementation-plan.md
-│   ├── coordinator-plan.md
-│   ├── todo.md
-│   └── session-handover.md
+├── opencode.json              # Plugin manifest (28 skills, 2 agents, 9 templates)
+├── Makefile                   # Developer commands (make check, list, stats, ...)
+├── install.sh                 # Global installer (--uninstall supported)
+├── scripts/                   # CI and maintenance scripts
+├── skills/                    # 28 skill definitions
+│   ├── smart-start/           # Session: bootstrap
+│   ├── context-compress/      # Session: mid-session compression
+│   ├── generate-docs/         # Documentation: generate
+│   ├── update-docs/           # Documentation: update
+│   ├── validate-docs/         # Documentation: check staleness
+│   ├── generate-agents-md/    # Documentation: AGENTS.md
+│   ├── retrospective/         # Documentation: git history
+│   ├── onboard-developer/     # Documentation: onboarding guide
+│   ├── create-plan/           # Planning: create
+│   ├── update-plan/           # Planning: update
+│   ├── resume-plan/           # Planning: resume session
+│   ├── generate-handover/     # Planning: handover
+│   ├── analyze-impact/        # Planning: impact analysis
+│   ├── cross-repo-plan/       # Planning: multi-repo coordination
+│   ├── implement-phase/       # Implementation: execute plan phase
+│   ├── scaffold/              # Implementation: generate boilerplate
+│   ├── refactor/              # Implementation: safe refactoring
+│   ├── fix-ci/                # Implementation: fix CI failures
+│   ├── add-tests/             # Testing: generate tests
+│   ├── test-strategy/         # Testing: strategy document
+│   ├── coverage-check/        # Testing: coverage heuristic
+│   ├── diff-review/           # Review: structured code review
+│   ├── pr-ready/              # Review: prepare PR
+│   ├── release-notes/         # Release: generate notes
+│   ├── adr-create/            # Architecture: decision records
+│   ├── ci-setup/              # DevOps: generate CI pipeline
+│   ├── dependency-audit/      # Quality: audit dependencies
+│   └── debug-assist/          # Workflow: structured debugging
+├── agents/
+│   ├── engineer.md            # Primary agent
+│   └── doc-explorer.md        # Subagent for docs (plan materialization by explicit delegation)
+├── templates/                 # 9 canonical templates
 ```
 
 ## Roadmap
 
-### Foundation
+All phases are **Done**. See [CHANGELOG.md](CHANGELOG.md) for detailed release history.
 
-| # | What | Status |
-|---|------|--------|
-| 1 | **Templates** — entity templates for all document types | ✅ Done |
-| 2 | **Subagents** — Doc-Explorer for writing docs and plans | ✅ Done |
-| 3 | **Integration** — global installer + agent definitions | ✅ Done |
-
-### Documentation Skills
-
-| # | Skill | Description | Status |
-|---|-------|-------------|--------|
-| 4 | `generate-docs` | Full project, module, and feature documentation | ✅ Done |
-| 5 | `update-docs` | Targeted documentation updates after code changes | ✅ Done |
-| 6 | `validate-docs` | Git-based staleness detection (CHECK path) | ✅ Done |
-| 7 | `generate-agents-md` | Project-specific AGENTS.md from conventions | ✅ Done |
-| 8 | `retrospective` | ADRs and module chronology from git history | ✅ Done |
-
-### Planning Skills
-
-| # | Skill | Description | Status |
-|---|-------|-------------|--------|
-| 9 | `create-plan` | Structured implementation plans with phases | ✅ Done |
-| 10 | `update-plan` | Plan status tracking and phase transitions | ✅ Done |
-| 11 | `resume-plan` | Session bootstrap for plan continuation | ✅ Done |
-| 12 | `generate-handover` | Session handover documents for continuity | ✅ Done |
-| 13 | `analyze-impact` | Pre-implementation impact analysis | ✅ Done |
-| 14 | `cross-repo-plan` | Multi-repository plan coordination | ✅ Done |
-
-### Workflow Skills
-
-| # | Skill | Description | Status |
-|---|-------|-------------|--------|
-| 15 | `smart-start` | Intelligent session bootstrap with auto-detection | ✅ Done |
-| 16 | `diff-review` | Structured PR/diff code review | ✅ Done |
-
-### Execution Skills
-
-| # | Skill | Description | Status |
-|---|-------|-------------|--------|
-| 17 | `execute-work-packet` | Gated execution protocol (steps -> gate -> execute -> digest) | ✅ Done |
-
-### Infrastructure
-
-| # | What | Status |
-|---|------|--------|
-| 18 | CI pipeline (Markdown Lint, Template Sync, ShellCheck) | ✅ Done |
-| 19 | Enterprise readiness (LICENSE, CONTRIBUTING, SECURITY, CoC) | ✅ Done |
-| 20 | Plugin — `opencode.json` manifest, `Makefile`, installer with `--uninstall` | ✅ Done |
+| Phase | Category | Skills | Status |
+|-------|----------|--------|--------|
+| 1 | Foundation | Templates, Subagents, Integration, Plugin | Done |
+| 2 | Documentation | `generate-docs`, `update-docs`, `validate-docs`, `generate-agents-md`, `retrospective`, `onboard-developer` | Done |
+| 3 | Planning | `create-plan`, `update-plan`, `resume-plan`, `generate-handover`, `analyze-impact`, `cross-repo-plan` | Done |
+| 4 | Implementation | `implement-phase`, `scaffold`, `refactor`, `fix-ci` | Done |
+| 5 | Testing | `add-tests`, `test-strategy`, `coverage-check` | Done |
+| 6 | Review & Release | `diff-review`, `pr-ready`, `release-notes` | Done |
+| 7 | Architecture | `adr-create` | Done |
+| 8 | DevOps & Quality | `ci-setup`, `dependency-audit`, `debug-assist` | Done |
+| 9 | Session | `smart-start`, `context-compress` | Done |
+| 10 | Infrastructure | CI pipeline, Enterprise readiness, GitHub templates | Done |
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.
+
+## Acknowledgments
+
+This project is a fork of [DasDigitaleMomentum/opencode-processing-skills](https://github.com/DasDigitaleMomentum/opencode-processing-skills), which created the original framework with the core skills, agent definitions, and template system. This fork extends the original with 15 additional skills covering implementation, testing, review, release, architecture, DevOps, and session management — plus a CI pipeline and enterprise-readiness infrastructure.
