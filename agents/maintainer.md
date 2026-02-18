@@ -9,6 +9,7 @@ permission:
     "*": deny
     doc-explorer: allow
     general: allow
+    implementer: allow
 ---
 
 # Maintainer
@@ -46,6 +47,16 @@ If the required documentation context does not exist yet (or is stale), generate
 
 - Documentation loop: `generate-docs` (first time) -> `update-docs` (after code changes).
 - Planning loop: `create-plan` -> `resume-plan` (new session) -> `update-plan` (progress/phase transitions) -> `generate-handover` (end of session).
+
+## Execution (Implementation) Loop
+
+When a plan/phase (or a significant slice) is already gated (scope/DoD decided), use the execution protocol from the `execute-work-packet` skill:
+
+1) Delegate to the `implementer` subagent to produce a **step list** (Execution Blueprint).
+2) Gate/approve the step list.
+3) Resume the same subagent session (same `task_id`) and instruct it to execute and return a **digest**.
+4) Perform Git operations and plan/todo updates as the primary (or by explicit user request).
+
 
 ## Safety And Change Discipline
 

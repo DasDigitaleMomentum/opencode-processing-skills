@@ -76,6 +76,15 @@ OpenCode skills are self-contained units. A skill loaded into an agent session m
 
 The framework deliberately stops at the boundary between planning and coding. Implementation is the domain of the coding agent (OpenCode's primary capability). The `resume-plan` skill bootstraps context so the agent can implement effectively, but the actual coding workflow is left to the agent's native capabilities. An "implement-phase" skill would either be too generic to be useful or too prescriptive for the variety of possible implementations.
 
+### How is execution handled then?
+
+Instead of a generic "implementation" skill that tries to plan-and-code, this framework uses:
+
+- A dedicated **execution protocol** (`execute-work-packet`) that is explicitly **gated** (step list -> primary approval -> execute -> digest)
+- A dedicated execution-only **subagent** (`implementer`) that reduces primary context bloat by returning compact digests
+
+This keeps planning and execution responsibilities separated while still standardizing implementation as a repeatable workflow.
+
 ## Target Project File Convention
 
 When skills/agents create artifacts in a target project:

@@ -109,6 +109,7 @@ See [AGENTS.md](AGENTS.md#design-decisions) for detailed rationale behind key ar
 - Why templates are duplicated in each skill directory
 - Why the question tool is used for all user interaction
 - Why there is no "implementation" skill
+ - How execution is handled via a gated work-packet protocol
 
 ## Installation
 
@@ -153,6 +154,7 @@ In your project, open OpenCode and:
 | `update-plan` | Updates plan status, todos, and handles phase transitions |
 | `resume-plan` | Bootstraps a new session to continue working on an existing plan |
 | `generate-handover` | Creates session handover documents for continuity |
+| `execute-work-packet` | Executes a gated implementation unit via step list -> gate -> digest (no new artifacts) |
 
 ## Available Agents (Subagents)
 
@@ -160,6 +162,7 @@ In your project, open OpenCode and:
 |-------|------|-------------|
 | `maintainer` | primary | Uses provider prompt; allows Task only for `doc-explorer` + `general` (blocks built-in `explore`) |
 | `doc-explorer` | subagent | Writes/updates `docs/` and `plans/`; self-delegates per module for large codebases |
+| `implementer` | subagent | Execution-only: step list -> gate -> execute -> digest; no Git operations |
 
 ## Project Structure
 
@@ -174,10 +177,12 @@ In your project, open OpenCode and:
 │   ├── create-plan/       # Create implementation plans
 │   ├── update-plan/       # Update plan status and todos
 │   ├── resume-plan/       # Bootstrap session for plan continuation
-│   └── generate-handover/ # Generate session handover documents
+│   ├── generate-handover/ # Generate session handover documents
+│   └── execute-work-packet/ # Gated execution (steps -> gate -> digest)
 ├── agents/                # Agent definitions (primary + subagents)
 │   ├── maintainer.md      # Primary agent for docs/plans maintenance
-│   └── doc-explorer.md    # Writes docs/plans, self-delegates per module
+│   ├── doc-explorer.md    # Writes docs/plans, self-delegates per module
+│   └── implementer.md     # Execution-only subagent (no Git)
 ├── templates/             # All templates and config references
 │   ├── project-overview.md
 │   ├── module-documentation.md
@@ -200,6 +205,7 @@ In your project, open OpenCode and:
 | 4 | **Integration** (global installer + agents) | Done |
 | 5 | **Plugin** (optional convenience extension for the primary agent) | Planned |
 | 6 | **Retrospective** (Git/log analysis for documentation reconstruction) | Planned |
+| 7 | **Execution Layer** (work-packet protocol + implementer subagent) | Done |
 
 ## License
 
