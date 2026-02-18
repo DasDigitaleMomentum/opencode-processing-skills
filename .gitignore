@@ -1,0 +1,20 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Node (for local markdownlint runs)
+node_modules/
+
+# Temporary files
+*.tmp
+*.bak
+*.orig
