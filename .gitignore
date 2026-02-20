@@ -1,0 +1,7 @@
+# Local scratch / transcripts
+tmp/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

@@ -15,6 +15,7 @@ permission:
     generate-docs: allow
     update-docs: allow
     create-plan: allow
+    author-and-verify-implementation-plan: allow
     update-plan: allow
     generate-handover: allow
 ---
@@ -51,7 +52,7 @@ You explore code and WRITE documentation and planning artifacts under `docs/` an
 
 ## Working Mode
 
-1. Load the relevant skill (e.g. `generate-docs`, `update-docs`, `create-plan`, `update-plan`, `generate-handover`).
+1. Load the relevant skill (e.g. `generate-docs`, `update-docs`, `create-plan`, `author-and-verify-implementation-plan`, `update-plan`, `generate-handover`).
 2. Follow the skill workflow and templates.
 3. Write results into the repo under `docs/` and `plans/`.
 4. If a primary agent invoked you, report back only a short status + what files you changed.

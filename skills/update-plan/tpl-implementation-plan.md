@@ -18,16 +18,13 @@ updated: "{{date}}"
 
 ## Affected Modules
 
-<!-- Which modules will be modified or created -->
-
 | Module | Change Type | Description |
 |--------|-------------|-------------|
 | [{{module_name}}](../../docs/modules/{{module_name}}.md) | modify/create/delete | {{what_changes}} |
 
 ## Required Context
 
-<!-- Files the implementing agent MUST read before starting this phase.
-     This section bridges the gap between planning and implementation. -->
+<!-- Files the implementing agent MUST read before starting this phase. -->
 
 | File | Why |
 |------|-----|
@@ -35,7 +32,8 @@ updated: "{{date}}"
 
 ## Implementation Steps
 
-<!-- Ordered steps, each above code level. Not line-by-line but also not hand-wavy -->
+<!-- Ordered steps, each above code level. Not line-by-line but also not hand-wavy.
+     Each step should reference concrete targets (file paths and/or symbols/components). -->
 
 ### Step 1: {{step_title}}
 
@@ -44,16 +42,10 @@ updated: "{{date}}"
 - **Why**: {{rationale}}
 - **Considerations**: {{edge_cases_or_constraints}}
 
-### Step 2: {{step_title}}
-
-- **What**: {{description}}
-- **Where**: {{module/file/area}}
-- **Why**: {{rationale}}
-- **Considerations**: {{edge_cases_or_constraints}}
-
 ## Testing Plan
 
-<!-- How to verify the implementation -->
+<!-- How to verify the implementation.
+     Prefer a single primary "verify" command when possible (e.g. `pytest ...`, `npm test`, `go test ./...`). -->
 
 | Test Type | What to Test | Expected Outcome |
 |-----------|-------------|-----------------|
@@ -65,8 +57,22 @@ updated: "{{date}}"
 
 ## Open Decisions
 
-<!-- Technical decisions that need to be made during implementation -->
-
 | Decision | Options | Chosen | Rationale |
 |----------|---------|--------|-----------|
 | {{decision}} | {{options}} | {{chosen}} | {{rationale}} |
+
+## Reality Check
+
+<!-- Ground this implementation plan against current repository reality.
+     Use this section to record what you verified in the codebase (anchors) and any mismatches.
+     Do NOT change the gated phase scope here; raise scope changes to the primary. -->
+
+### Code Anchors Used
+
+| File | Symbol/Area | Why it matters |
+|------|-------------|----------------|
+| {{path}} | {{symbol_or_area}} | {{why}} |
+
+### Mismatches / Notes
+
+- {{note}}

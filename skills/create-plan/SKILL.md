@@ -1,6 +1,6 @@
 ---
 name: create-plan
-description: Create a structured implementation plan for a feature or change. This documentation shall serve Agents and Humans. Produces a plan with requirements, phases, implementation steps, todo list, and Definition of Done. Use this skill when the user wants to plan a non-trivial feature before implementing it.
+description: Create a structured plan (plan.md, phases/, todo.md) for a feature or change. Use this skill when planning non-trivial work before implementation.
 license: MIT
 compatibility: opencode
 metadata:
@@ -13,13 +13,16 @@ metadata:
 ## What This Skill Does
 
 
-Creates a complete implementation plan with all associated artifacts. This documentation shall serve Agents and Humans when working in consecutive sessions with the project:
+Creates a complete **plan** with the artifacts required to execute work in phases. This documentation shall serve Agents and Humans when working in consecutive sessions with the project:
 
 1. **Plan** (`plans/<name>/plan.md`) - Objective, requirements, DoD, phases overview
 2. **Phases** (`plans/<name>/phases/phase-N.md`) - Scope definition per phase (what/why)
-3. **Implementation Plans** (`plans/<name>/implementation/phase-N-impl.md`) - Technical approach per phase (how)
-4. **Todo List** (`plans/<name>/todo.md`) - Trackable items with status
-5. Creates the directory structure for future **Handovers**
+3. **Todo List** (`plans/<name>/todo.md`) - Trackable items with status
+4. Creates the directory structure for future **Handovers**
+
+This skill intentionally does **not** author per-phase implementation plans (`plans/<name>/implementation/phase-N-impl.md`).
+
+Default next step (second pass): use `author-and-verify-implementation-plan` to author/verify the per-phase implementation plan against current repo reality.
 
 ## When to Use
 
@@ -35,6 +38,14 @@ Do NOT use for simple, one-shot tasks that don't need formal planning.
 - Rationale: plans are conversation-anchored (requirements, trade-offs, sequencing, DoD). Moving authorship to a subagent risks losing intent and introducing gaps.
 - Use `doc-explorer` for codebase impact/symbol analysis when the plan touches existing code (doc-explorer writes findings to `docs/`, keeping analysis out of the primary's context).
 - Optional (edge cases): use `doc-explorer` only to materialize/format a large set of plan files after the primary has finalized content and structure.
+
+## Routing Matrix (Who does what)
+
+- **Writes**: `plans/<name>/plan.md`, `plans/<name>/phases/**`, `plans/<name>/todo.md`, and creates directories under `plans/<name>/`.
+- **Does NOT write**: `plans/<name>/implementation/**` (use `author-and-verify-implementation-plan`).
+- **Primary**: owns requirements, scope, DoD, phase breakdown, gating.
+- **doc-explorer**: optional for repo-anchored analysis persisted into `docs/**` and/or mechanical plan materialization.
+- **implementer**: never used for plan authoring.
 
 ## Workflow
 
@@ -65,7 +76,6 @@ Determine if phasing is needed:
 
 **Single-phase plans** (simple features):
 - One phase covering the entire scope
-- One implementation plan
 - Still create the full directory structure for consistency
 
 **Multi-phase plans** (complex features):
@@ -104,19 +114,13 @@ For each phase, create `plans/<name>/phases/phase-N.md`:
 - Acceptance criteria (how to verify the phase is done)
 - Dependencies on other phases
 
-### Step 6: Create Implementation Plans
+### Step 6: Create the Implementation Directory (Second Pass Follows)
 
-For each phase, create `plans/<name>/implementation/phase-N-impl.md`:
+Create the implementation directory structure (no files yet):
 
-- Technical approach (How)
-- Affected modules with expected changes
-- **Required Context**: list files the implementing agent must read before starting (module docs, relevant code files, API specs). This is critical for session continuity.
-- Implementation steps (ordered, each with what/where/why)
-- Testing plan for this phase
-- Rollback strategy
-- Open technical decisions
+- `plans/<name>/implementation/`
 
-If project documentation exists (`docs/modules/`), reference it in both the affected modules section and the Required Context section.
+Then, as the default second pass (before execution), author and verify per-phase implementation plans via `author-and-verify-implementation-plan`.
 
 ### Step 7: Create the Todo List
 
@@ -124,7 +128,8 @@ Create `plans/<name>/todo.md`:
 
 - Populate with items from Phase 1 (the starting phase)
 - All items start as "Pending"
-- Fill in the Phase Context section with links to phase doc, implementation plan, and relevant module docs
+ - Fill in the Phase Context section with links to the phase doc and relevant module docs
+ - Add an implementation plan link placeholder (to be created by `author-and-verify-implementation-plan` before execution)
 - Initialize the changelog with the plan creation entry
 
 ### Step 8: Create the Handover Directory
@@ -145,14 +150,15 @@ Use the `question` tool to confirm the plan or gather adjustments.
 
 1. **File-based interface**: All artifacts go into `plans/<name>/` directory structure. The directory name should be lowercase, hyphenated, descriptive.
 2. **Phase independence**: Each phase must end in a stable state. No phase should leave the codebase broken.
-3. **Phase describes scope, implementation plan describes approach**: Keep these concerns separated. The phase says what/why, the implementation plan says how.
+3. **Phase describes scope**: Keep phase docs focused on what/why and acceptance criteria. The per-phase implementation approach (how) is authored later via `author-and-verify-implementation-plan`.
 4. **Reference, don't duplicate**: Implementation plans reference module docs and phase docs. Don't repeat requirements from the plan in each phase.
 5. **Realistic sizing**: Phases must be completable in a single session. When in doubt, make phases smaller.
 6. **No built-in explore agent**: Do NOT use the built-in `explore` subagent type in this framework.
 7. **Use `doc-explorer` for codebase analysis**: Delegate deep symbol/dependency analysis via the Task tool. Results are written to `docs/`, not returned as text.
-8. **Always ask for confirmation**: Use the `question` tool to validate requirements, phase structure, and scope with the user before creating artifacts.
-9. **Initialize changelog**: The plan's changelog should document its creation with the current date.
-10. **Create all directories**: Ensure the full directory structure exists: `plans/<name>/`, `phases/`, `implementation/`, `handovers/`.
+8. **Two-pass default for implementation plans**: Implementation plans are authored/verified separately via `author-and-verify-implementation-plan` before executing a phase.
+9. **Always ask for confirmation**: Use the `question` tool to validate requirements, phase structure, and scope with the user before creating artifacts.
+10. **Initialize changelog**: The plan's changelog should document its creation with the current date.
+11. **Create all directories**: Ensure the full directory structure exists: `plans/<name>/`, `phases/`, `implementation/`, `handovers/`.
 
 ## Templates
 
@@ -160,5 +166,4 @@ This skill includes normative templates as bundled files. Only read the template
 
 - `tpl-plan.md` - Structure for the plan document
 - `tpl-phase.md` - Structure for phase documents
-- `tpl-implementation-plan.md` - Structure for implementation plans
 - `tpl-todo.md` - Structure for the todo list

@@ -150,8 +150,9 @@ In your project, open OpenCode and:
 |-------|-------------|
 | `generate-docs` | Generates project, module, and feature documentation from codebase analysis |
 | `update-docs` | Updates existing documentation after code changes |
-| `create-plan` | Creates structured implementation plans with phases, todos, and DoD |
+| `create-plan` | Creates structured plans with phases, todos, and DoD |
 | `update-plan` | Updates plan status, todos, and handles phase transitions |
+| `author-and-verify-implementation-plan` | Authors/refines phase implementation plans by cross-checking them against current code reality |
 | `resume-plan` | Bootstraps a new session to continue working on an existing plan |
 | `generate-handover` | Creates session handover documents for continuity |
 | `execute-work-packet` | Executes a gated implementation unit via step list -> gate -> digest (no new artifacts) |
@@ -160,7 +161,7 @@ In your project, open OpenCode and:
 
 | Agent | Mode | Description |
 |-------|------|-------------|
-| `maintainer` | primary | Uses provider prompt; allows Task only for `doc-explorer` + `general` (blocks built-in `explore`) |
+| `maintainer` | primary | Primary planning+implementation; delegates to `doc-explorer`, `implementer`, and `general` (blocks built-in `explore`) |
 | `doc-explorer` | subagent | Writes/updates `docs/` and `plans/`; self-delegates per module for large codebases |
 | `implementer` | subagent | Execution-only: step list -> gate -> execute -> digest; no Git operations |
 
@@ -174,8 +175,9 @@ In your project, open OpenCode and:
 ├── skills/                # Skill definitions (SKILL.md + templates)
 │   ├── generate-docs/     # Generate project documentation
 │   ├── update-docs/       # Update existing documentation
-│   ├── create-plan/       # Create implementation plans
+│   ├── create-plan/       # Create structured plans
 │   ├── update-plan/       # Update plan status and todos
+│   ├── author-and-verify-implementation-plan/ # 2nd pass: ground impl-plans against code
 │   ├── resume-plan/       # Bootstrap session for plan continuation
 │   ├── generate-handover/ # Generate session handover documents
 │   └── execute-work-packet/ # Gated execution (steps -> gate -> digest)

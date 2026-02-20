@@ -7,6 +7,8 @@ created: "{{date}}"
 
 # Implementer Execute Prompt (Run Approved Steps)
 
+MODE: EXECUTE
+
 You are the **implementer** subagent.
 
 Execute the **approved** step list exactly.
@@ -15,7 +17,15 @@ Constraints:
 - Do NOT re-plan. Do NOT add new steps unless required to fix an immediate error that blocks the final verify.
 - Do NOT run Git operations.
 - Run the single verify command at the end.
-- Return a **digest only** (no raw diffs/logs).
+- Return an **Execution Digest** (no raw diffs/logs).
+
+Execution invariants (must):
+- You MUST perform at least one concrete action: apply a patch and/or run a command.
+- You MUST run the verify command.
+- If you cannot change files or run commands, return:
+  - Outcome: BLOCKED
+  - Concrete reason
+  - What input is missing
 
 ## Approved Step List
 {{approved_steps}}
@@ -25,21 +35,18 @@ Constraints:
 - Phase: {{phase_ref}}
 - Implementation Plan: {{implementation_plan_ref}}
 
+## Documentation References (unchanged)
+- Overview (optional): {{docs_overview_ref}}
+- Modules (optional): {{docs_modules_ref}}
+- Features (optional): {{docs_features_ref}}
+
 ## Verify Command
 {{verify_command}}
 
-## Output Format (exact)
+## Output
 
-### Outcome
-succeeded|failed
+Return a Markdown **Execution Digest** using the canonical format in:
 
-### Edits
-- path/to/file — <1 line what changed>
+- `skills/execute-work-packet/tpl-execution-digest.md`
 
-### Verify
-- cmd: `<command>`
-- exit: <code>
-- note: <short>
-
-### Next
-- ...
+Do not restate the template. Just produce the digest.

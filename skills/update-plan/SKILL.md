@@ -35,6 +35,13 @@ Keeps planning artifacts synchronized with actual progress:
 - Use `doc-explorer` only if verifying acceptance criteria requires codebase analysis (results are written to `docs/`).
 - Optional (edge cases): delegate mechanical edits (bulk todo moves, large reshuffles) to `doc-explorer` if needed.
 
+## Routing Matrix (Who does what)
+
+- **Writes**: updates under `plans/<name>/` including `plan.md`, `todo.md`, `phases/**`, and (when needed) `implementation/**`.
+- **Primary**: preferred owner for updates (session decisions/intents live here).
+- **doc-explorer**: optional helper for mechanical edits or codebase analysis to verify acceptance criteria.
+- **implementer**: never used for plan maintenance.
+
 ## Workflow
 
 ### Step 1: Identify the Plan
@@ -157,7 +164,7 @@ Summarize what was updated. If the phase is complete, highlight:
 
 This skill includes normative templates as bundled files. Only read the templates when processing them. Output MUST preserve template headings/frontmatter keys when updating plan artifacts:
 
-- `tpl-todo.md` - Expected structure for the todo list
-- `tpl-phase.md` - Expected structure for phase documents
-- `tpl-implementation-plan.md` - Expected structure for implementation plans
-- `tpl-plan.md` - Expected structure for the plan document (reference for changelog/phases table updates)
+ - `tpl-todo.md` - Expected structure for the todo list
+ - `tpl-phase.md` - Expected structure for phase documents
+ - `tpl-implementation-plan.md` - Expected structure for implementation plans
+ - `tpl-plan.md` - Expected structure for the plan document (reference for changelog/phases table updates)
