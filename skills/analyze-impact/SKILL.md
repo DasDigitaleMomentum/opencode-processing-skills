@@ -84,7 +84,7 @@ For each affected file, check if the planned changes touch public interfaces:
 - **Data models**: schema changes, migration requirements
 - **Configuration**: changed config keys, new required config values
 
-Rate the risk: 🟢 (internal only) / 🟡 (public API, backward compatible) / 🔴 (breaking change)
+Rate the risk: Low (internal only) / Medium (public API, backward compatible) / High (breaking change)
 
 ### Step 5: Check Test Coverage
 
@@ -97,9 +97,9 @@ find . -path "*/test*" -name "*<module>*" -o -path "*/spec*" -name "*<module>*"
 
 For each affected area:
 
-- Are there existing tests? (covered / uncovered)
-- Will the planned changes break existing tests? (likely / unlikely)
-- Are new tests needed? (yes / no, with rationale)
+- Are there existing tests? (Covered / Uncovered)
+- Will the planned changes break existing tests? (Likely / Unlikely)
+- Are new tests needed? (Yes / No, with rationale)
 
 ### Step 6: Check Prerequisites
 
@@ -127,14 +127,14 @@ Write the impact report to `plans/<name>/implementation/phase-N-impact.md`:
 | Files to Modify | N |
 | Files to Create | N |
 | Downstream Dependents | N |
-| Breaking Change Risk | 🟢/🟡/🔴 |
+| Breaking Change Risk | Low/Medium/High |
 | Test Coverage | N% estimated |
 
 ## Affected Modules
 
 | Module | Changes | Risk | Dependents |
 |--------|---------|------|------------|
-| <name> | <summary> | 🟢/🟡/🔴 | N files |
+| <name> | <summary> | Low/Medium/High | N files |
 
 ## Dependency Analysis
 
@@ -148,19 +148,19 @@ Write the impact report to `plans/<name>/implementation/phase-N-impact.md`:
 
 | Change | Type | Risk | Mitigation |
 |--------|------|------|------------|
-| <change> | API/Schema/Config | 🟢/🟡/🔴 | <how to mitigate> |
+| <change> | API/Schema/Config | Low/Medium/High | <how to mitigate> |
 
 ## Test Impact
 
 | Area | Current Coverage | Action Needed |
 |------|-----------------|---------------|
-| <area> | ✅/⚠️/❌ | <action> |
+| <area> | Covered/Partial/Missing | <action> |
 
 ## Prerequisites Check
 
 | Prerequisite | Status |
 |--------------|--------|
-| <item> | ✅ met / ❌ missing |
+| <item> | Met / Missing |
 
 ## Recommendations
 
@@ -172,7 +172,7 @@ Write the impact report to `plans/<name>/implementation/phase-N-impact.md`:
 
 Present the key findings to the user. Highlight:
 
-- Any 🔴 breaking changes that need careful handling
+- Any high-risk breaking changes that need careful handling
 - Missing prerequisites that must be resolved first
 - Modules with no test coverage that should be tested before changing
 

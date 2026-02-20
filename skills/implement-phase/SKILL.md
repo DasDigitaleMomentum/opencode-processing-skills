@@ -1,6 +1,6 @@
 ---
 name: implement-phase
-description: Executes a plan phase step by step. Reads plan artifacts, follows implementation steps, runs tests after each change, and updates plan status automatically. This is the missing link between planning and code.
+description: Executes a plan phase step by step. Reads plan artifacts, follows implementation steps, runs tests after each change, and updates plan status automatically.
 license: MIT
 compatibility: opencode
 metadata:
@@ -73,7 +73,7 @@ After all steps are completed:
 
 ### Step 5: Update Plan Status
 
-Apply `update-plan` patterns:
+Do NOT update the plan files with ad-hoc manual edits. In the same primary-agent session, invoke exactly the `update-plan` skill to apply these patterns:
 
 1. Update `todo.md` — mark all items completed
 2. Update `phases/phase-N.md` — set status to completed

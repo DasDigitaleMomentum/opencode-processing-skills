@@ -55,7 +55,7 @@ Extract from `package.json` scripts, `Makefile`, or CI:
 
 ### Step 3: Extract Conventions
 
-From `AGENTS.md`, `.editorconfig`, linter configs, git hooks:
+From `AGENTS.md` (Do strongly reference `AGENTS.md` as the single point of truth rather than duplicating its contents), `.editorconfig`, linter configs, git hooks:
 
 - Branch naming convention
 - Commit message format
@@ -104,9 +104,9 @@ Write to `docs/onboarding.md`:
 ### Debugging locally
 
 ## Conventions
+- **Coding Conventions & Rules**: Please refer to `AGENTS.md` in the repository root as the single source of truth.
 - <branch naming>
 - <commit format>
-- <code style>
 
 ## Troubleshooting
 ### <common issue 1>

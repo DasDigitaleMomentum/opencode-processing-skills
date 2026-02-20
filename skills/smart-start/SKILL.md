@@ -53,7 +53,7 @@ Check if project documentation exists:
    - Extract source mappings from Structure sections
    - Check source changes via `git log --since`
    - Assess overview and feature staleness
-   - Produce the staleness summary (current/stale/missing counts)
+   - Produce the staleness summary (Current/Stale/Missing counts)
 
 ### Step 2: Check Plan State
 
@@ -74,6 +74,7 @@ Check if any plans exist:
 3. For the active plan (if any), read `todo.md` **frontmatter + Active Phase section** (first ~20 lines):
    - Which phase is active?
    - How many items: pending / in_progress / completed / blocked?
+   - **IMPORTANT: Do NOT read the full phase documentation files at this stage. Leave deep context loading to `resume-plan` to avoid unnecessary context growth.**
 
 4. Check for handovers:
 
@@ -144,21 +145,21 @@ The assessment follows this structure:
 ```markdown
 ## Session Assessment
 
-### 📄 Documentation
-<status: ✅ Current | ⚠️ Partially stale | ❌ Missing>
+### Documentation
+<status: Current | Partially stale | Missing>
 <if stale: list stale modules with commit counts>
 <if missing: suggest generate-docs>
 
-### 📋 Plans
-<status: ✅ Active plan | ⚠️ Draft plan | ➖ No plans>
+### Plans
+<status: Active plan | Draft plan | No plans>
 <if active: plan name, active phase, todo summary>
 <if handover exists: note and date>
 
-### 🔄 Recent Activity
+### Recent Activity
 <last 3-5 commits, one line each>
-<uncommitted changes: yes/no>
+<uncommitted changes: Yes/No>
 
-### → Recommended Actions
+### Recommended Actions
 1. <primary action with rationale>
 2. <secondary action if applicable>
 3. <optional follow-up>
@@ -168,13 +169,13 @@ The assessment follows this structure:
 
 | Docs | Plan | Recent Commits | Recommendation |
 |------|------|---------------|----------------|
-| ❌ Missing | Any | Any | `generate-docs` first |
-| ✅ Current | Active | Any | `resume-plan` |
-| ⚠️ Stale | Active | Any | `resume-plan`, then `update-docs` after phase |
-| ⚠️ Stale | None | Yes | `update-docs` (targeted) |
-| ✅ Current | None | Yes | Ready for new work or `create-plan` |
-| ✅ Current | Completed | Any | `update-docs`, then new work |
-| ⚠️ Stale | Completed | Any | `update-docs` (targeted) |
+| Missing | Any | Any | `generate-docs` first |
+| Current | Active | Any | `resume-plan` |
+| Stale | Active | Any | `resume-plan`, then `update-docs` after phase |
+| Stale | None | Yes | `update-docs` (targeted) |
+| Current | None | Yes | Ready for new work or `create-plan` |
+| Current | Completed | Any | `update-docs`, then new work |
+| Stale | Completed | Any | `update-docs` (targeted) |
 
 ## Integration with Other Skills
 

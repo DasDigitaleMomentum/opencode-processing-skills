@@ -62,13 +62,13 @@ For each commit, extract:
 
 ### Step 3: Group by Category
 
-| Category | Prefix | Emoji |
-|----------|--------|-------|
-| 🚀 Features | feat | New functionality |
-| 🐛 Bug Fixes | fix | Fixed issues |
-| 📚 Documentation | docs | Documentation changes |
-| 🔧 Maintenance | chore, ci, build | Internal improvements |
-| ⚠️ Breaking Changes | ! or BREAKING CHANGE | Require migration |
+| Category | Prefix | Description |
+|----------|--------|-------------|
+| Features | feat | New functionality |
+| Bug Fixes | fix | Fixed issues |
+| Documentation | docs | Documentation changes |
+| Maintenance | chore, ci, build | Internal improvements |
+| Breaking Changes | ! or BREAKING CHANGE | Require migration |
 
 ### Step 4: Detect Breaking Changes
 
@@ -83,24 +83,24 @@ Scan for breaking change indicators:
 ```markdown
 # <version> — YYYY-MM-DD
 
-## ⚠️ Breaking Changes
+## Breaking Changes
 
 - <description> (#PR)
 
-## 🚀 Features
+## Features
 
 - <description> (#PR)
 - <description> (#PR)
 
-## 🐛 Bug Fixes
+## Bug Fixes
 
 - <description> (#PR)
 
-## 📚 Documentation
+## Documentation
 
 - <description> (#PR)
 
-## 🔧 Maintenance
+## Maintenance
 
 - <description> (#PR)
 

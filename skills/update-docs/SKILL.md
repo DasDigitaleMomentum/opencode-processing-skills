@@ -28,6 +28,7 @@ Updates existing project documentation to reflect code changes. Handles:
 - After a plan phase is completed and code has changed
 
 Do NOT use this skill to create documentation from scratch - use `generate-docs` instead.
+Do NOT use this skill to update root-level `AGENTS.md` - use `generate-agents-md` (full regeneration) or edit `AGENTS.md` manually.
 
 ## Execution Model
 
@@ -44,7 +45,7 @@ When changes span multiple modules, doc-explorer SHOULD delegate per-module upda
 2. **Per-module instance**: Receives scoped task ("update docs for module X, changes: ..."), reads existing doc, updates it
 3. **Orchestrator**: Updates cross-cutting artifacts (overview, feature docs), validates cross-references
 
-This prevents token bloat from accumulating analysis of all changed modules in a single context.
+This prevents unnecessary context growth from accumulating analysis of all changed modules in a single context.
 
 ## Workflow
 

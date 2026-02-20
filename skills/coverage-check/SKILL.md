@@ -12,7 +12,7 @@ metadata:
 
 ## What This Skill Does
 
-The **`validate-docs` of testing**. Performs a fast, lightweight coverage check by matching source files against test files using naming conventions. No coverage tools, no test execution, no source file reads — just file system patterns.
+Performs a fast, lightweight coverage check by matching source files against test files using naming conventions. No coverage tools, no test execution, no source file reads — just file system patterns.
 
 Answers: "Which source files have no corresponding test file?"
 
@@ -80,12 +80,12 @@ done
 
 | File | Module | Risk |
 |------|--------|------|
-| src/auth/login.ts | auth | 🔴 High (handles user input) |
-| src/utils/format.ts | utils | 🟢 Low (pure utility) |
+| src/auth/login.ts | auth | High (handles user input) |
+| src/utils/format.ts | utils | Low (pure utility) |
 
 ### Well-Covered Modules
-- ✅ api/ (8/8 files have tests)
-- ✅ models/ (5/5 files have tests)
+- api/ (8/8 files have tests)
+- models/ (5/5 files have tests)
 
 ### Recommendation
 Focus `add-tests` on: auth/login.ts, data/repository.ts

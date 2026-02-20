@@ -39,7 +39,7 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 ## Architecture Principles
 
 - **File-based interface**: Subagents write to the defined file structure (templates). The file structure IS the interface, not return values. Every subagent that produces artifacts writes them to disk; the primary agent receives only a short status summary.
-- **One subagent per output domain**: Subagents are organized by what they WRITE, not by what they do. `doc-explorer` writes to `docs/` and `plans/`. There is no separate analysis agent -- analysis is an intermediate step within the writing agent's workflow.
+- **One subagent per output domain**: Subagents are organized by what they WRITE, not by what they do. `doc-explorer` primarily writes to `docs/`; plan artifacts are authored by the primary and only materialized by doc-explorer on explicit delegation. There is no separate analysis agent -- analysis is an intermediate step within the writing agent's workflow.
 - **Self-delegation for scale**: When a subagent's workload would exceed comfortable context limits (e.g., documenting a project with many modules), it spawns additional instances of itself, each scoped to a smaller unit of work.
 - **Agent extension over commands**: Skills extend the primary agent's behavior. Subagents handle expensive exploration.
 - **Stack-agnostic**: No assumptions about language or framework
@@ -65,7 +65,7 @@ Plans are conversation-anchored: requirements emerge from user dialogue, trade-o
 
 ### Why one subagent (doc-explorer) instead of separate analysis and writing agents?
 
-Earlier iterations had a separate `code-analyzer` (read-only analysis) and `doc-explorer` (writing). This created problems: (1) code-analyzer could only return text, violating the file-based interface principle; (2) the delegation chain primary -> doc-explorer -> code-analyzer added indirection without value, since doc-explorer already has the same read capabilities; (3) the primary spawning code-analyzer directly for plan creation would dump the entire analysis into the primary's context, causing token bloat. The solution: doc-explorer handles both analysis and writing. For scale, it self-delegates (spawns additional doc-explorer instances per module) rather than delegating to a different agent type.
+Earlier iterations had a separate `code-analyzer` (read-only analysis) and `doc-explorer` (writing). This created problems: (1) code-analyzer could only return text, violating the file-based interface principle; (2) the delegation chain primary -> doc-explorer -> code-analyzer added indirection without value, since doc-explorer already has the same read capabilities; (3) the primary spawning code-analyzer directly for plan creation would dump the entire analysis into the primary's context, causing unnecessary context growth. The solution: doc-explorer handles both analysis and writing. For scale, it self-delegates (spawns additional doc-explorer instances per module) rather than delegating to a different agent type.
 
 ### Why does doc-explorer self-delegate instead of the primary spawning per-module instances?
 
@@ -75,9 +75,9 @@ The primary agent should not need to know the internal module structure of a pro
 
 OpenCode skills are self-contained units. A skill loaded into an agent session must have all its resources available without depending on external paths. The `templates/` directory serves as the canonical reference for humans; the `tpl-*` files in each skill are the operational copies. This is a deliberate trade-off: we accept file-level redundancy to ensure skills work independently of the project directory structure after installation.
 
-### Why no "implementation" skill?
+### Why have `implement-phase` if coding is already a primary-agent capability?
 
-The framework deliberately stops at the boundary between planning and coding. Implementation is the domain of the coding agent (OpenCode's primary capability). The `resume-plan` skill bootstraps context so the agent can implement effectively, but the actual coding workflow is left to the agent's native capabilities. An "implement-phase" skill would either be too generic to be useful or too prescriptive for the variety of possible implementations.
+`implement-phase` is intentionally process-oriented, not a replacement for coding capability. The primary agent can already write code; this skill adds execution discipline across sessions: ordered step execution, test-after-change checkpoints, and explicit `update-plan` synchronization. The value is repeatability and traceability.
 
 ### How is execution handled then?
 

@@ -1,6 +1,6 @@
 ---
 name: pr-ready
-description: Prepares a feature branch for pull request. Runs all checks, generates PR description, verifies documentation is updated, creates changelog entry, and suggests labels. One command to go from "code done" to "PR ready for review."
+description: Prepares a feature branch for pull request. Runs all checks, generates PR description, verifies documentation is updated, creates changelog entry, and suggests labels.
 license: MIT
 compatibility: opencode
 metadata:
@@ -12,7 +12,7 @@ metadata:
 
 ## What This Skill Does
 
-Automates the **"last mile"** before opening a PR. After coding is done, there are always the same repetitive steps: run checks, write PR description, update changelog, verify docs. This skill handles all of them in one pass.
+Automates the final preparation steps before opening a PR: run checks, write PR description, update changelog, and verify documentation updates.
 
 ## When to Use
 

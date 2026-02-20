@@ -62,9 +62,9 @@ Categorize updates:
 
 | Type | Risk | Action |
 |------|------|--------|
-| Patch (1.0.0 → 1.0.1) | 🟢 Low | Safe to update |
-| Minor (1.0.0 → 1.1.0) | 🟡 Medium | Review changelog |
-| Major (1.0.0 → 2.0.0) | 🔴 High | Breaking changes likely |
+| Patch (1.0.0 → 1.0.1) | Low | Safe to update |
+| Minor (1.0.0 → 1.1.0) | Medium | Review changelog |
+| Major (1.0.0 → 2.0.0) | High | Breaking changes likely |
 
 ### Step 3: Check Vulnerabilities
 
@@ -93,10 +93,10 @@ Flag problematic licenses:
 
 | License | Compatibility |
 |---------|--------------|
-| MIT, Apache-2.0, BSD | ✅ Permissive |
-| GPL-3.0 | ⚠️ Copyleft (check project license) |
-| AGPL-3.0 | 🔴 Strong copyleft |
-| Unknown | ⚠️ Investigate |
+| MIT, Apache-2.0, BSD | Permissive |
+| GPL-3.0 | Copyleft (check project license) |
+| AGPL-3.0 | Strong copyleft |
+| Unknown | Investigate |
 
 ### Step 5: Generate Report
 

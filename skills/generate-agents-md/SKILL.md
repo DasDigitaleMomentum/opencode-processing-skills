@@ -1,6 +1,6 @@
 ---
 name: generate-agents-md
-description: Generates a project-specific AGENTS.md that captures conventions, build commands, module rules, and coding standards. This file is the first thing any AI agent reads when opening the project, making it the highest-leverage document for session efficiency.
+description: Generates a project-specific AGENTS.md that captures conventions, build commands, module rules, and coding standards. This file is read at session start by coding agents and helps keep behavior consistent.
 license: MIT
 compatibility: opencode
 metadata:
@@ -12,7 +12,7 @@ metadata:
 
 ## What This Skill Does
 
-Creates an `AGENTS.md` file in the project root that captures everything an AI agent needs to know before writing code. This is the **single highest-leverage document** in any project because it is read at the start of every agent session.
+Creates an `AGENTS.md` file in the project root that captures the conventions an agent needs before writing code. The file is read at the start of each agent session.
 
 A well-written `AGENTS.md` eliminates the 2-5k tokens that agents otherwise spend re-discovering project conventions (build commands, test patterns, naming rules, directory layout) at every session start.
 
@@ -23,7 +23,7 @@ A well-written `AGENTS.md` eliminates the 2-5k tokens that agents otherwise spen
 - After significant project restructuring (new modules, changed build system)
 - When onboarding a project to AI-assisted development for the first time
 
-Do NOT use this to update an existing `AGENTS.md` — that should be done as part of `update-docs` or manually.
+Use this skill to create or fully regenerate `AGENTS.md`. For small targeted edits, update `AGENTS.md` manually.
 
 ## Execution Model
 

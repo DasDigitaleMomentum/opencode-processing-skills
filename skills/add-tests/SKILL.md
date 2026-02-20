@@ -126,11 +126,11 @@ If tests fail:
 Show what was covered:
 
 ```
-✅ Tests generated: <file>
+Tests generated: <file>
    - <N> test cases
-   - Happy path: <covered/not>
-   - Edge cases: <covered/not>
-   - Error handling: <covered/not>
+   - Happy path: <Covered/Not Covered>
+   - Edge cases: <Covered/Not Covered>
+   - Error handling: <Covered/Not Covered>
 ```
 
 ## Rules

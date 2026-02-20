@@ -35,5 +35,5 @@ Templates contain placeholder text with `{{variables}}`. These are not dynamical
 
 | Version | Supported |
 |---------|-----------|
-| main branch | ✅ |
-| Other branches | ❌ |
+| main branch | Yes |
+| Other branches | No |

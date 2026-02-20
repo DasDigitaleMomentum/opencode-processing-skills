@@ -128,27 +128,50 @@ Look for patterns that changed over time:
 Delegate to `doc-explorer` with the gathered metadata. The subagent writes:
 
 1. **`docs/retrospective.md`** — overview of the project's evolution with timeline
-2. **`docs/adrs/`** — individual ADR files for each detected significant decision, using this format:
+2. **`docs/adrs/`** — individual ADR files for each detected significant decision. You MUST use the exact same heading structure and order as `adr-create`:
 
 ```markdown
 # ADR-NNN: <Title>
 
 ## Status
-Accepted
+
+Accepted | Proposed | Superseded by ADR-NNN
 
 ## Date
-<detected from git>
+
+<YYYY-MM-DD, inferred from commit date>
 
 ## Context
-<what was happening in the project at the time>
+<what was happening in the project at the time, detected from git>
 
 ## Decision
 <what was changed and why (inferred from commit messages and diff patterns)>
 
-## Consequences
-<what followed this decision (detected from subsequent commits)>
+## Alternatives Considered
 
-## Evidence
+### Alternative A: <name>
+- **Pros**: ...
+- **Cons**: ...
+- **Why rejected**: ...
+
+### Alternative B: <name>
+- **Pros**: ...
+- **Cons**: ...
+- **Why rejected**: ...
+
+## Consequences
+
+### Positive
+- <expected benefit based on observed outcomes>
+
+### Negative
+- <expected downside or trade-off>
+
+### Risks
+- <what could go wrong>
+
+## References
+
 - Commit: <hash> — <message>
 - Files affected: <count>
 ```

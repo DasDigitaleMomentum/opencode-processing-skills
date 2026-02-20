@@ -135,20 +135,20 @@ Present the review using the format below. Use the `question` tool to discuss fi
 
 | Area | Risk | Detail |
 |------|------|--------|
-| <area> | 🟢/🟡/🔴 | <explanation> |
+| <area> | Low/Medium/High | <explanation> |
 
 ### Documentation Impact
 
 | Doc | Status | Action Needed |
 |-----|--------|---------------|
-| <doc> | ⚠️ needs update | <what changed> |
-| <doc> | ✅ still accurate | – |
+| <doc> | needs update | <what changed> |
+| <doc> | still accurate | – |
 
 ### Test Coverage
 
 | Change | Test Status |
 |--------|------------|
-| <change> | ✅ covered / ⚠️ gap / ❌ missing |
+| <change> | Covered / Gap / Missing |
 
 ### Recommendations
 

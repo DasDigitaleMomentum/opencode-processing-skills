@@ -59,9 +59,9 @@ Flag context that can be discarded:
 <one sentence: what we're doing right now>
 
 ### Progress
-- ✅ <completed step>
-- 🔄 <current step>
-- ⬜ <pending step>
+- Completed: <completed step>
+- In Progress: <current step>
+- Pending: <pending step>
 
 ### Key Decisions
 - <decision>: <rationale>

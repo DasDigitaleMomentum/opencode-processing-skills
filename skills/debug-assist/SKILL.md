@@ -47,7 +47,7 @@ Reproduce the bug locally:
 
 If it doesn't reproduce → it's environment-specific. Check: OS, versions, configuration, data.
 
-**Log:** "Reproduced: yes/no, with command: X"
+**Log:** "Reproduced: Yes/No, with command: X"
 
 ### Step 3: Isolate
 

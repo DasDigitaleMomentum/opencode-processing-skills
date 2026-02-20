@@ -125,7 +125,7 @@ Check if the project overview needs updating:
 Feature docs reference modules. Use the module staleness results from Step 4 to infer feature staleness:
 
 1. Read only the `## Implementation` section of each feature doc (the table that maps modules to symbols).
-2. If any referenced module is stale → mark the feature as **"check recommended"** (not definitively stale, since the module change may not affect the feature).
+2. If any referenced module is stale → mark the feature as **"Review Recommended"** (not definitively stale, since the module change may not affect the feature).
 
 This avoids any source file reads for feature validation.
 
@@ -148,31 +148,31 @@ Generated: <timestamp>
 
 | Status | Count |
 |--------|-------|
-| ✅ Current | N |
-| ⚠️ Stale   | N |
-| ❌ Missing  | N |
+| Current | N |
+| Stale   | N |
+| Missing  | N |
 
 ### Module Documentation
 
 | Module | Status | Commits Since Update | Key Changes |
 |--------|--------|----------------------|-------------|
-| <name> | ✅ current | – | – |
-| <name> | ⚠️ stale | N commits, M files | `file1` (X+/Y-), `file2` (X+/Y-) |
-| <name> | ❌ missing | new module | `<path>` (N files) |
+| <name> | Current | – | – |
+| <name> | Stale | N commits, M files | `file1` (X+/Y-), `file2` (X+/Y-) |
+| <name> | Missing | new module | `<path>` (N files) |
 
 ### Feature Documentation
 
 | Feature | Status | Reason |
 |---------|--------|--------|
-| <name> | ✅ current | all referenced modules current |
-| <name> | ⚠️ check | depends on stale module: <module> |
+| <name> | Current | all referenced modules current |
+| <name> | Review Recommended | depends on stale module: <module> |
 
 ### Overview
 
 | Check | Status | Detail |
 |-------|--------|--------|
-| Module list | ✅/⚠️ | <detail> |
-| Tech stack | ✅/⚠️ | <detail> |
+| Module list | Current/Review Recommended | <detail> |
+| Tech stack | Current/Review Recommended | <detail> |
 
 ### Recommended Actions
 
