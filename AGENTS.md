@@ -12,7 +12,6 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 ├── README.md              # Project overview (English)
 ├── skills/                # Reusable skill definitions
 ├── agents/                # Agent configurations  
-├── templates/             # Document and plan templates
 └── docs/                  # Project documentation
 ```
 
@@ -68,9 +67,9 @@ Earlier iterations had a separate `code-analyzer` (read-only analysis) and `doc-
 
 The primary agent should not need to know the internal module structure of a project. Doc-explorer discovers modules during exploration and decides how to partition the work. This keeps the primary's prompt simple ("document this project") and avoids leaking implementation details of the documentation process into the primary's context.
 
-### Why duplicate templates in each skill directory?
+### Why bundle templates in each skill directory?
 
-OpenCode skills are self-contained units. A skill loaded into an agent session must have all its resources available without depending on external paths. The `templates/` directory serves as the canonical reference for humans; the `tpl-*` files in each skill are the operational copies. This is a deliberate trade-off: we accept file-level redundancy to ensure skills work independently of the project directory structure after installation.
+OpenCode skills are self-contained units. A skill loaded into an agent session must have all its resources available without depending on external paths. Therefore, `tpl-*` files live alongside each skill as the operational (and canonical) templates. This avoids drift between a separate "human reference" template set and the templates agents actually follow.
 
 ### Why no "implementation" skill?
 

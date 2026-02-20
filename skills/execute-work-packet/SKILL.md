@@ -197,9 +197,8 @@ In EXECUTE mode, the subagent must:
 - Skill-first: when this skill is invoked, follow its MODE + output contracts before doing anything else.
 - Keep verification minimal: **one** explicit verify command unless the work packet DoD requires more.
 - No raw diffs or long logs in responses.
-- If verify fails: stop, report digest + minimal excerpt, do not attempt large refactors.
+- If verify fails: apply **minimal, targeted fixes** (no refactors) and re-run verify. If still failing or a larger change is required, stop and report a digest with a minimal relevant excerpt.
 - If the step list must change during execution: stop and ask Primary for a new gate.
-- If verify fails: the subagent may do minimal, targeted fixes and re-run verify; otherwise stop and report BLOCKED.
 
 ---
 

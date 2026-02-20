@@ -1,6 +1,6 @@
 # OpenCode Processing Skills
 
-A collection of agents, skills, and templates for standardizing project documentation and planning workflows when working with AI coding agents (OpenCode).
+A collection of agents and skills (with bundled `tpl-*` templates) for standardizing project documentation, planning, and execution workflows when working with AI coding agents (OpenCode).
 
 ## Purpose
 
@@ -106,7 +106,7 @@ See [AGENTS.md](AGENTS.md#design-decisions) for detailed rationale behind key ar
 - Why the primary agent authors plans, not doc-explorer
 - Why one subagent (doc-explorer) instead of separate analysis and writing agents
 - Why doc-explorer self-delegates instead of the primary spawning per-module instances
-- Why templates are duplicated in each skill directory
+- Why templates are bundled in each skill directory
 - Why the question tool is used for all user interaction
 - Why there is no "implementation" skill
  - How execution is handled via a gated work-packet protocol
@@ -185,15 +185,6 @@ In your project, open OpenCode and:
 │   ├── maintainer.md      # Primary agent for docs/plans maintenance
 │   ├── doc-explorer.md    # Writes docs/plans, self-delegates per module
 │   └── implementer.md     # Execution-only subagent (no Git)
-├── templates/             # All templates and config references
-│   ├── project-overview.md
-│   ├── module-documentation.md
-│   ├── feature-documentation.md
-│   ├── plan.md
-│   ├── phase.md
-│   ├── implementation-plan.md
-│   ├── todo.md
-│   ├── session-handover.md
 └── docs/                  # Documentation for this project
 ```
 
