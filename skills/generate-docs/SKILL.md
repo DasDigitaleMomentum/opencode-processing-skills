@@ -43,7 +43,7 @@ For projects with 3+ modules or modules with 50+ files, doc-explorer SHOULD dele
 2. **Per-module instance**: Receives scoped task ("document module X in directory Y"), explores only that module, writes `docs/modules/<name>.md`
 3. **Orchestrator**: Collects status, writes cross-cutting feature docs
 
-This prevents token bloat from accumulating the entire codebase analysis in a single context.
+This prevents unnecessary context growth from accumulating the entire codebase analysis in a single context.
 
 ## Workflow
 

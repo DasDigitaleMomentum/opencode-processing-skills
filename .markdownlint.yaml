@@ -1,0 +1,37 @@
+# markdownlint configuration
+# See: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+default: true
+
+# Allow long lines (skill descriptions and design decisions are verbose by design)
+MD013: false
+
+# Allow multiple headings with same content (templates repeat heading patterns)
+MD024: false
+
+# Allow HTML comments (used in templates for placeholder instructions)
+MD033: false
+
+# Allow bare URLs
+MD034: false
+
+# Allow emphasis used instead of a heading
+MD036: false
+
+# Allow trailing punctuation in headings (e.g. "Why no implementation skill?")
+MD026: false
+
+# Allow tabs (used for indentation in some templates)
+MD010: false
+
+# Allow unaligned table columns (templates use placeholder rows with varying widths)
+MD060: false
+
+# Relax blank-line rules for skill files (lists after bold headers are a common pattern)
+MD032: false
+
+# Allow code blocks without language specifier (directory trees, ASCII diagrams)
+MD040: false
+
+# Relax heading blank-line requirement
+MD022: false

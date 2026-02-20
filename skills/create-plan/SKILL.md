@@ -12,7 +12,6 @@ metadata:
 
 ## What This Skill Does
 
-
 Creates a complete implementation plan with all associated artifacts. This documentation shall serve Agents and Humans when working in consecutive sessions with the project:
 
 1. **Plan** (`plans/<name>/plan.md`) - Objective, requirements, DoD, phases overview
