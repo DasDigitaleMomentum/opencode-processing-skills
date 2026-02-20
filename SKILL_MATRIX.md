@@ -17,7 +17,7 @@ dialogue, source edits, terminal execution, or plan authorship decisions.
 |---|---|
 | Session | `smart-start`, `resume-plan`, `context-compress` |
 | Planning | `create-plan`, `update-plan`, `generate-handover`, `analyze-impact`, `cross-repo-plan` |
-| Implementation | `implement-phase`, `refactor`, `scaffold`, `fix-ci`, `debug-assist` |
+| Implementation | `execute-work-packet`, `implement-phase`, `refactor`, `scaffold`, `fix-ci`, `debug-assist` |
 | Testing | `add-tests`, `coverage-check` |
 | Review & Quality | `validate-docs`, `diff-review`, `dependency-audit` |
 | Delivery | `pr-ready`, `release-notes`, `ci-setup`, `generate-agents-md` |

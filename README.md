@@ -1,7 +1,5 @@
 # OpenCode Processing Skills
 
-> **Fork of [DasDigitaleMomentum/opencode-processing-skills](https://github.com/DasDigitaleMomentum/opencode-processing-skills)** — extended with additional skills, CI pipeline, and enterprise-readiness.
-
 A collection of agents, skills, and templates for standardizing project documentation and planning workflows when working with AI coding agents ([OpenCode](https://github.com/sst/opencode)).
 
 ## Purpose
@@ -122,7 +120,7 @@ See [AGENTS.md](AGENTS.md#design-decisions) for detailed rationale behind key ar
 ### Quick Install (Global)
 
 ```bash
-git clone git@github.com:flitzrrr/opencode-processing-skills.git
+git clone git@github.com:DasDigitaleMomentum/opencode-processing-skills.git
 cd opencode-processing-skills
 ./install.sh
 ```
@@ -196,6 +194,13 @@ create-plan → analyze-impact → resume-plan → update-plan → generate-hand
  (CREATE)     (PRE-CHECK)     (BOOTSTRAP)    (TRACK)       (TRANSFER)
 ```
 
+### Work Packet Execution Workflow
+
+```
+execute-work-packet (preflight) → approval gate → execute-work-packet (execute)
+          (STEPS)                    (PRIMARY)               (DIGEST)
+```
+
 ### Implementation Workflow
 
 ```
@@ -231,7 +236,7 @@ generate-agents-md → generate-docs → retrospective → onboard-developer
  (CONVENTIONS)        (CURRENT STATE)   (HISTORY)      (GETTING STARTED)
 ```
 
-## Available Skills (28)
+## Available Skills (29)
 
 ### Documentation (6)
 
@@ -254,6 +259,12 @@ generate-agents-md → generate-docs → retrospective → onboard-developer
 | `generate-handover` | Creates session handover documents for continuity |
 | `analyze-impact` | Pre-implementation impact analysis — dependencies, breaking changes, test gaps |
 | `cross-repo-plan` | Plans spanning multiple repositories with dependency tracking |
+
+### Execution (1)
+
+| Skill | Description |
+|-------|-------------|
+| `execute-work-packet` | Gated execution protocol using an `implementer` subagent (preflight steps -> approval -> execution digest) |
 
 ### Implementation (4)
 
@@ -309,16 +320,17 @@ generate-agents-md → generate-docs → retrospective → onboard-developer
 |-------|------|-------------|
 | `engineer` | primary | Uses provider prompt; allows Task only for `doc-explorer` + `general` (blocks built-in `explore`) |
 | `doc-explorer` | subagent | Writes/updates `docs/`; may materialize `plans/` files only when explicitly delegated |
+| `implementer` | subagent | Execution-only subagent for approved work packets (no Git operations) |
 
 ## Project Structure
 
 ```
 .
-├── opencode.json              # Plugin manifest (28 skills, 2 agents, 9 templates)
+├── opencode.json              # Plugin manifest (29 skills, 3 agents, 12 templates)
 ├── Makefile                   # Developer commands (make check, list, stats, ...)
 ├── install.sh                 # Global installer (--uninstall supported)
 ├── scripts/                   # CI and maintenance scripts
-├── skills/                    # 28 skill definitions
+├── skills/                    # 29 skill definitions
 │   ├── smart-start/           # Session: bootstrap
 │   ├── context-compress/      # Session: mid-session compression
 │   ├── generate-docs/         # Documentation: generate
@@ -333,6 +345,7 @@ generate-agents-md → generate-docs → retrospective → onboard-developer
 │   ├── generate-handover/     # Planning: handover
 │   ├── analyze-impact/        # Planning: impact analysis
 │   ├── cross-repo-plan/       # Planning: multi-repo coordination
+│   ├── execute-work-packet/   # Execution: gated packet execution protocol
 │   ├── implement-phase/       # Implementation: execute plan phase
 │   ├── scaffold/              # Implementation: generate boilerplate
 │   ├── refactor/              # Implementation: safe refactoring
@@ -349,8 +362,9 @@ generate-agents-md → generate-docs → retrospective → onboard-developer
 │   └── debug-assist/          # Workflow: structured debugging
 ├── agents/
 │   ├── engineer.md            # Primary agent
-│   └── doc-explorer.md        # Subagent for docs (plan materialization by explicit delegation)
-├── templates/                 # 9 canonical templates
+│   ├── doc-explorer.md        # Subagent for docs (plan materialization by explicit delegation)
+│   └── implementer.md         # Subagent for execution-only work packets
+├── templates/                 # 12 canonical templates
 ```
 
 ## Roadmap
@@ -362,7 +376,7 @@ All phases are **Done**. See [CHANGELOG.md](CHANGELOG.md) for detailed release h
 | 1 | Foundation | Templates, Subagents, Integration, Plugin | Done |
 | 2 | Documentation | `generate-docs`, `update-docs`, `validate-docs`, `generate-agents-md`, `retrospective`, `onboard-developer` | Done |
 | 3 | Planning | `create-plan`, `update-plan`, `resume-plan`, `generate-handover`, `analyze-impact`, `cross-repo-plan` | Done |
-| 4 | Implementation | `implement-phase`, `scaffold`, `refactor`, `fix-ci` | Done |
+| 4 | Implementation & Execution | `execute-work-packet`, `implement-phase`, `scaffold`, `refactor`, `fix-ci` | Done |
 | 5 | Testing | `add-tests`, `test-strategy`, `coverage-check` | Done |
 | 6 | Review & Release | `diff-review`, `pr-ready`, `release-notes` | Done |
 | 7 | Architecture | `adr-create` | Done |
@@ -373,7 +387,3 @@ All phases are **Done**. See [CHANGELOG.md](CHANGELOG.md) for detailed release h
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
-
-## Acknowledgments
-
-This project is a fork of [DasDigitaleMomentum/opencode-processing-skills](https://github.com/DasDigitaleMomentum/opencode-processing-skills), which created the original framework with the core skills, agent definitions, and template system. This fork extends the original with 15 additional skills covering implementation, testing, review, release, architecture, DevOps, and session management — plus a CI pipeline and enterprise-readiness infrastructure.

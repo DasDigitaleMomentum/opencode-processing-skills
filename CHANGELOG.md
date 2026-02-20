@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`retrospective`** skill: reconstructs ADRs, module timelines, and pattern evolution from git history
 - **`analyze-impact`** skill: pre-implementation impact analysis for plan phases (dependencies, breaking changes, test gaps)
 - **`cross-repo-plan`** skill: multi-repository plan coordination with dependency tracking and coordinator-plan template
+- **`execute-work-packet`** skill: gated execution protocol for scoped work packets via preflight + execute digest flow
 - **`validate-docs`** skill: git-based documentation staleness detection (~2-3k tokens vs. 20-50k full scan)
 - **`smart-start`** skill: intelligent session bootstrap with auto-detection of project state
 - **`implement-phase`** skill: execute plan phases step by step with test verification and auto status updates
@@ -31,10 +32,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`debug-assist`** skill: structured debugging with hypothesis logging (Reproduce → Isolate → Fix)
 - **`onboard-developer`** skill: generate developer onboarding guide (setup, workflows, conventions)
 - **Plugin**: `opencode.json` manifest, `Makefile` with developer commands, installer `--uninstall` support
+- **`implementer`** subagent: execution-only worker for approved `execute-work-packet` tasks
 - CI pipeline with template sync check, markdown lint, and ShellCheck
 - `coordinator-plan.md` template for cross-repo plans
+- `execution-digest.md`, `implementer-preflight-prompt.md`, `implementer-execute-prompt.md` canonical templates
 - `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`
-- `LICENSE` (MIT — Martin Klein)
+- `LICENSE` (MIT — DasDigitaleMomentum)
 - `.gitignore`, `.editorconfig`, `.markdownlint-cli2.jsonc`
 - GitHub issue templates (bug report, feature request)
 - GitHub PR template

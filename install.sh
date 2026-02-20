@@ -15,7 +15,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGE_ID="flitzrrr-opencode-processing-skills"
+PACKAGE_ID="dasdigitalemomentum-opencode-processing-skills"
+LEGACY_PACKAGE_IDS=(
+    "flitzrrr-opencode-processing-skills"
+)
 SKILL_MARKER_FILE=".opencode-processing-skills.owner"
 AGENT_MARKER_SUFFIX=".opencode-processing-skills.owner"
 
@@ -44,18 +47,35 @@ agent_marker_path() {
     printf '%s%s' "$agent_path" "$AGENT_MARKER_SUFFIX"
 }
 
+marker_has_managed_id() {
+    local marker="$1"
+    local legacy_id
+
+    if grep -Fxq "$PACKAGE_ID" "$marker"; then
+        return 0
+    fi
+
+    for legacy_id in "${LEGACY_PACKAGE_IDS[@]}"; do
+        if grep -Fxq "$legacy_id" "$marker"; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
 is_managed_skill() {
     local skill_path="$1"
     local marker
     marker="$(skill_marker_path "$skill_path")"
-    [[ -f "$marker" ]] && grep -Fxq "$PACKAGE_ID" "$marker"
+    [[ -f "$marker" ]] && marker_has_managed_id "$marker"
 }
 
 is_managed_agent() {
     local agent_path="$1"
     local marker
     marker="$(agent_marker_path "$agent_path")"
-    [[ -f "$marker" ]] && grep -Fxq "$PACKAGE_ID" "$marker"
+    [[ -f "$marker" ]] && marker_has_managed_id "$marker"
 }
 
 for arg in "$@"; do

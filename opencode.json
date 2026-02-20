@@ -2,10 +2,9 @@
     "name": "opencode-processing-skills",
     "version": "3.0.0",
     "description": "Skills, agents, and templates for structured documentation, planning, implementation, testing, and release workflows with AI coding agents.",
-    "author": "Martin Klein",
+    "author": "DasDigitaleMomentum",
     "license": "MIT",
-    "repository": "https://github.com/flitzrrr/opencode-processing-skills",
-    "upstream": "https://github.com/DasDigitaleMomentum/opencode-processing-skills",
+    "repository": "https://github.com/DasDigitaleMomentum/opencode-processing-skills",
     "compatibility": {
         "opencode": ">=0.1.0"
     },
@@ -87,6 +86,12 @@
             "path": "skills/cross-repo-plan/SKILL.md",
             "category": "planning",
             "description": "Multi-repository plan coordination"
+        },
+        {
+            "name": "execute-work-packet",
+            "path": "skills/execute-work-packet/SKILL.md",
+            "category": "execution",
+            "description": "Gated execution packet protocol via implementer subagent"
         },
         {
             "name": "implement-phase",
@@ -190,7 +195,13 @@
             "name": "doc-explorer",
             "path": "agents/doc-explorer.md",
             "mode": "subagent",
-            "description": "Writes/updates docs/ and plans/"
+            "description": "Writes/updates docs/ and may materialize plans/ on explicit delegation"
+        },
+        {
+            "name": "implementer",
+            "path": "agents/implementer.md",
+            "mode": "subagent",
+            "description": "Execution-only subagent for approved work packets"
         }
     ],
     "templates": [
@@ -202,6 +213,9 @@
         "templates/implementation-plan.md",
         "templates/todo.md",
         "templates/session-handover.md",
-        "templates/coordinator-plan.md"
+        "templates/coordinator-plan.md",
+        "templates/execution-digest.md",
+        "templates/implementer-preflight-prompt.md",
+        "templates/implementer-execute-prompt.md"
     ]
 }
