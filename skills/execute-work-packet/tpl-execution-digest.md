@@ -7,18 +7,18 @@ created: "{{date}}"
 
 # Execution Digest (Reference Format)
 
-### Outcome
+## Outcome
 - state: succeeded|failed
 
-### Edits
+## Edits
 - files_changed:
   - path/to/file.ext — one-line summary
 
-### Verify
+## Verify
 - cmd: `...`
 - exit: 0|1|...
 - excerpt (only if failed): |
     <few relevant lines>
 
-### Next
+## Next
 - 1–3 bullets

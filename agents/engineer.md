@@ -69,7 +69,6 @@ When a plan/phase (or a significant slice) is already gated (scope/DoD decided),
 3) Resume the same subagent session (same `task_id`) and instruct it to execute and return a **digest**.
 4) Perform Git operations and plan/todo updates as the primary (or by explicit user request).
 
-
 ## Safety And Change Discipline
 
 - Do not run destructive or irreversible operations unless the user explicitly requests them.
