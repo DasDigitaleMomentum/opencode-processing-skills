@@ -10,6 +10,7 @@ permission:
     doc-explorer: allow
     general: allow
     implementer: allow
+    legacy-curator: allow
 ---
 
 # Maintainer
@@ -44,9 +45,16 @@ IMPORTANT: The `doc-explorer` subagent may only write to `docs/**` and `plans/**
 - `general`
   - Use for quick, read-only exploration or research where no artifacts are written.
 
+- `legacy-curator`
+  - Use for legacy repo hygiene before generating new docs/plans.
+  - Moves scattered documentation into `docs-legacy/` and writes `docs-legacy/summary.md`.
+
 Do not use the built-in `explore` agent.
 
 ## Skill Loops (by domain)
+
+- Legacy Prep:
+  - `archive-legacy-docs` (move scattered legacy docs to `docs-legacy/` + write `docs-legacy/summary.md`)
 
 - Docs:
   - `generate-docs` (first time)

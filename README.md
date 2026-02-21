@@ -156,6 +156,7 @@ In your project, open OpenCode and:
 | `resume-plan` | Bootstraps a new session to continue working on an existing plan |
 | `generate-handover` | Creates session handover documents for continuity |
 | `execute-work-packet` | Executes a gated implementation unit via step list -> gate -> digest (no new artifacts) |
+| `archive-legacy-docs` | Archives scattered legacy docs into docs-legacy/ and writes docs-legacy/summary.md |
 
 ## Available Agents (Subagents)
 
@@ -164,6 +165,7 @@ In your project, open OpenCode and:
 | `maintainer` | primary | Primary planning+implementation; delegates to `doc-explorer`, `implementer`, and `general` (blocks built-in `explore`) |
 | `doc-explorer` | subagent | Writes/updates `docs/` and `plans/`; self-delegates per module for large codebases |
 | `implementer` | subagent | Execution-only: step list -> gate -> execute -> digest; no Git operations |
+| `legacy-curator` | subagent | Legacy hygiene: git-aware moves to docs-legacy/ + summary.md; no commits |
 
 ## Project Structure
 
@@ -185,6 +187,7 @@ In your project, open OpenCode and:
 │   ├── maintainer.md      # Primary agent for docs/plans maintenance
 │   ├── doc-explorer.md    # Writes docs/plans, self-delegates per module
 │   └── implementer.md     # Execution-only subagent (no Git)
+│   └── legacy-curator.md  # Legacy docs archive + summary (no commits)
 └── docs/                  # Documentation for this project
 ```
 
