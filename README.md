@@ -11,12 +11,12 @@ That's what this repo does. It's a set of skills and agents that give OpenCode a
 A few principles that came out of this:
 
 - **Subagents where they help, not everywhere.** Heavy codebase exploration? Subagent. Writing docs? Subagent. But planning stays with the primary – because delegating a plan to a subagent means serializing the entire conversation context into a prompt, and at that point you're writing just as much as if you did it yourself. No information saved, just indirection added.
-- **Gated execution.** The primary controls implementation through a blueprint → approve → execute → digest loop. The primary reviews the blueprint to verify the subagent understood the task, then releases the same session to execute. Same session means no context loss. The user doesn't see the gating – it's the primary keeping focus.
+- **Gated execution.** The primary sends a prompt with a plan reference, the subagent explores the plan and source code, then proposes a blueprint. The primary reviews and refines that blueprint before releasing the same session to execute. Same session means no context loss. The user doesn't see the gating – it's the primary keeping focus.
 - **Everything persists to files.** `docs/` and `plans/` are the interface – no obscure memory plugins, no MCP bloat. The docs and plans are readable by both humans and AI, down to the level of important symbols. New session? Read the files and continue.
 
 ### Dynamic Context Pruning (DCP)
 
-The primary reads a lot of files during exploration – file contents, search results, tool outputs – most of which aren't needed long-term. DCP lets the model actively clean up its own context: distill key findings, prune noise, keep the session usable for much longer than it otherwise would be. Without it, the 128k cap becomes a real bottleneck after a few rounds of exploration.
+This project works well with the [DCP plugin](https://github.com/Opencode-DCP/opencode-dynamic-context-pruning) for OpenCode. The primary reads a lot of files during exploration – file contents, search results, tool outputs – most of which aren't needed long-term. DCP lets the model actively clean up its own context: distill key findings, prune noise, keep the session usable for much longer than it otherwise would be. Without it, the 128k cap becomes a real bottleneck after a few rounds of exploration.
 
 ## What you get
 
@@ -77,7 +77,7 @@ Before execution, grounded implementation plans are authored and verified agains
 
 ### Implementing
 
-The gated protocol: the primary proposes a step list (blueprint) to the subagent, verifies it understood the task, then releases execution. The subagent implements, verifies, and returns a digest. Git operations (commit, PR) stay with you.
+The gated protocol: the primary sends a prompt with a plan reference. The subagent explores the plan and codebase, then proposes a step list (blueprint). The primary reviews it – does the sub actually understand the task? – refines if needed, then releases execution. The subagent implements, verifies, and returns a digest. Git operations (commit, PR) stay with you.
 
 ```
 > Implement the next phase of the auth-refactor plan
@@ -95,7 +95,7 @@ cd opencode-processing-skills
 
 This copies skills to `~/.config/opencode/skills/` and agents to `~/.config/opencode/agents/`.
 
-After installation, select the `@maintainer` agent in OpenCode. It knows when to load which skill and how to delegate to the right subagent.
+**IMPORTANT:** After installation, restart OpenCode and select the `@maintainer` agent. It knows when to load which skill and how to delegate to the right subagent.
 
 ## Skills
 
