@@ -1,119 +1,55 @@
 # OpenCode Processing Skills
 
-A collection of agents and skills (with bundled `tpl-*` templates) for standardizing project documentation, planning, and execution workflows when working with AI coding agents (OpenCode).
+Agents + skills (with bundled `tpl-*` templates) to standardize **documentation**, **planning**, and **implementation** workflows with OpenCode.
 
-## Purpose
+## What you get
 
-This project addresses key challenges when working with AI agents in software development:
+- Repeatable, file-based workflows (`docs/`, `plans/`) that survive context limits.
+- Gated implementation protocol (blueprint → execute → digest) without Git in subagents.
+- Legacy repo prep: archive scattered docs into `docs-legacy/` before generating new docs/plans.
 
-1. **Standardized Documentation** - Consistent project and module documentation that can be generated and updated
-2. **Structured Planning** - Plans with phases, implementation details, and persistent todo tracking across sessions
-3. **Session Continuity** - Seamless handover between sessions despite limited context windows
-4. **Quality Onboarding** - Fast, consistent onboarding of new agent sessions with the right context
+## Workflows (recommended)
 
-## Core Concepts
+### 0) Legacy repo prep (optional but recommended)
 
-### Entity Model
+If the repo has scattered / historical documentation:
 
-Three domains describe all relevant artifacts:
+1. Load `archive-legacy-docs`
+2. Delegate to `legacy-curator`
+   - moves legacy docs to `docs-legacy/` (git-aware)
+   - writes `docs-legacy/summary.md`
 
-**Workspace Entities** (what exists)
+### 1) Generate documentation
 
-| Entity | Description |
-|--------|-------------|
-| **Project** | The entire workspace, e.g. a repository |
-| **Module** | Self-contained part of a project (service, container, frontend, etc.) |
-| **File/Directory** | Filesystem manifestation |
-| **Symbol** | Referenceable language element with semantic meaning |
+1. Load `generate-docs` → creates/updates `docs/` inventories (`overview`, `modules`, `features`).
+2. After code changes: load `update-docs`.
 
-**Planning Entities** (what needs to be done)
+### 2) Create plans
 
-| Entity | Description |
-|--------|-------------|
-| **Plan** | Concrete implementation plan for one or more features, including DoD, tests, requirements |
-| **Phase** | Subdivision of a plan when it exceeds a single session's capacity (scope definition: what and why) |
-| **Implementation Plan** | Per-phase technical approach, above source-code level (how) |
-| **Persistent Todo List** | Checkable items with status and changelog |
-| **Session Handover** | Context transfer document for seamless session continuation (created on demand) |
+1. Load `create-plan` → creates `plans/<plan>/plan.md`, `phases/*`, `todo.md`.
+2. Start a new session: load `resume-plan`.
+3. During execution: load `update-plan` to keep phase/todo state in sync.
+4. When needed: load `generate-handover`.
 
-**Documentation Entities** (how it works)
+### 3) Author + verify implementation plans (2-pass default)
 
-| Entity | Description |
-|--------|-------------|
-| **Project Overview** | High-level architecture, modules, references to detail docs |
-| **Module Documentation** | Overview + exhaustive inventories (files/dirs + symbols) |
-| **Feature Documentation** | How features work, with references to implementation |
+Before executing a phase:
 
-### Target Project File Convention
+1. Load `author-and-verify-implementation-plan`
+2. Delegate to `doc-explorer` → writes `plans/<plan>/implementation/phase-N-impl.md` grounded against current code.
 
-When applied to a target project, artifacts are stored visibly in the project root:
+### 4) Implement (gated execution)
 
-```
-project-root/
-├── AGENTS.md
-├── docs/
-│   ├── overview.md
-│   ├── modules/
-│   │   └── <module-name>.md
-│   ├── features/
-│   │   └── <feature-name>.md
-│   └── handovers/
-│       └── session-YYYY-MM-DD.md
-├── plans/
-│   └── <plan-name>/
-│       ├── plan.md
-│       ├── phases/
-│       │   ├── phase-1.md
-│       │   └── phase-2.md
-│       ├── implementation/
-│       │   ├── phase-1-impl.md
-│       │   └── phase-2-impl.md
-│       ├── todo.md
-│       └── handovers/
-│           └── session-YYYY-MM-DD.md
-```
+1. Load `execute-work-packet`
+2. Delegate to `implementer`:
+   - **MODE: BLUEPRINT** → Execution Blueprint (step list)
+3. Primary gates internally (e.g. `APPROVE-WP1`).
+4. Resume same `task_id`:
+   - **MODE: EXECUTE** → applies changes + runs verify command → returns digest
 
-## Architecture
+The primary owns Git operations (commit/PR) and asks the user only for real product/scope decisions.
 
-### Integration Model
-
-```
-User Request
-  -> Primary Agent (provider prompt)
-      -> Subagent: Doc-Explorer (writes docs/ + plans/)
-         -> Self-delegates per module for large codebases
-      -> Subagent: general (read-only research/exploration when needed)
-      -> question Tool for follow-ups
-```
-
-The primary agent is extended through skills from this project. Doc-explorer handles exploration, analysis, and artifact writing. For large codebases, doc-explorer self-delegates by spawning additional doc-explorer instances scoped to individual modules. All communication with the user goes through the `question` tool to avoid unnecessary premium requests.
-
-### Design Principles
-
-- **Stack-agnostic** - No assumptions about language or framework
-- **Documentation as interface** - Docs and plans are the persistent interface between sessions
-- **Redundancy-free** - Templates reference each other instead of duplicating content
-- **Session-resilient** - Everything persisted, handover on demand
-- **Context-aware** - Documents structured for partial loading (not everything at once)
-- **File-based interface** - Subagents write to the defined file structure, skills define what and how
-- **Write-path AND read-path** - Skills cover both creating/updating artifacts and bootstrapping context from them
-
-### Design Decisions
-
-See [AGENTS.md](AGENTS.md#design-decisions) for detailed rationale behind key architectural decisions, including:
-
-- Why Phase (What/Why) is separate from Implementation Plan (How)
-- Why the primary agent authors plans, not doc-explorer
-- Why one subagent (doc-explorer) instead of separate analysis and writing agents
-- Why doc-explorer self-delegates instead of the primary spawning per-module instances
-- Why templates are bundled in each skill directory
-- Why the question tool is used for all user interaction
-- Why there is no "implementation" skill
- - How execution is handled via a gated work-packet protocol
-
-## Installation
-
-### Quick Install (Global)
+## Installation (global)
 
 ```bash
 git clone git@github.com:DasDigitaleMomentum/opencode-processing-skills.git
@@ -121,88 +57,38 @@ cd opencode-processing-skills
 ./install.sh
 ```
 
-### What the Installer Does
+Installs:
 
-1. **Skills** (global) - Copies all skills to `~/.config/opencode/skills/`
-2. **Agents** (global) - Copies all agent definitions to `~/.config/opencode/agents/`
+- skills → `~/.config/opencode/skills/`
+- agents → `~/.config/opencode/agents/`
 
-### Manual Setup
-
-If you prefer manual installation:
-
-1. Copy `skills/*/` directories to `~/.config/opencode/skills/`
-2. Copy `agents/*.md` to `~/.config/opencode/agents/`
-
-### After Installation
-
-In your project, open OpenCode and:
-
-1. Select the `maintainer` agent for documentation/planning work
-2. Load `generate-docs` to create initial documentation
-3. Load `create-plan` / `update-plan` to manage multi-session workplans
-4. Load `resume-plan` at the start of a new session to continue a plan
-5. Load `update-docs` after code changes
-6. Load `generate-handover` when you need a session handover
-
-## Available Skills
+## Skills
 
 | Skill | Description |
 |-------|-------------|
-| `generate-docs` | Generates project, module, and feature documentation from codebase analysis |
-| `update-docs` | Updates existing documentation after code changes |
+| `archive-legacy-docs` | Archives scattered legacy docs into `docs-legacy/` and writes `docs-legacy/summary.md` |
+| `generate-docs` | Generates project/module/feature documentation |
+| `update-docs` | Updates documentation after code changes |
 | `create-plan` | Creates structured plans with phases, todos, and DoD |
+| `author-and-verify-implementation-plan` | Authors/refines phase implementation plans by cross-checking against current code |
+| `resume-plan` | Bootstraps a new session to continue an existing plan |
 | `update-plan` | Updates plan status, todos, and handles phase transitions |
-| `author-and-verify-implementation-plan` | Authors/refines phase implementation plans by cross-checking them against current code reality |
-| `resume-plan` | Bootstraps a new session to continue working on an existing plan |
-| `generate-handover` | Creates session handover documents for continuity |
-| `execute-work-packet` | Executes a gated implementation unit via step list -> gate -> digest (no new artifacts) |
-| `archive-legacy-docs` | Archives scattered legacy docs into docs-legacy/ and writes docs-legacy/summary.md |
+| `generate-handover` | Creates session handover documents |
+| `execute-work-packet` | Executes a gated implementation unit via blueprint → execute → digest |
 
-## Available Agents (Subagents)
+## Agents
 
 | Agent | Mode | Description |
 |-------|------|-------------|
-| `maintainer` | primary | Primary planning+implementation; delegates to `doc-explorer`, `implementer`, and `general` (blocks built-in `explore`) |
-| `doc-explorer` | subagent | Writes/updates `docs/` and `plans/`; self-delegates per module for large codebases |
-| `implementer` | subagent | Execution-only: step list -> gate -> execute -> digest; no Git operations |
-| `legacy-curator` | subagent | Legacy hygiene: git-aware moves to docs-legacy/ + summary.md; no commits |
+| `maintainer` | primary | Primary planning+implementation; delegates to subagents |
+| `doc-explorer` | subagent | Writes/updates `docs/` and `plans/` |
+| `implementer` | subagent | Execution-only (no Git), returns digests |
+| `legacy-curator` | subagent | Legacy hygiene: git-aware moves to `docs-legacy/` + summary; no commits |
 
-## Project Structure
+## Details
 
-```
-.
-├── AGENTS.md              # OpenCode agent instructions for this project
-├── README.md              # This file
-├── install.sh             # Global installer script
-├── skills/                # Skill definitions (SKILL.md + templates)
-│   ├── generate-docs/     # Generate project documentation
-│   ├── update-docs/       # Update existing documentation
-│   ├── create-plan/       # Create structured plans
-│   ├── update-plan/       # Update plan status and todos
-│   ├── author-and-verify-implementation-plan/ # 2nd pass: ground impl-plans against code
-│   ├── resume-plan/       # Bootstrap session for plan continuation
-│   ├── generate-handover/ # Generate session handover documents
-│   └── execute-work-packet/ # Gated execution (steps -> gate -> digest)
-├── agents/                # Agent definitions (primary + subagents)
-│   ├── maintainer.md      # Primary agent for docs/plans maintenance
-│   ├── doc-explorer.md    # Writes docs/plans, self-delegates per module
-│   └── implementer.md     # Execution-only subagent (no Git)
-│   └── legacy-curator.md  # Legacy docs archive + summary (no commits)
-└── docs/                  # Documentation for this project
-```
-
-## Roadmap
-
-| Phase | What | Status |
-|-------|------|--------|
-| 1 | **Templates** for all entities | Done |
-| 2 | **Skills** (Generate Docs, Update Docs, Create Plan, Update Plan, Resume Plan, Generate Handover) | Done |
-| 3 | **Subagents** (Doc-Explorer) | Done |
-| 4 | **Integration** (global installer + agents) | Done |
-| 5 | **Plugin** (optional convenience extension for the primary agent) | Planned |
-| 6 | **Retrospective** (Git/log analysis for documentation reconstruction) | Planned |
-| 7 | **Execution Layer** (work-packet protocol + implementer subagent) | Done |
+See [AGENTS.md](AGENTS.md) for rationale and deeper design notes.
 
 ## License
 
-MIT
+MIT (see [LICENSE](LICENSE)).
