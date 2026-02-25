@@ -2,6 +2,15 @@
 
 Agents + skills (with bundled `tpl-*` templates) to standardize **documentation**, **planning**, and **implementation** workflows with OpenCode.
 
+## Why this exists (context-efficient execution)
+
+Most models feel “big context” on paper (often ~128k), but real projects fill that budget quickly. This repo leans on a simple pattern to keep the primary agent focused and cheap:
+
+- Delegate heavy work to subagents and **reuse the same subagent session** via `task_id`.
+- Gate execution with **BLUEPRINT → (Primary gate) → EXECUTE → DIGEST** to prevent focus drift.
+
+This works especially well with **DCP (Dynamic Context Pruning)** and environments like **GitHub Copilot**, where context and/or request budgets are practical constraints.
+
 ## What you get
 
 - Repeatable, file-based workflows (`docs/`, `plans/`) that survive context limits.
