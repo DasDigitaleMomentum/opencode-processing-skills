@@ -2,6 +2,8 @@
 
 Agents, skills, and templates for **documentation**, **planning**, and **implementation** workflows with [OpenCode](https://github.com/opencode-ai/opencode).
 
+## REMARK: This is NOT build by or affiliated with the OpenCode Team ("anomalyco")
+
 ## Why I built this
 
 I switched to GitHub Copilot as my provider a while back. GHCP caps context at 128k for most models – even those that technically support much more. On the upside, it charges per request, and tool calls plus subagent spawns are included in that request. So the economics are clear: keep your primary session lean, delegate expensive exploration to subagents, and make sure nothing gets lost between sessions.
