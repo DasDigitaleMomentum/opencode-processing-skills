@@ -142,10 +142,14 @@ Subagent responds with a compact digest:
 
 ### 4) Primary post-processing
 
-Primary then:
+Read the digest carefully. The subagent's verification result determines next steps:
 
-- Runs `git status` / `git diff` as needed
-- Runs any additional verification if desired
+- **Verification passed:** Spot-check with `git diff --stat` to confirm expected changes. Do not re-run the full test suite yourself – the subagent already did.
+- **Verification failed or incomplete:** If additional testing is needed, delegate it to the subagent (resume the same `task_id` with specific test instructions and relevant references). Do not run large test suites in the primary session.
+- **BLOCKED / no verification ran:** Decide whether to provide missing input and re-delegate, or run a targeted check yourself.
+
+Then:
+
 - Updates `plans/<plan>/todo.md` and phase status via `update-plan`
 - Commits / creates PR **only** when explicitly requested by the user
 
@@ -199,6 +203,21 @@ In EXECUTE mode, the subagent must:
 - No raw diffs or long logs in responses.
 - If verify fails: apply **minimal, targeted fixes** (no refactors) and re-run verify. If still failing or a larger change is required, stop and report a digest with a minimal relevant excerpt.
 - If the step list must change during execution: stop and ask Primary for a new gate.
+
+---
+
+## Coding Standards
+
+These apply to all code written during execution – by the implementer subagent or the primary.
+
+1. **No hardcoded defaults.** Use configuration files or environment variables for values that may change across environments.
+2. **Analyze root cause.** Don't patch symptoms. Understand why something is broken before changing code.
+3. **Minimal changes.** Only touch what the work packet requires. Don't refactor adjacent code you weren't asked to change.
+4. **Preserve existing patterns.** Match the conventions already established in the codebase (naming, structure, error handling).
+5. **No silent failures.** Don't swallow errors or add fallbacks that hide problems. If something fails, it should be visible.
+6. **Respect the dependency boundary.** Don't introduce new dependencies without explicit approval from the primary/user.
+
+If `docs/coding-standards.md` exists in the target repo, read and follow it as well – project-specific standards take precedence.
 
 ---
 

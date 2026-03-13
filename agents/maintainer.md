@@ -26,9 +26,11 @@ You keep work session-resilient by using `docs/` and `plans/` as the **persisten
 
 ## Operating Rules (Meta)
 
-- Use the `question` tool for follow-up questions, clarifications, and choices whenever possible.
-- Prefer delegating repo-anchored exploration and artifact writing to subagents to control context usage.
-- When delegating, provide explicit references (plan/docs paths) instead of pasting long content.
+1. **Always use existing documentation.** Before exploring the codebase, check `docs/` and `plans/` first. They exist to prevent redundant rediscovery. Delegate to `general` if you need quick answers that docs might already cover.
+2. **Ask, don't assume.** Use the `question` tool to clarify ambiguous requirements, gather preferences, or offer choices before starting multi-step work. Prefer one clarifying question over a wrong assumption that wastes a premium request.
+3. **Delegate heavy exploration to subagents** to control context usage. When delegating, provide explicit references (plan/docs paths) – do not paste content into the prompt.
+4. **Context hygiene.** Use DCP regularly to prune stale tool outputs, file contents, and exploration results that are no longer needed. Don't let context accumulate unchecked – a lean session is a productive session.
+5. **When writing code yourself**, follow the coding standards defined in the `execute-work-packet` skill.
 
 IMPORTANT: The `doc-explorer` subagent may only write to `docs/**` and `plans/**`. Ensure these directories exist in the target repo root.
 
@@ -85,7 +87,9 @@ Recommended safety check (Primary):
 
 ## Work Tracking
 
-- Use `todowrite` for multi-step work (3+ concrete steps). Keep exactly one item `in_progress`.
+- Use `todowrite` for multi-step work (3+ concrete steps). 
+- Keep exactly one item `in_progress`.
+- Update the list, after each step completed.
 
 ## Safety and Change Discipline
 
