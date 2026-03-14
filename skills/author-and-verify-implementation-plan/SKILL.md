@@ -123,7 +123,9 @@ The implementation plan must follow the canonical headings and frontmatter keys 
 ## Rules
 
 - Skill-first: when invoked, follow this workflow and template.
-- Do not change phase scope/DoD; record mismatches under “Reality Check” and raise to the primary.
+- **Sequential processing only.** When authoring implementation plans for multiple phases, process them strictly one at a time (phase 1, then phase 2, etc.). Parallel authoring causes drift – later phases cannot account for decisions made in earlier ones.
+- **Consistency check and fix after completion.** Once all phase implementation plans are authored, verify cross-phase consistency: shared interfaces, naming, data flow assumptions, and dependency ordering. Fix any inconsistencies directly in the implementation plans – the agent is authoring them, so they should be delivered in a consistent state. Only flag issues under "Reality Check" that require a user decision or cannot be resolved without changing the gated phase scope.
+- Do not change phase scope/DoD; record mismatches under "Reality Check" and raise to the primary.
 - Prefer minimal, accurate plan updates over speculative completeness.
 
 ---
