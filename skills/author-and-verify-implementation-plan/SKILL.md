@@ -111,7 +111,8 @@ The generated/updated `plans/<plan>/implementation/phase-N-impl.md` MUST include
 
 - A **Required Context** section with specific files.
 - **Implementation Steps** that reference concrete targets (files/symbols/components).
-- A **single** verify command in the Testing Plan.
+- A **single** verify command in the Testing Plan that exercises changed behavior.
+- A **Test Integrity Constraints** subsection identifying which existing tests are affected and how.
 - A **Reality Check** section:
   - code anchors (files/symbols) used to ground the plan
   - mismatches or open questions (if discovered)

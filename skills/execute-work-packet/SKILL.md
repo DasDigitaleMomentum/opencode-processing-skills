@@ -199,7 +199,7 @@ In EXECUTE mode, the subagent must:
 
 - Subagent must not run Git operations (commit, rebase, push).
 - Skill-first: when this skill is invoked, follow its MODE + output contracts before doing anything else.
-- Keep verification minimal: **one** explicit verify command unless the work packet DoD requires more.
+- Keep verification minimal: **one** explicit verify command unless the work packet DoD requires more. The verify command must **exercise the changed behavior** (e.g., run relevant tests, hit the affected endpoint, trigger the modified flow) — not just compile, lint, or type-check.
 - No raw diffs or long logs in responses.
 - If verify fails: apply **minimal, targeted fixes** (no refactors) and re-run verify. If still failing or a larger change is required, stop and report a digest with a minimal relevant excerpt.
 - If the step list must change during execution: stop and ask Primary for a new gate.

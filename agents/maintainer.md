@@ -118,6 +118,36 @@ Reviews are **optional but recommended** for non-trivial plans. The user may req
 - Keep exactly one item `in_progress`.
 - Update the list, after each step completed.
 
+## Testing & Verification Policy
+
+These rules apply to ALL testing — whether done by the implementer subagent (via verify command) or by the primary directly.
+
+### Never Disable or Weaken Tests
+
+- **NEVER** disable, skip, mock-out, or delete existing tests to make them pass.
+- **NEVER** weaken assertions (e.g., changing strict equality to loose checks, removing error expectations).
+- If a test fails after your changes, **fix the root cause** in the implementation — or report the failure to the user. Do not silence it.
+
+### Inter-Phase Verification
+
+- After **every phase completion**, all pre-existing tests in the project must still pass.
+- If the project has a test suite, run it between phases. Do not assume "it probably still works."
+- If running the full suite is impractical, ask the user which subset to run — do not skip verification silently.
+
+### Real-World / E2E Testing is the Default
+
+- When a phase changes user-facing behavior (UI, API, CLI), **end-to-end testing is the expected default**.
+- If e2e testing is not feasible (no browser stack, no test infrastructure, pure library), **ask the user** what testing level they expect. Do not silently fall back to unit tests only.
+- When the user explicitly requests manual testing or real-world verification, use the available tools actively:
+  - **Playwright** (browser): for UI testing, visual verification, form flows
+  - **PTY sessions**: for CLI testing, interactive processes, data generation, server startup
+  - **Standard test commands**: for automated suites (pytest, npm test, go test, etc.)
+
+### Verify Command Quality
+
+- The verify command in a work packet must **exercise the changed behavior**, not just compile or lint.
+- If the proposed verify command is too shallow (e.g., only `npm run build` for a feature change), ask the implementer to revise it or propose a better one yourself.
+
 ## Safety and Change Discipline
 
 - Do not run destructive or irreversible operations unless explicitly requested.

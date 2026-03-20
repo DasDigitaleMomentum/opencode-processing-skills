@@ -81,7 +81,7 @@ created: "{{date}}"
 ## Testing Plan Assessment
 
 <!-- CHECK: Is the testing plan adequate for this phase?
-     - Does the verify command actually test the changes?
+     - Does the verify command actually test the changes (exercises changed behavior, not just compile/lint)?
      - Is there exactly ONE primary verify command (as per convention)?
      - Are the test types appropriate (unit vs integration vs e2e)?
      - Do the tests verify BEHAVIOR and CORRECTNESS, not just "no errors"?
@@ -89,6 +89,15 @@ created: "{{date}}"
      - Is there a real-world testing step?
        If not: flag as a limitation. Mock/unit tests alone often miss integration issues.
        If the user explicitly waived: note the waiver. -->
+
+### Test Integrity Check
+
+<!-- REQUIRED: Does the implementation plan address test integrity?
+     - Does it identify which existing tests will be affected?
+     - Does it distinguish between tests that need updating (behavior changed) vs tests that must stay untouched?
+     - Does it explicitly state that no existing tests will be disabled or weakened?
+     - If the plan modifies existing tests: is the modification justified by a genuine requirement change?
+     If any of these are missing or unclear: flag as Major finding. -->
 
 ### Test Gaps
 

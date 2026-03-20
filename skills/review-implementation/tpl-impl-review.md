@@ -125,10 +125,21 @@ created: "{{date}}"
 ## Regression Risk
 
 <!-- CHECK: Could this implementation break existing functionality?
-     - Were existing tests maintained (not deleted or weakened)?
+     - Were existing tests maintained (not deleted, disabled, or weakened)?
+     - Were assertions kept at their original strictness (not loosened to make tests pass)?
      - Do all pre-existing tests still pass?
+     - If any test was modified: was the modification justified by a genuine requirement change (not just to silence a failure)?
      - Are there areas where side effects are likely but untested?
      - Were database/schema changes handled safely? -->
+
+### Test Integrity Check
+
+<!-- REQUIRED: Explicitly confirm or deny each:
+     - [ ] No existing tests were deleted
+     - [ ] No existing tests were disabled (skip, pending, xit, etc.)
+     - [ ] No existing assertions were weakened
+     - [ ] All pre-existing tests still pass
+     If any box is unchecked: flag as Critical finding. -->
 
 ### Findings
 
