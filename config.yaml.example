@@ -1,0 +1,25 @@
+# Model configuration for OpenCode Processing Skills agents
+#
+# Copy this file to config.yaml and set models for your subagents.
+# install.sh reads this file and injects the model into each agent's frontmatter.
+#
+# If an agent is not listed here (or the value is empty), no model is set
+# and OpenCode uses its default model for that agent.
+#
+# Format:
+#   <agent-filename-without-extension>: <provider/model-id>
+
+# --- Subagents ---
+delegate: openai/gpt-5.3-codex
+doc-explorer: openai/gpt-5.3-codex
+implementer: openai/gpt-5.3-codex
+legacy-curator: openai/gpt-5.3-codex
+
+# --- Primary (uncommon, but possible) ---
+# maintainer: openai/o3
+
+# --- Alternative examples ---
+# delegate: github-copilot/gpt-5.4-mini
+# doc-explorer: github-copilot/gpt-5.4-mini
+# implementer: github-copilot/gpt-5.4-mini
+# legacy-curator: github-copilot/gpt-5.4-mini

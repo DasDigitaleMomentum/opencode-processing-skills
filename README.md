@@ -75,7 +75,7 @@ Before execution, grounded implementation plans are authored and verified agains
 > Write the implementation plans and verify them against the codebase
 ```
 
-**Tip:** Consider reviewing your plans and implementation plans in a fresh session – same or different model. A second pair of eyes catches assumptions you've stopped seeing. This works just as well for reviewing the implementation itself.
+**Tip:** Consider reviewing your plans and implementation plans before moving to the next stage. The review skills (`review-plan`, `review-implementation-plan`, `review-implementation`) delegate to a fresh subagent that approaches the artifacts without authoring context — catching gaps you've stopped seeing. Works especially well in a fresh session or with a different model.
 
 ### Implementing
 
@@ -92,10 +92,38 @@ The gated protocol: the primary sends a prompt with a plan reference. The subage
 ```bash
 git clone git@github.com:DasDigitaleMomentum/opencode-processing-skills.git
 cd opencode-processing-skills
+cp config.yaml.example config.yaml   # optional: configure models
 ./install.sh
 ```
 
-This copies skills to `~/.config/opencode/skills/` and agents to `~/.config/opencode/agents/`.
+This copies skills to `~/.config/opencode/skills/` and agents to `~/.config/opencode/agents/`. If a `config.yaml` is present, the installer injects model settings into agent frontmatter during installation.
+
+### Model configuration
+
+By default, subagents use whatever model your OpenCode provider assigns. To run subagents on a specific model, copy `config.yaml.example` to `config.yaml` and set a model per agent:
+
+```yaml
+delegate: openai/gpt-5.3-codex
+doc-explorer: openai/gpt-5.3-codex
+implementer: openai/gpt-5.3-codex
+legacy-curator: openai/gpt-5.3-codex
+```
+
+Leave an agent out (or set it to empty) to keep the provider default. Re-run `./install.sh` after changing the config.
+
+`config.yaml` is gitignored – it's your local choice, not the repo's.
+
+### A note on rate limits and model choice
+
+If you're using GitHub Copilot as your provider, be aware that GHCP enforces rate limits on frontier models — and has been tightening them over time, including for subagent usage. Running Opus (or similar) as both primary and delegation target will likely hit those limits during heavier sessions.
+
+**Recommendations:**
+
+- **Use a capable but non-frontier model for subagents.** Many tasks (exploration, research, doc generation) don't need frontier reasoning. A model like GPT-5.3-Codex or GPT-5.4-Mini handles them well at lower cost and without rate-limit pressure.
+- **Reserve frontier models for the primary agent** (where planning decisions and user interaction happen) or for specific tasks where you explicitly want a second opinion.
+- **The `delegate` vs `general` split exists for this reason.** `delegate` runs on your configured model (cheap, fast, predictable). The built-in `general` uses the provider default — use it when you want the provider's best model for a specific task.
+
+If you have direct API access to a model provider (Azure, OpenAI, etc.), rate limits are typically more generous, and you can configure more powerful models for subagents without concern.
 
 **IMPORTANT:** After installation, restart OpenCode and select the `@maintainer` agent. It knows when to load which skill and how to delegate to the right subagent.
 
@@ -107,6 +135,9 @@ This copies skills to `~/.config/opencode/skills/` and agents to `~/.config/open
 | `update-docs` | Updates existing docs after code changes |
 | `create-plan` | Creates `plans/<name>/` with plan, phases, and todo |
 | `author-and-verify-implementation-plan` | Authors per-phase implementation plans, cross-checked against current code |
+| `review-plan` | Independent review of a plan: scope, DoD, testing strategy, completeness |
+| `review-implementation-plan` | Independent review of an impl plan: actionability, codebase grounding, feasibility |
+| `review-implementation` | Independent review of completed code: acceptance criteria, test quality, real-world testing |
 | `resume-plan` | Bootstraps a new session to continue an existing plan |
 | `update-plan` | Updates plan status, todos, and phase transitions |
 | `generate-handover` | Creates session handover docs for context transfer |
@@ -118,6 +149,7 @@ This copies skills to `~/.config/opencode/skills/` and agents to `~/.config/open
 | Agent | Role | What it does |
 |-------|------|-------------|
 | `maintainer` | primary | Orchestrates everything – planning, delegation, Git operations |
+| `delegate` | subagent | General-purpose exploration and research (configurable model) |
 | `doc-explorer` | subagent | Explores code, writes/updates `docs/` and `plans/` |
 | `implementer` | subagent | Executes code changes (no Git), returns compact digests |
 | `legacy-curator` | subagent | Git-aware moves to `docs-legacy/`, no commits |
@@ -133,6 +165,13 @@ You ──prompt──▸ @maintainer ──delegates──▸ subagents
                docs/ & plans/           code changes
                (persistent)             (maintainer commits
                                          when you ask)
+
+Delegation targets:
+  delegate ......... exploration, research, commands (configured model)
+  doc-explorer ..... docs/ and plans/ artifacts
+  implementer ...... code changes (gated execution)
+  legacy-curator ... docs-legacy/ archive
+  general (built-in) second opinion, user-requested tasks
 ```
 
 The file structure IS the interface. Subagents write to `docs/` and `plans/`, the primary agent reads from them. No magic state, no hidden context – just files.

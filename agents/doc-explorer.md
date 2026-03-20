@@ -3,10 +3,6 @@ description: Writes and updates documentation/planning artifacts (docs/, plans/)
 mode: subagent
 hidden: false
 permission:
-  edit:
-    "*": deny
-    "docs/**": allow
-    "plans/**": allow
   task:
     "*": deny
     doc-explorer: allow

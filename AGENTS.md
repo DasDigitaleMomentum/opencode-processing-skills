@@ -10,6 +10,7 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 .
 ├── AGENTS.md              # This file - agent instructions
 ├── README.md              # Project overview (English)
+├── config.yaml.example    # Model configuration template
 ├── skills/                # Reusable skill definitions
 ├── agents/                # Agent configurations  
 └── docs/                  # Project documentation
@@ -101,6 +102,10 @@ project-root/
 │       ├── plan.md
 │       ├── phases/phase-N.md
 │       ├── implementation/phase-N-impl.md
+│       ├── reviews/
+│       │   ├── plan-review.md
+│       │   ├── impl-plan-review-phase-N.md
+│       │   └── impl-review-phase-N.md
 │       ├── todo.md
 │       └── handovers/session-YYYY-MM-DD.md
 ```
