@@ -50,11 +50,12 @@ Delegation is the default. Only do work yourself when it is trivially small (a s
   - Do NOT use as the default delegation target — use `delegate` instead.
 
 - `doc-explorer`
-  - Use when you need to **write or update** `docs/**` or `plans/**`.
-  - Use for repo-anchored analysis that should be persisted to docs/plans.
+  - Writes `docs/**` and `plans/**`. Use for documentation and planning artifacts.
+  - Does NOT write code files.
 
 - `implementer`
-  - Use for **execution work packets** (code changes + verify commands), following `execute-work-packet`.
+  - Writes **code files only**, following the `execute-work-packet` gated protocol (blueprint → gate → execute → digest).
+  - Does NOT write `docs/**` or `plans/**`. Exception: when a plan update is large enough to require the gated blueprint flow, `implementer` may execute it — but the primary must explicitly gate this.
   - No Git operations; returns compact digests.
 
 - `legacy-curator`
@@ -63,27 +64,30 @@ Delegation is the default. Only do work yourself when it is trivially small (a s
 
 Do not use the built-in `explore` agent.
 
-## Skill Loops (by domain)
+## Plan-to-Implementation Lifecycle
 
-- Legacy Prep:
-  - `archive-legacy-docs` (move scattered legacy docs to `docs-legacy/` + write `docs-legacy/summary.md`)
+This is the standard process. Steps marked [optional] may be skipped, but the order is fixed.
 
-- Docs:
-  - `generate-docs` (first time)
-  - `update-docs` (after code changes)
+```
+1. CREATE PLAN         → Primary        → create-plan
+2. [REVIEW PLAN]       → delegate       → review-plan
+3. IMPL PLAN           → doc-explorer   → author-and-verify-implementation-plan
+4. [REVIEW IMPL PLAN]  → delegate       → review-implementation-plan
+5. EXECUTE             → implementer    → execute-work-packet
+6. [REVIEW IMPL]       → delegate       → review-implementation
+7. UPDATE PLAN         → doc-explorer   → update-plan
+8. [HANDOVER]          → doc-explorer   → generate-handover
+```
 
-- Plans:
-  - `create-plan` → `resume-plan` (new session) → `update-plan` (progress/phase transitions)
-  - `author-and-verify-implementation-plan` (2nd pass before execution: author + ground per-phase impl plans against code reality)
-  - `generate-handover` (end of session / context transfer)
+- **Steps 3–6 repeat per phase** when a plan has multiple phases.
+- Reviews are optional but recommended for non-trivial plans. Review artifacts go to `plans/<name>/reviews/`.
+- Plan updates (step 7) go to `doc-explorer`, NOT `implementer`.
 
-- Reviews (independent quality gates, delegated to `delegate` or `general`):
-  - `review-plan` (after `create-plan`: validate scope, DoD, testing strategy, completeness)
-  - `review-implementation-plan` (after `author-and-verify-implementation-plan`: validate actionability, codebase grounding, feasibility)
-  - `review-implementation` (after `execute-work-packet`: validate acceptance criteria, test quality, real-world testing)
+### Additional skill loops
 
-- Implementation:
-  - `execute-work-packet` (gated execution via `implementer`, returns digests; no Git in subagent)
+- Legacy Prep: `archive-legacy-docs` (via `legacy-curator`)
+- Docs: `generate-docs` (first time) / `update-docs` (after code changes) (via `doc-explorer`)
+- Session continuity: `resume-plan` (start of new session)
 
 ## Execution (Implementation) Summary
 
@@ -99,18 +103,6 @@ If the phase implementation plan is missing or not grounded against current code
 Recommended safety check (Primary):
 - Before execute: `git diff --name-only` should be empty or understood
 - After execute: `git diff --stat` should show expected changes
-
-## Reviews (Quality Gates)
-
-Reviews are independent quality checks delegated to `delegate` (or `general` for a same-model perspective). The reviewer approaches artifacts **without prior context** — fresh eyes catch gaps that authors miss.
-
-**Typical flow with reviews:**
-
-1. `create-plan` → `review-plan` → fix findings → proceed
-2. `author-and-verify-implementation-plan` → `review-implementation-plan` → fix findings → proceed
-3. `execute-work-packet` → `review-implementation` → fix findings → accept/commit
-
-Reviews are **optional but recommended** for non-trivial plans. The user may request or skip them. Review artifacts are written to `plans/<name>/reviews/`.
 
 ## Work Tracking
 
