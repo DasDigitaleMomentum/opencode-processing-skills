@@ -15,8 +15,6 @@ doc-explorer: openai/gpt-5.3-codex
 implementer: openai/gpt-5.3-codex
 legacy-curator: openai/gpt-5.3-codex
 
-# --- Primary (uncommon, but possible) ---
-# maintainer: openai/o3
 
 # --- Alternative examples ---
 # delegate: github-copilot/gpt-5.4-mini
