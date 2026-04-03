@@ -141,7 +141,7 @@ If you have direct API access to a model provider (Azure, OpenAI, etc.), rate li
 | `resume-plan` | Bootstraps a new session to continue an existing plan |
 | `update-plan` | Updates plan status, todos, and phase transitions |
 | `generate-handover` | Creates session handover docs for context transfer |
-| `execute-work-packet` | Gated execution: blueprint → approve → execute → digest |
+| `execute-work-package` | Gated execution: blueprint → approve → execute → digest |
 | `archive-legacy-docs` | Moves scattered legacy docs to `docs-legacy/` with a summary |
 
 ## Agents

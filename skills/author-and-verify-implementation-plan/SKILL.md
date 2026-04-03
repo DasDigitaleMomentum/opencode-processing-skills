@@ -26,7 +26,7 @@ Use this skill when:
 
 - The phase is already gated (scope/DoD decided in `plan.md` + `phases/phase-N.md`).
 - You want the “how” (`implementation/phase-N-impl.md`) to be grounded in current code.
-- You plan to delegate execution later via `execute-work-packet`.
+- You plan to delegate execution later via `execute-work-package`.
 
 Do **not** use this skill to:
 

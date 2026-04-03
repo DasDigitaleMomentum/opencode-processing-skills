@@ -1,7 +1,7 @@
 ---
 type: execution
 entity: subagent-preflight-prompt
-skill: execute-work-packet
+skill: execute-work-package
 created: "{{date}}"
 ---
 
@@ -55,7 +55,7 @@ If `{{verify_command}}` is empty/unknown, propose exactly **one** verify command
 
 Return a Markdown **Execution Blueprint** using the canonical format in:
 
-- `skills/execute-work-packet/tpl-execution-blueprint.md`
+- `skills/execute-work-package/tpl-execution-blueprint.md`
 
 Rules for BLUEPRINT:
 - Do NOT restate phase/impl-plan steps. Concretize using docs inventories (symbols/features/modules) plus a brief code cross-check.

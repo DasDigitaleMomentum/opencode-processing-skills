@@ -50,7 +50,7 @@ created: "{{date}}"
 ## Code Quality Assessment
 
 <!-- CHECK: Does the implementation meet quality standards?
-     Evaluate against the coding standards from execute-work-packet:
+     Evaluate against the coding standards from execute-work-package:
      1. No hardcoded defaults - uses config/env where appropriate?
      2. Root cause addressed - not just symptoms patched?
      3. Minimal changes - only touched what's needed?

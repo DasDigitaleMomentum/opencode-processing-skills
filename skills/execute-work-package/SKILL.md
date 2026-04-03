@@ -1,5 +1,5 @@
 ---
-name: execute-work-packet
+name: execute-work-package
 description: Execute a significant implementation unit (phase or major slice) using a gated subagent loop (blueprint -> gate -> execute -> digest) without creating new persistent artifacts.
 license: MIT
 compatibility:

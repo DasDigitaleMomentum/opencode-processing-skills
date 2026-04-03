@@ -1,7 +1,7 @@
 ---
 type: execution
 entity: subagent-execute-prompt
-skill: execute-work-packet
+skill: execute-work-package
 created: "{{date}}"
 ---
 
@@ -48,6 +48,6 @@ Execution invariants (must):
 
 Return a Markdown **Execution Digest** using the canonical format in:
 
-- `skills/execute-work-packet/tpl-execution-digest.md`
+- `skills/execute-work-package/tpl-execution-digest.md`
 
 Do not restate the template. Just produce the digest.

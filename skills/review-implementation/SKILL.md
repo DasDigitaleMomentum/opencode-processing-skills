@@ -1,6 +1,6 @@
 ---
 name: review-implementation
-description: Independent review of a completed implementation against its plan, acceptance criteria, and code quality standards. Produces a structured review with severity-rated findings. Use after execute-work-packet to validate implementation quality.
+description: Independent review of a completed implementation against its plan, acceptance criteria, and code quality standards. Produces a structured review with severity-rated findings. Use after execute-work-package to validate implementation quality.
 license: MIT
 compatibility:
   opencode: ">=0.1"
@@ -11,7 +11,7 @@ metadata:
 
 # Skill: Review Implementation
 
-This skill provides an **independent quality gate** for completed implementations executed via `execute-work-packet`.
+This skill provides an **independent quality gate** for completed implementations executed via `execute-work-package`.
 
 A fresh reviewer (with no implementation context) evaluates the actual code changes against the plan, acceptance criteria, and coding standards. The review is persisted as a plan artifact.
 
@@ -21,7 +21,7 @@ A fresh reviewer (with no implementation context) evaluates the actual code chan
 
 Use this skill when:
 
-- A phase has been implemented via `execute-work-packet` and you want to validate before committing/merging.
+- A phase has been implemented via `execute-work-package` and you want to validate before committing/merging.
 - You want to verify that acceptance criteria are actually met (not just claimed).
 - You want an independent assessment of test quality and coverage.
 - The user explicitly requests an implementation review.
@@ -30,7 +30,7 @@ Do **not** use this skill to:
 
 - Review the plan itself (use `review-plan`).
 - Review an implementation plan before execution (use `review-implementation-plan`).
-- Fix implementation issues (the reviewer only reports findings; fixes go through `execute-work-packet`).
+- Fix implementation issues (the reviewer only reports findings; fixes go through `execute-work-package`).
 
 ---
 
@@ -70,7 +70,7 @@ Primary gathers:
 - `plans/<name>/plan.md`
 - `plans/<name>/phases/phase-N.md`
 - `plans/<name>/implementation/phase-N-impl.md`
-- Execution digest (from `execute-work-packet` output) or git diff reference
+- Execution digest (from `execute-work-package` output) or git diff reference
 - `docs/` references (if available)
 
 ### 2) Delegate
@@ -93,7 +93,7 @@ Subagent returns:
 
 Primary decides:
 - **Accepted**: Proceed to commit/merge. Update plan via `update-plan`.
-- **Needs Rework**: Delegate fixes via `execute-work-packet` (new work packet for specific fixes).
+- **Needs Rework**: Delegate fixes via `execute-work-package` (new work packet for specific fixes).
 - **Rejected**: Discuss with user. May require replanning via `update-plan`.
 
 ---
@@ -107,7 +107,7 @@ The review artifact `plans/<name>/reviews/impl-review-phase-N.md` MUST:
 - Verify EACH **acceptance criterion** against actual code with evidence.
 - Assess **test quality** beyond pass/fail (meaningful? behavioral? regression-catching?).
 - Address **Real-World Testing** explicitly (performed, not performed, waived).
-- Evaluate **code quality** against the coding standards from `execute-work-packet`.
+- Evaluate **code quality** against the coding standards from `execute-work-package`.
 - Rate every finding with a **severity** (Critical / Major / Minor / Note).
 
 ---
