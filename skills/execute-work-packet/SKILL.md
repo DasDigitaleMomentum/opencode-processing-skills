@@ -1,6 +1,6 @@
 ---
 name: execute-work-packet
-description: Execute a significant implementation unit (phase or major slice) using a gated, stateful subagent loop (steps -> gate -> execute -> digest) without creating new persistent artifacts.
+description: Execute a significant implementation unit (phase or major slice) using a gated subagent loop (blueprint -> gate -> execute -> digest) without creating new persistent artifacts.
 license: MIT
 compatibility:
   opencode: ">=0.1"
@@ -17,7 +17,7 @@ It is a small, repeatable protocol:
 
 1) **BLUEPRINT**: Subagent returns an **Execution Blueprint** (step list)
 2) **GATE**: Primary approves (primary-internal)
-3) **EXECUTE**: Subagent implements and verifies (same `task_id`)
+3) **EXECUTE**: Fresh subagent implements and verifies
 4) **DIGEST**: Subagent returns a compact digest (no raw logs/diffs)
 
 This skill deliberately **does not** create new persistent artifacts in `docs/` or `plans/`.
@@ -70,12 +70,14 @@ Do **not** use this skill to:
 - `plans/` provides the gated intent/DoD and references for what to implement.
 - `docs/` (if present) provides curated inventories (modules/features/symbols) so the subagent does not rediscover everything.
 
-### Statefulness
+### Agent Lifecycle
 
-The protocol relies on continuing the subagent in the **same** session via **the same `task_id`**:
+The BLUEPRINT and EXECUTE steps use **separate** Agent invocations (not SendMessage to resume):
 
-- First `Task`: request “Step List only”
-- Second `Task` (resume with `task_id`): request “Execute approved steps and return digest”
+- **BLUEPRINT Agent**: spawned with `mode: auto`, returns the step list, then terminates.
+- **EXECUTE Agent**: spawned as a **new** Agent with the approved step list baked into the prompt. This avoids unreliable SendMessage-based resumption of idle agents.
+
+The EXECUTE prompt must include the full approved step list and all references — the agent has no memory of the BLUEPRINT agent's context.
 
 ---
 
@@ -119,13 +121,13 @@ Primary provides an explicit approval token before execution (primary-internal g
 
 If the user requests changes, the step list must be revised and re-approved with a new approval token.
 
-### 2) Execute (same `task_id`)
+### 2) Execute (new Agent)
 
-Primary resumes the same subagent `task_id` and instructs it to execute the **approved** steps (see `tpl-implementer-execute-prompt.md`).
+Primary spawns a **new** `implementer` Agent with a prompt based on `tpl-implementer-execute-prompt.md`. The prompt includes the full approved step list, all references, and the verify command. Do NOT use SendMessage to resume the BLUEPRINT agent — spawn a fresh Agent instead.
 
 #### Invariant: MODE lock
 
-The execute resume prompt MUST start with a clear mode indicator:
+The execute prompt MUST start with a clear mode indicator:
 
 - `MODE: EXECUTE`
 
@@ -145,7 +147,7 @@ Subagent responds with a compact digest:
 Read the digest carefully. The subagent's verification result determines next steps:
 
 - **Verification passed:** Spot-check with `git diff --stat` to confirm expected changes. Do not re-run the full test suite yourself – the subagent already did.
-- **Verification failed or incomplete:** If additional testing is needed, delegate it to the subagent (resume the same `task_id` with specific test instructions and relevant references). Do not run large test suites in the primary session.
+- **Verification failed or incomplete:** If additional testing is needed, spawn a new subagent with specific test instructions and relevant references. Do not run large test suites in the primary session.
 - **BLOCKED / no verification ran:** Decide whether to provide missing input and re-delegate, or run a targeted check yourself.
 
 Then:
