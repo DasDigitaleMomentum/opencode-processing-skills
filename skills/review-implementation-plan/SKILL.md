@@ -22,7 +22,7 @@ A fresh reviewer (with no authoring context) evaluates the implementation plan a
 Use this skill when:
 
 - An implementation plan has been authored/verified and you want to validate it before execution.
-- You want to confirm that the implementation plan is concrete enough for `execute-work-packet`.
+- You want to confirm that the implementation plan is concrete enough for `execute-work-package`.
 - The user explicitly requests an implementation plan review.
 
 Do **not** use this skill to:
@@ -89,7 +89,7 @@ Subagent returns:
 ### 4) Act on findings
 
 Primary decides:
-- **Ready**: Proceed to `execute-work-packet`.
+- **Ready**: Proceed to `execute-work-package`.
 - **Needs Revision**: Re-run `author-and-verify-implementation-plan` with specific corrections.
 - **Major Gaps**: Discuss with user; potentially revise phase scope via `update-plan`.
 

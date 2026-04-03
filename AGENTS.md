@@ -80,7 +80,7 @@ The framework deliberately stops at the boundary between planning and coding. Im
 
 Instead of a generic "implementation" skill that tries to plan-and-code, this framework uses:
 
-- A dedicated **execution protocol** (`execute-work-packet`) that is explicitly **gated** (step list -> primary approval -> execute -> digest)
+- A dedicated **execution protocol** (`execute-work-package`) that is explicitly **gated** (step list -> primary approval -> execute -> digest)
 - A dedicated execution-only **subagent** (`implementer`) that reduces primary context bloat by returning compact digests
 
 This keeps planning and execution responsibilities separated while still standardizing implementation as a repeatable workflow.

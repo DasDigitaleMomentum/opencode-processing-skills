@@ -1,5 +1,5 @@
 ---
-name: execute-work-packet
+name: execute-work-package
 description: Execute a significant implementation unit (phase or major slice) using a gated, stateful subagent loop (steps -> gate -> execute -> digest) without creating new persistent artifacts.
 license: MIT
 compatibility:
@@ -9,7 +9,7 @@ metadata:
   phase: implementation
 ---
 
-# Skill: Execute Work Packet
+# Skill: Execute Work Package
 
 This skill standardizes **execution/implementation** once planning is gated.
 
@@ -47,7 +47,7 @@ Do **not** use this skill to:
 
 - **Primary (maintainer)**
   - Owns scope/DoD/risk decisions and gating.
-  - Chooses the work packet (phase or significant phase slice).
+  - Chooses the work package (phase or significant phase slice).
   - Owns Git operations (stage/commit/PR) unless explicitly delegated.
   - Updates plan/todo via `update-plan` as needed.
 
@@ -81,11 +81,11 @@ The protocol relies on continuing the subagent in the **same** session via **the
 
 ## Protocol
 
-### 0) Primary inputs (for any work packet)
+### 0) Primary inputs (for any work package)
 
 Before delegating:
 
-- Ensure the work packet is already gated (scope/DoD decided).
+- Ensure the work package is already gated (scope/DoD decided).
 - Provide an explicit **task statement** plus **references** to the relevant planning artifacts.
   The subagent should read these references itself (the primary does not need to paste content).
   Recommended references:
@@ -199,7 +199,7 @@ In EXECUTE mode, the subagent must:
 
 - Subagent must not run Git operations (commit, rebase, push).
 - Skill-first: when this skill is invoked, follow its MODE + output contracts before doing anything else.
-- Keep verification minimal: **one** explicit verify command unless the work packet DoD requires more. The verify command must **exercise the changed behavior** (e.g., run relevant tests, hit the affected endpoint, trigger the modified flow) — not just compile, lint, or type-check.
+- Keep verification minimal: **one** explicit verify command unless the work package DoD requires more. The verify command must **exercise the changed behavior** (e.g., run relevant tests, hit the affected endpoint, trigger the modified flow) — not just compile, lint, or type-check.
 - No raw diffs or long logs in responses.
 - If verify fails: apply **minimal, targeted fixes** (no refactors) and re-run verify. If still failing or a larger change is required, stop and report a digest with a minimal relevant excerpt.
 - If the step list must change during execution: stop and ask Primary for a new gate.
@@ -212,7 +212,7 @@ These apply to all code written during execution – by the implementer subagent
 
 1. **No hardcoded defaults.** Use configuration files or environment variables for values that may change across environments.
 2. **Analyze root cause.** Don't patch symptoms. Understand why something is broken before changing code.
-3. **Minimal changes.** Only touch what the work packet requires. Don't refactor adjacent code you weren't asked to change.
+3. **Minimal changes.** Only touch what the work package requires. Don't refactor adjacent code you weren't asked to change.
 4. **Preserve existing patterns.** Match the conventions already established in the codebase (naming, structure, error handling).
 5. **No silent failures.** Don't swallow errors or add fallbacks that hide problems. If something fails, it should be visible.
 6. **Respect the dependency boundary.** Don't introduce new dependencies without explicit approval from the primary/user.

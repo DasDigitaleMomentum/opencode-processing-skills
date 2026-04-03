@@ -8,6 +8,7 @@
 #   1. Copies skills to ~/.config/opencode/skills/ (global)
 #   2. Copies agent definitions to ~/.config/opencode/agents/ (global)
 #   3. If config.yaml exists, injects model settings into agent frontmatter
+#   4. Creates additional delegate variants from additional_delegates config
 
 set -euo pipefail
 
@@ -28,7 +29,8 @@ get_model_for_agent() {
         return
     fi
     # Parse simple "key: value" YAML (no nesting, no quotes needed)
-    # Skips comments and empty lines, matches exact agent name
+    # Skips comments and empty lines, matches exact agent name at root level
+    # (not indented, so not under additional_delegates)
     local model
     model=$(grep -E "^${agent_name}:" "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/^[^:]*:[[:space:]]*//' | sed 's/[[:space:]]*$//')
     echo "$model"
@@ -54,6 +56,60 @@ inject_model() {
         # Remove model line if present (no config = use default)
         sed -i '/^model:/d' "$file"
     fi
+}
+
+# --- Helper: parse additional_delegates from config.yaml ---
+# Returns lines of "suffix model" pairs
+get_additional_delegates() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        return
+    fi
+    # Find the additional_delegates section and extract indented entries
+    # Each entry is "  suffix: model" under the additional_delegates: key
+    awk '
+        /^additional_delegates:/ { in_section=1; next }
+        /^[a-zA-Z]/ && in_section { exit }  # Exit on next root-level key
+        in_section && /^[[:space:]]+[a-zA-Z]/ {
+            # Remove leading whitespace
+            gsub(/^[[:space:]]+/, "")
+            # Skip commented lines
+            if (substr($0, 1, 1) == "#") next
+            # Split on first colon
+            colon = index($0, ":")
+            if (colon > 0) {
+                suffix = substr($0, 1, colon - 1)
+                model = substr($0, colon + 1)
+                # Trim whitespace from model
+                gsub(/^[[:space:]]+/, "", model)
+                gsub(/[[:space:]]+$/, "", model)
+                if (suffix != "" && model != "") {
+                    print suffix, model
+                }
+            }
+        }
+    ' "$CONFIG_FILE"
+}
+
+# --- Helper: create a delegate variant from the delegate template ---
+create_delegate_variant() {
+    local suffix="$1"
+    local model="$2"
+    local template="$SCRIPT_DIR/agents/delegate.md"
+    local dest="$AGENTS_DEST/delegate-${suffix}.md"
+
+    # Copy template
+    cp "$template" "$dest"
+
+    # Update description to indicate this is a variant
+    sed -i "s|^description:.*|description: Delegate variant '${suffix}' with model ${model}. Use for specific delegation needs.|" "$dest"
+
+    # Update the heading (match "# Delegate" at start of line, with optional trailing content)
+    sed -i 's|^# Delegate\b.*|# Delegate ('"${suffix}"')|' "$dest"
+
+    # Inject the model
+    inject_model "$dest" "$model"
+
+    echo "  Generated: delegate-${suffix}.md -> model: $model"
 }
 
 # --- Step 1: Install Skills (global) ---
@@ -105,6 +161,20 @@ for agent_file in "$SCRIPT_DIR/agents"/*.md; do
 done
 
 echo ""
+
+# --- Step 3: Create additional delegate variants ---
+if [ -f "$CONFIG_FILE" ]; then
+    additional=$(get_additional_delegates)
+    if [ -n "$additional" ]; then
+        echo "Step 3: Creating additional delegate variants"
+        while read -r suffix model; do
+            if [ -n "$suffix" ] && [ -n "$model" ]; then
+                create_delegate_variant "$suffix" "$model"
+            fi
+        done <<< "$additional"
+        echo ""
+    fi
+fi
 
 # --- Summary ---
 if [ -f "$CONFIG_FILE" ]; then

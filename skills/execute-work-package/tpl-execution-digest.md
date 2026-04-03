@@ -1,7 +1,7 @@
 ---
 type: execution
 entity: digest
-skill: execute-work-packet
+skill: execute-work-package
 created: "{{date}}"
 ---
 

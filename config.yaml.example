@@ -16,6 +16,34 @@ implementer: openai/gpt-5.3-codex
 legacy-curator: openai/gpt-5.3-codex
 
 
+# --- Additional Delegates ---
+# You can create additional delegate variants with different models.
+# Each entry under additional_delegates creates a new agent (delegate-<name>)
+# based on the delegate template but with a different model.
+#
+# Use cases:
+#   - delegate-review: frontier model for thorough code reviews
+#   - delegate-fast: lightweight model for quick lookups and simple tasks
+#   - delegate-codex: code-specialized model for implementation analysis
+#   - delegate-gpt: GPT variant for different reasoning style
+#
+# The primary agent can then use specific delegates for specific tasks:
+#   e.g., "use delegate-review for this review" or "delegate to delegate-fast"
+#
+# Format:
+#   additional_delegates:
+#     <suffix>: <provider/model-id>
+#
+# This creates agents named delegate-<suffix> (e.g., delegate-review, delegate-fast)
+
+# additional_delegates:
+#   codex: azure/gpt-5.3-codex         # Code-specialized, good for impl analysis
+#   fast: github-copilot/gpt-5.4-mini  # Lightweight, good for quick lookups
+#   gpt: azure/gpt-5.4                 # General GPT, different reasoning style
+#   opus: anthropic/claude-opus-4.6    # Frontier, good for thorough reviews
+#   qwen: alibaba/qwen3.6-plus         # Alternative perspective
+
+
 # --- Alternative examples ---
 # delegate: github-copilot/gpt-5.4-mini
 # doc-explorer: github-copilot/gpt-5.4-mini

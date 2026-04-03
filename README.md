@@ -113,6 +113,18 @@ Leave an agent out (or set it to empty) to keep the provider default. Re-run `./
 
 `config.yaml` is gitignored – it's your local choice, not the repo's.
 
+### Additional delegate variants
+
+You can create delegate variants with different models for specific use cases (e.g., a frontier model for reviews, a fast model for simple lookups):
+
+```yaml
+additional_delegates:
+  review: anthropic/claude-opus-4
+  fast: github-copilot/gpt-5.4-mini
+```
+
+This creates `delegate-review` and `delegate-fast` agents during installation. Tell the maintainer which variant to use: "use delegate-review for this review" or "delegate to delegate-fast for a quick lookup".
+
 ### A note on rate limits and model choice
 
 If you're using GitHub Copilot as your provider, be aware that GHCP enforces rate limits on frontier models — and has been tightening them over time, including for subagent usage. Running Opus (or similar) as both primary and delegation target will likely hit those limits during heavier sessions.
@@ -141,7 +153,7 @@ If you have direct API access to a model provider (Azure, OpenAI, etc.), rate li
 | `resume-plan` | Bootstraps a new session to continue an existing plan |
 | `update-plan` | Updates plan status, todos, and phase transitions |
 | `generate-handover` | Creates session handover docs for context transfer |
-| `execute-work-packet` | Gated execution: blueprint → approve → execute → digest |
+| `execute-work-package` | Gated execution: blueprint → approve → execute → digest |
 | `archive-legacy-docs` | Moves scattered legacy docs to `docs-legacy/` with a summary |
 
 ## Agents

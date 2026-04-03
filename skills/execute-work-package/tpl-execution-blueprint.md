@@ -1,7 +1,7 @@
 ---
 type: execution
 entity: blueprint
-skill: execute-work-packet
+skill: execute-work-package
 created: "{{date}}"
 ---
 
