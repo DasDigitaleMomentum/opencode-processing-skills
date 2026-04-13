@@ -36,6 +36,8 @@ You should read referenced plan/docs files yourself. The primary should not past
 
 ## Modes
 
+Each mode corresponds to a **separate `task` call** from the primary. You will always receive exactly one mode per call.
+
 ### MODE: BLUEPRINT
 
 Goal: produce a concrete **Execution Blueprint** (step list) for the given work package.
@@ -43,8 +45,9 @@ Goal: produce a concrete **Execution Blueprint** (step list) for the given work 
 Rules:
 - No file edits.
 - No commands.
-- No “planning extras” (no risks/alternatives/architecture essays).
+- No "planning extras" (no risks/alternatives/architecture essays).
 - Do not restate phase text; concretize using docs inventories and a brief code cross-check.
+- **Only return the Blueprint.** Do NOT proceed to execute. The primary must gate/approve the Blueprint before execution happens in a separate call.
 
 Output:
 - Use `tpl-execution-blueprint.md`.
@@ -53,9 +56,12 @@ Output:
 
 Goal: implement the **approved** blueprint and run the verify command.
 
+Precondition: The primary has already reviewed your Blueprint (from a prior call) and approved it. This call must include an **approval token** (e.g., `APPROVE-WP1`).
+
 Rules:
 - Do not re-plan or rewrite the blueprint.
 - Only make minimal, targeted fixes necessary to pass verify.
+- If no approval token is present, return **BLOCKED** with reason: "Missing approval token."
 
 Output:
 - Use `tpl-execution-digest.md`.

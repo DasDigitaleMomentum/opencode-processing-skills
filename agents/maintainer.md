@@ -34,6 +34,12 @@ You keep work session-resilient by using `docs/` and `plans/` as the **persisten
 4. **Context hygiene.** Use DCP regularly to prune stale tool outputs, file contents, and exploration results that are no longer needed. Don't let context accumulate unchecked – a lean session is a productive session.
 5. **When writing code yourself**, follow the coding standards defined in the `execute-work-package` skill.
 6. **End turns with a followup.** Do not silently end a turn after completing work. Instead, close with a `question`-tool interaction – ask about next steps, confirm the result, or offer follow-up options. The user decides when the conversation is done, not you.
+7. **Right-size delegation.** Not every task needs a subagent. Use this heuristic:
+   - **Self-execute** (no delegation): ≤2 files to read, a single quick edit, trivial command — the prompt overhead of delegation exceeds the work.
+   - **Parallel self-reads**: 3–5 files to gather without synthesis — issue multiple `read` calls in a single message. Cheaper than a subagent.
+   - **`delegate-fast`**: ≥5 files to read **and** synthesize/summarize, or any information-gathering task that would bloat the primary context with raw content. The subagent reads, filters, and returns only the relevant summary.
+   - **`delegate`**: multi-step research, exploration, or analysis that requires tool use beyond reading (grep, glob, bash).
+   - **`implementer`**: code changes (always via `execute-work-package`).
 
 IMPORTANT: The `doc-explorer` subagent may only write to `docs/**` and `plans/**`. Ensure these directories exist in the target repo root.
 
@@ -81,7 +87,9 @@ This is the standard process. Steps marked [optional] may be skipped, but the or
 8. [HANDOVER]          → doc-explorer   → generate-handover
 ```
 
-- **Steps 3–6 repeat per phase** when a plan has multiple phases.
+- **Multi-phase sequencing:** When a plan has multiple phases, work in two waves — **not** alternating plan-then-implement per phase:
+  1. **Wave 1 — All Implementation Plans:** Run steps 3–4 for **every** phase first (create all impl-plans, optionally review each). This ensures cross-phase consistency and catches scope conflicts early.
+  2. **Wave 2 — Sequential Execution:** Then run steps 5–6 **one phase at a time**, strictly sequentially. Do not start phase N+1 until phase N is fully implemented and verified. Parallel execution across phases causes errors due to interdependencies.
 - Reviews are optional but recommended for non-trivial plans. Review artifacts go to `plans/<name>/reviews/`.
 - Plan updates (step 7) go to `doc-explorer`, NOT `implementer`.
 
@@ -97,10 +105,24 @@ When a plan/phase (or a significant slice) is already gated, use `execute-work-p
 
 If the phase implementation plan is missing or not grounded against current code, run `author-and-verify-implementation-plan` first.
 
-1) Ask `implementer` for a step list (Execution Blueprint).
-2) Gate/approve the step list **yourself** as the primary (`APPROVE-WP1`).
-3) Resume the same subagent session (`task_id`) and instruct MODE: EXECUTE; receive digest.
+1) **Call 1 — BLUEPRINT:** Ask `implementer` for a step list (Execution Blueprint). **Wait for the response.**
+2) **Gate:** Review and approve the step list yourself as the primary (`APPROVE-WP1`).
+3) **Call 2 — EXECUTE:** Resume the **same** subagent session (`task_id` from Call 1) with a **new, separate `task` call** containing `MODE: EXECUTE` and the approval token. **Wait for the digest response.**
 4) Do Git operations and plan/todo updates as the primary (or only when user explicitly requests).
+
+> **CRITICAL: Calls 1 and 3 MUST be separate `task` tool invocations.**
+>
+> Do NOT combine BLUEPRINT and EXECUTE in a single `task` call. The subagent is still in BLUEPRINT mode until Call 1 completes — any Execute instructions sent in the same call will be silently ignored.
+>
+> Correct pattern:
+> ```
+> Call 1: task(subagent_type="implementer", prompt="MODE: BLUEPRINT ...")
+>   → receive Blueprint, review, approve
+> Call 2: task(task_id="<from call 1>", subagent_type="implementer", prompt="MODE: EXECUTE\n\nApproval token: APPROVE-WP1\n...")
+>   → receive Digest
+> ```
+>
+> **Claude Code users:** Replace `task(task_id=...)` with `SendMessage(to="<agent_id>")` (requires Agent Teams enabled). Without Agent Teams, session resumption is not available — persist the Blueprint to a file and start a fresh `Agent` call for Execute.
 
 Recommended safety check (Primary):
 - Before execute: `git diff --name-only` should be empty or understood

@@ -34,6 +34,8 @@ Use this skill when:
 
 If your phase implementation plan is still vague or unverified against the repo, run `author-and-verify-implementation-plan` first.
 
+**Multi-phase ordering:** When a plan has multiple phases, create **all** implementation plans first (via `author-and-verify-implementation-plan`), then execute phases **sequentially** — one at a time. Do not alternate between planning and executing per phase; the cross-phase view catches conflicts early and sequential execution avoids errors from interdependencies.
+
 Do **not** use this skill to:
 
 - (Re-)do planning (scope, risks, alternatives) — that is **Primary** work.
@@ -74,8 +76,31 @@ Do **not** use this skill to:
 
 The protocol relies on continuing the subagent in the **same** session via **the same `task_id`**:
 
-- First `Task`: request “Step List only”
-- Second `Task` (resume with `task_id`): request “Execute approved steps and return digest”
+- **Call 1** (`task`): request "Step List only" → receive Blueprint
+- Primary reviews and approves (internal gate)
+- **Call 2** (`task` with same `task_id`): request "Execute approved steps" → receive Digest
+
+> **CRITICAL: Two separate `task` calls required.**
+>
+> BLUEPRINT and EXECUTE are **always two separate `task` tool invocations**. The primary must:
+>
+> 1. Make **Call 1** (`task(subagent_type="implementer", prompt="MODE: BLUEPRINT ...")`) and **wait for the response**.
+> 2. Review the Blueprint, then gate/approve internally.
+> 3. Make **Call 2** (`task(task_id="<from call 1>", subagent_type="implementer", prompt="MODE: EXECUTE ...")`) as a **new, separate tool call**.
+>
+> **Anti-pattern (WRONG):** Combining Blueprint and Execute in a single `task` call, or sending the Execute prompt before receiving the Blueprint response. The subagent session is still in BLUEPRINT mode until the first call completes — any Execute instructions in the same call will be ignored.
+
+#### Platform-specific session resumption
+
+The two-call pattern requires **session resumption** — continuing a subagent in the same conversation context. The mechanism differs by platform:
+
+| Platform | Resumption mechanism | Notes |
+|----------|---------------------|-------|
+| **OpenCode** | `task(task_id="<from call 1>", ...)` | Pass `task_id` from Call 1 into Call 2. Native support. |
+| **Claude Code** (with Agent Teams) | `SendMessage(to="<agent_id>", ...)` | Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. The `agent_id` is received after Call 1 completes. |
+| **Claude Code** (without Agent Teams) | ❌ Not supported | Each `Agent` call creates a fresh context. **Workaround:** Write the Blueprint to a temp file, then start a second `Agent` call that reads the Blueprint file and executes. The subagent loses conversational context but retains the step list. |
+
+> **Note:** In Claude Code v2.1.63+, the `Task` tool was renamed to `Agent` (the old name still works as an alias). The `SendMessage` tool is only available when Agent Teams are enabled.
 
 ---
 

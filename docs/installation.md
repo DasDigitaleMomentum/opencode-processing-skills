@@ -78,6 +78,47 @@ If you have direct API access to a model provider (Azure, OpenAI, etc.), rate li
 
 ---
 
+## Claude Code Compatibility
+
+These skills are designed for OpenCode but can also work with Claude Code, with some adaptations.
+
+### Agent Teams (required for stateful execution)
+
+The `execute-work-package` skill relies on **session resumption** — the ability to continue a subagent conversation across multiple calls (BLUEPRINT → EXECUTE). In Claude Code, this requires **Agent Teams**, which are experimental and disabled by default.
+
+**Enable Agent Teams** by setting the environment variable or adding it to your Claude Code `settings.json`:
+
+```bash
+# Shell environment
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+```
+
+```json
+// ~/.claude/settings.json (or project-level .claude/settings.json)
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
+```
+
+With Agent Teams enabled, session resumption uses `SendMessage(to="<agent_id>")` instead of OpenCode's `task(task_id=...)`. See `skills/execute-work-package/SKILL.md` for the full platform compatibility table.
+
+**Without Agent Teams**, each `Agent` call starts a fresh context. The workaround is to persist the Blueprint to a file and start a new `Agent` call that reads it — functional but the subagent loses conversational context.
+
+### Other differences
+
+| Aspect | OpenCode | Claude Code |
+|--------|----------|-------------|
+| Subagent tool | `task()` | `Agent()` (was `Task()` before v2.1.63) |
+| Session resumption | `task_id` parameter | `SendMessage` (Agent Teams) |
+| Agent definitions | `~/.config/opencode/agents/` | `.claude/agents/` or `~/.claude/agents/` |
+| Skill loading | Built-in `skill` tool | Via `skills` frontmatter or CLAUDE.md |
+
+> **Note:** Claude Code requires v2.1.32+ for Agent Teams. Check with `claude --version`.
+
+---
+
 ## Updating
 
 To update to the latest version:
