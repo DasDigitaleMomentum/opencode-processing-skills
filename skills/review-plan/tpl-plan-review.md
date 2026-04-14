@@ -7,6 +7,18 @@ reviewer: "{{agent_type}}"  # delegate | general
 created: "{{date}}"
 ---
 
+<!-- REVIEW PRIORITY GUIDE
+     Focus sections (always address thoroughly):
+     - Overall Assessment, Requirement Coverage, Scope Clarity, Definition of Done Assessment, Phase Structure Assessment, Testing Strategy Assessment, Findings Summary
+     
+     Secondary sections (include only when real problems found):
+     - Reference Consistency, Documentation & Cleanup, formal DoD checklisting
+     
+     If a secondary section has no real findings, OMIT it entirely rather than
+     writing "No issues found." A shorter, focused review is better than a 
+     comprehensive-but-cluttered one.
+-->
+
 # Plan Review: {{plan_name}}
 
 > Reviewing [{{plan_name}}](../plan.md)
@@ -44,11 +56,12 @@ created: "{{date}}"
 
 ## Definition of Done Assessment
 
-<!-- CHECK: Is the DoD concrete and verifiable?
-     - Can each criterion be objectively checked (yes/no)?
-     - Are there implicit assumptions that should be explicit?
-     - Does the DoD cover: functionality, tests, documentation, deployment?
-     - Is the DoD achievable within the planned phases? -->
+<!-- SECONDARY — Only include if real problems found. Omit entirely if clean.
+     CHECK: Is the DoD concrete and verifiable?
+      - Can each criterion be objectively checked (yes/no)?
+      - Are there implicit assumptions that should be explicit?
+      - Does the DoD cover: functionality, tests, documentation, deployment?
+      - Is the DoD achievable within the planned phases? -->
 
 ### Findings
 
@@ -92,11 +105,12 @@ created: "{{date}}"
 
 ## Reference Consistency
 
-<!-- CHECK: Are all internal references valid and consistent?
-     - Do phase references in plan.md match actual phase files?
-     - Do requirement IDs (if used) match across documents?
-     - Are file paths and module names consistent?
-     - Do scope boundaries in phases align with the plan's scope? -->
+<!-- SECONDARY — Only include if real problems found. Omit entirely if clean.
+     CHECK: Are all internal references valid and consistent?
+      - Do phase references in plan.md match actual phase files?
+      - Do requirement IDs (if used) match across documents?
+      - Are file paths and module names consistent?
+      - Do scope boundaries in phases align with the plan's scope? -->
 
 ### Findings
 
@@ -104,11 +118,12 @@ created: "{{date}}"
 
 ## Completeness Check
 
-<!-- CHECK: Is the plan sufficiently detailed for execution?
-     - Could someone start implementing Phase 1 based solely on plan + phase docs?
-     - Are there implicit decisions that should be made explicit?
-     - Are risks and mitigations realistic?
-     - Are there missing sections or empty placeholders? -->
+<!-- SECONDARY — Only include if real problems found. Omit entirely if clean.
+     CHECK: Is the plan sufficiently detailed for execution?
+      - Could someone start implementing Phase 1 based solely on plan + phase docs?
+      - Are there implicit decisions that should be made explicit?
+      - Are risks and mitigations realistic?
+      - Are there missing sections or empty placeholders? -->
 
 ### Findings
 

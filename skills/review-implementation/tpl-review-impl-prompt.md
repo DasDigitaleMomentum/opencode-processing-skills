@@ -13,6 +13,12 @@ You are reviewing a completed implementation as an **independent reviewer**. You
 
 Review the implementation of Phase {{phase_number}} against its plan and acceptance criteria. Produce a structured review document.
 
+## Review Focus
+
+{{focus}}
+
+Prioritize findings related to this focus. Formal criteria (DoD checklists, NFR conformance, reference pedantry) are secondary — only include them when they reveal real problems, not as standard checkboxes.
+
 ## What to Review
 
 Read ALL of these before starting your review:
@@ -58,7 +64,7 @@ Write your review to:
 Use the canonical template:
 - `skills/review-implementation/tpl-impl-review.md`
 
-**Be honest and thorough.** Rate findings by severity (Critical/Major/Minor/Note). Verify claims against actual code and test output — don't take the digest at face value.
+**Be honest and thorough — with focus.** Prioritize findings that matter for the stated focus. Rate by severity (Critical/Major/Minor/Note). Formal criteria that show no real problems may be omitted entirely.
 
 Return to the primary only:
 - The overall verdict (Accepted / Needs Rework / Rejected)

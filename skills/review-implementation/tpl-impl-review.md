@@ -8,6 +8,18 @@ reviewer: "{{agent_type}}"  # delegate | general
 created: "{{date}}"
 ---
 
+<!-- REVIEW PRIORITY GUIDE
+     Focus sections (always address thoroughly):
+     - Overall Assessment, Acceptance Criteria Verification, Code Quality Assessment, Testing Assessment, Findings Summary
+     
+     Secondary sections (include only when real problems found):
+     - Reference Consistency, Documentation & Cleanup, formal DoD checklisting
+     
+     If a secondary section has no real findings, OMIT it entirely rather than
+     writing "No issues found." A shorter, focused review is better than a 
+     comprehensive-but-cluttered one.
+-->
+
 # Implementation Review: Phase {{phase_number}} - {{phase_title}}
 
 > Reviewing implementation of [Phase {{phase_number}}](../phases/phase-{{phase_number}}.md)
@@ -147,11 +159,12 @@ created: "{{date}}"
 
 ## Documentation & Cleanup
 
-<!-- CHECK: Is the implementation complete beyond just code?
-     - Were necessary documentation updates made (API docs, README, etc.)?
-     - Were TODO/FIXME comments resolved or tracked?
-     - Were temporary/debug artifacts cleaned up?
-     - Is the changelog updated if required? -->
+<!-- SECONDARY — Only include if real problems found. Omit entirely if clean.
+     CHECK: Is the implementation complete beyond just code?
+      - Were necessary documentation updates made (API docs, README, etc.)?
+      - Were TODO/FIXME comments resolved or tracked?
+      - Were temporary/debug artifacts cleaned up?
+      - Is the changelog updated if required? -->
 
 ### Findings
 

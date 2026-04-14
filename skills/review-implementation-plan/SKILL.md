@@ -31,6 +31,14 @@ Do **not** use this skill to:
 - Review a completed implementation (use `review-implementation`).
 - Rewrite the implementation plan (the reviewer only reports findings).
 
+## Review Focus
+
+The primary specifies the review focus when delegating. The default focus is **functional and technical findings** — correctness, feasibility, completeness of the solution.
+
+**Formal criteria** (DoD compliance checklists, NFR conformance, reference consistency, documentation cleanup) are secondary. Only include formal findings when they reveal **real problems** — not as standard checkboxes to fill. A review cluttered with formal nitpicking buries the findings that matter.
+
+The primary passes the focus via `{{focus}}` in the delegation prompt. If no focus is specified, use the default.
+
 ---
 
 ## Execution Model
@@ -65,6 +73,7 @@ Same rationale as `review-plan`: the reviewer must approach the artifact cold, w
 ### 1) Prepare references
 
 Primary gathers:
+- Review focus from the delegation prompt
 - `plans/<name>/plan.md`
 - `plans/<name>/phases/phase-N.md`
 - `plans/<name>/implementation/phase-N-impl.md`
@@ -78,6 +87,7 @@ Provide:
 - Plan, phase, and implementation plan paths
 - Docs references (if available)
 - Review output path: `plans/<name>/reviews/impl-plan-review-phase-N.md`
+- Review focus (freetext — what to prioritize)
 
 ### 3) Receive summary
 

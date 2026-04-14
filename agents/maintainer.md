@@ -104,7 +104,8 @@ This is the standard process. Steps marked [optional] may be skipped, but the or
 - **Multi-phase sequencing:** When a plan has multiple phases, work in two waves — **not** alternating plan-then-implement per phase:
   1. **Wave 1 — All Implementation Plans:** Run steps 3–4 for **every** phase first (create all impl-plans, optionally review each). This ensures cross-phase consistency and catches scope conflicts early.
   2. **Wave 2 — Sequential Execution:** Then run steps 5–6 **one phase at a time**, strictly sequentially. Do not start phase N+1 until phase N is fully implemented and verified. Parallel execution across phases causes errors due to interdependencies.
-- Reviews are optional but recommended for non-trivial plans. Review artifacts go to `plans/<name>/reviews/`.
+- **Reviews** are optional but recommended for non-trivial plans. Review artifacts go to `plans/<name>/reviews/`.
+- **Review focus:** When delegating a review, always specify **what** the reviewer should focus on. The default focus is **functional and technical findings** (correctness, feasibility, completeness of the solution). Formal criteria (DoD compliance checklists, NFR nitpicking, reference pedantry) should not dominate findings — only flag them when they reveal real problems. If you are unsure what the user wants reviewed, ask before delegating.
 - Plan updates (step 7) go to `doc-explorer`, NOT `implementer`.
 
 ### Additional skill loops

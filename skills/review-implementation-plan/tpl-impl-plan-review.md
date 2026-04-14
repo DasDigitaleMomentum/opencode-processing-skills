@@ -8,6 +8,18 @@ reviewer: "{{agent_type}}"  # delegate | general
 created: "{{date}}"
 ---
 
+<!-- REVIEW PRIORITY GUIDE
+     Focus sections (always address thoroughly):
+     - Overall Assessment, Scope Alignment, Technical Feasibility, Step Quality Assessment, Testing Plan Assessment, Findings Summary
+     
+     Secondary sections (include only when real problems found):
+     - Reference Consistency, Documentation & Cleanup, formal DoD checklisting
+     
+     If a secondary section has no real findings, OMIT it entirely rather than
+     writing "No issues found." A shorter, focused review is better than a 
+     comprehensive-but-cluttered one.
+-->
+
 # Implementation Plan Review: Phase {{phase_number}} - {{phase_title}}
 
 > Reviewing [Phase {{phase_number}} Implementation Plan](../implementation/phase-{{phase_number}}-impl.md)
@@ -113,11 +125,12 @@ created: "{{date}}"
 
 ## Reference Consistency
 
-<!-- CHECK: Are all references in the implementation plan valid?
-     - Do file paths in "Code Anchors" actually exist in the repo?
-     - Do symbol references match current code (not outdated)?
-     - Do module references match docs/modules/*.md?
-     - Are cross-references to plan.md and phase-N.md correct? -->
+<!-- SECONDARY — Only include if real problems found. Omit entirely if clean.
+     CHECK: Are all references in the implementation plan valid?
+      - Do file paths in "Code Anchors" actually exist in the repo?
+      - Do symbol references match current code (not outdated)?
+      - Do module references match docs/modules/*.md?
+      - Are cross-references to plan.md and phase-N.md correct? -->
 
 ### Findings
 
@@ -125,11 +138,12 @@ created: "{{date}}"
 
 ## Reality Check Validation
 
-<!-- CHECK: Is the "Reality Check" section of the implementation plan honest?
-     - Were enough code anchors examined?
-     - Are noted mismatches genuine (or are real mismatches missing)?
-     - Are open questions flagged appropriately?
-     - Has the plan been updated to reflect discovered reality? -->
+<!-- SECONDARY — Only include if real problems found. Omit entirely if clean.
+     CHECK: Is the "Reality Check" section of the implementation plan honest?
+      - Were enough code anchors examined?
+      - Are noted mismatches genuine (or are real mismatches missing)?
+      - Are open questions flagged appropriately?
+      - Has the plan been updated to reflect discovered reality? -->
 
 ### Findings
 

@@ -13,6 +13,12 @@ You are reviewing a plan as an **independent reviewer**. You have no prior conte
 
 Review the plan and produce a structured review document.
 
+## Review Focus
+
+{{focus}}
+
+Prioritize findings related to this focus. Formal criteria (DoD checklists, NFR conformance, reference pedantry) are secondary — only include them when they reveal real problems, not as standard checkboxes.
+
 ## What to Review
 
 - Plan: `{{plan_ref}}`
@@ -40,7 +46,7 @@ Write your review to:
 Use the canonical template:
 - `skills/review-plan/tpl-plan-review.md`
 
-**Be honest and thorough.** Rate findings by severity (Critical/Major/Minor/Note). A review that finds nothing is likely not thorough enough.
+**Be honest and thorough — with focus.** Prioritize findings that matter for the stated focus. Rate by severity (Critical/Major/Minor/Note). Formal criteria that show no real problems may be omitted entirely.
 
 Return to the primary only:
 - The overall verdict (Ready / Needs Revision / Major Gaps)
