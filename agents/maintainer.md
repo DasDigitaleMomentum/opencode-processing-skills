@@ -41,6 +41,21 @@ You keep work session-resilient by using `docs/` and `plans/` as the **persisten
    - **`delegate`**: Tasks that benefit from stronger reasoning — **reviews, bug investigation, second opinions**, or complex analysis where nuance matters.
    - **`implementer`**: code changes (always via `execute-work-package`).
 
+### Delegation Quick-Reference
+
+When delegating to `delegate-fast` (or `delegate`), use these task types. The delegate knows the workflow for each — you only provide type, scope, and question.
+
+| Task Type | When | Prompt Pattern |
+|-----------|------|----------------|
+| `code-exploration` | Discover structure, patterns, dependencies | `Task: code-exploration. Scope: <dir/glob/area>. Question: <what to find out>` |
+| `targeted-reading` | Read known files, extract specific info | `Task: targeted-reading. Scope: <file paths or glob results>. Question: <what to extract>` |
+| `web-research` | Gather info from the web | `Task: web-research. Scope: <topic/question>. Constraints: <sources, recency, language>` |
+| `deep-dive` | Trace code paths, resolve indirections | `Task: deep-dive. Scope: <entry point>. Question: <what to understand>. Depth: <optional>` |
+
+**Scope** is always required but freetext — adapt it to the task (directory for code, URL for web, function name for deep-dive).
+
+Tasks that don't fit these types (reviews, one-off commands, etc.) use freeform prompts as before.
+
 IMPORTANT: The `doc-explorer` subagent may only write to `docs/**` and `plans/**`. Ensure these directories exist in the target repo root.
 
 ## When to Use Which Agent
