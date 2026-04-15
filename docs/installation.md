@@ -3,18 +3,74 @@
 ## Quick Start
 
 ```bash
+brew install yq                            # hard dependency (v4+)
 git clone git@github.com:DasDigitaleMomentum/opencode-processing-skills.git
 cd opencode-processing-skills
-cp config.yaml.example config.yaml   # optional: configure models
+cp config.yaml.example config.yaml         # optional: configure targets and models
 ./install.sh
 ```
 
-This copies skills to `~/.config/opencode/skills/` and agents to `~/.config/opencode/agents/`.
+The installer auto-detects which harnesses to sync into. Out of the box:
 
-If Codex is installed (`~/.codex` exists), the installer also syncs skills to `~/.codex/skills/`.
-Antigravity uses the same OpenCode paths, so no separate Antigravity target is needed.
+- **OpenCode** (always): skills + agents to `~/.config/opencode/`
+- **Codex** (if `~/.codex/` exists): skills to `~/.codex/skills/`
+- **Claude Code** (if `~/.claude/` exists): skills + agents to `~/.claude/`
+- **Antigravity**: served transitively by the Claude Code target (it loads skills through the bundled `anthropic.claude-code` extension, which reads from the same path)
 
 After installation, restart OpenCode and select the `@maintainer` agent. It knows when to load which skill and how to delegate to the right subagent.
+
+---
+
+## Configuration Layers
+
+The installer resolves settings in this order (highest wins):
+
+| Layer | What it's for | Persistence |
+|---|---|---|
+| `OPS_*` env vars | Test/CI overrides, one-shot runs | session-local |
+| `config.yaml` | Your persistent setup | committed to *your* machine (gitignored) |
+| Built-in defaults | Works on a fresh clone with zero config | n/a |
+
+`config.yaml` is optional. A freshly cloned repo without any config still does the right thing via auto-detect. Use `config.yaml` when you want to pin a specific state (e.g. "always install Claude, never install Codex regardless of directory presence").
+
+### Targets in `config.yaml`
+
+```yaml
+targets:
+  opencode:
+    enabled: true            # required target
+    home: ~/.config/opencode
+  codex:
+    enabled: auto            # true | false | auto (= on iff dir exists)
+    home: ~/.codex
+  claude:
+    enabled: auto
+    home: ~/.claude          # also serves Antigravity via claude-code ext
+```
+
+### `OPS_*` environment overrides
+
+Use these when you need to override `config.yaml` for one run — typically in tests, CI, or when debugging. They all take the same tri-state as the YAML: `true | false | auto`.
+
+| Variable | Overrides |
+|---|---|
+| `OPS_SYNC_CODEX` | `targets.codex.enabled` |
+| `OPS_SYNC_CLAUDE` | `targets.claude.enabled` |
+| `OPS_OPENCODE_HOME` | `targets.opencode.home` |
+| `OPS_CODEX_HOME` | `targets.codex.home` |
+| `OPS_CLAUDE_HOME` | `targets.claude.home` |
+| `OPS_CONFIG_FILE` | path to an alternate `config.yaml` |
+| `OPS_ANTIGRAVITY_PATH` | Antigravity detection path (test-only) |
+
+All env vars use an `OPS_` prefix to avoid name collisions with tool-native variables like `CLAUDE_HOME` (which Claude Code CLI itself may set).
+
+Examples:
+
+```bash
+OPS_SYNC_CLAUDE=false ./install.sh                    # skip Claude for this run
+OPS_CLAUDE_HOME=$(mktemp -d) ./install.sh             # install into a sandbox
+OPS_CONFIG_FILE=/tmp/test.yaml ./install.sh           # use an alternate config
+```
 
 ---
 
@@ -122,17 +178,26 @@ With Agent Teams enabled, session resumption uses `SendMessage(to="<agent_id>")`
 
 ### Installing into Claude Code
 
-`./install.sh` auto-detects Claude Code: if `~/.claude/` exists, skills are copied to `~/.claude/skills/` and agents to `~/.claude/agents/` alongside the OpenCode targets. Override with environment variables:
+`./install.sh` auto-detects Claude Code: if `~/.claude/` exists, skills are copied to `~/.claude/skills/` and agents to `~/.claude/agents/` alongside the OpenCode targets. Pin the choice in `config.yaml` or override per-run with `OPS_*` env vars:
 
 ```bash
-SYNC_CLAUDE=0 ./install.sh                  # skip Claude even if ~/.claude exists
-SYNC_CLAUDE=1 ./install.sh                  # force Claude install
-CLAUDE_HOME=~/work/.claude ./install.sh     # install into a non-default location
+OPS_SYNC_CLAUDE=false ./install.sh              # skip Claude even if ~/.claude exists
+OPS_SYNC_CLAUDE=true  ./install.sh              # force Claude install
+OPS_CLAUDE_HOME=~/work/.claude ./install.sh     # install into a non-default location
+```
+
+Or in `config.yaml`:
+
+```yaml
+targets:
+  claude:
+    enabled: true          # auto | true | false
+    home: ~/work/.claude
 ```
 
 **Symlink safety.** If a destination path is already a symlink — common when you've linked the repo into `~/.claude/skills/` yourself so `git pull` keeps everything fresh — the installer skips it and logs `Symlink (skipping): <name>`. This lets you mix copy-based targets (OpenCode, where model injection rewrites files) with symlink-based targets (Claude, where you want live updates from the repo).
 
-**Antigravity.** Antigravity is a VS Code fork that ships the `anthropic.claude-code` extension, which reads from `CLAUDE_HOME`. It has no config path of its own, so the Claude Code target covers it automatically — if `~/Library/Application Support/Antigravity/` is present, the installer logs `Antigravity detected: served by Claude Code target`. If you have Antigravity but no `~/.claude/`, run once with `SYNC_CLAUDE=1` to bootstrap the directory.
+**Antigravity.** Antigravity is a VS Code fork that ships the `anthropic.claude-code` extension, which reads from the same path as the Claude Code CLI. It has no config path of its own, so the Claude Code target covers it automatically — if `~/Library/Application Support/Antigravity/` is present, the installer logs `Antigravity detected: served by Claude Code target`. If you have Antigravity but no `~/.claude/`, run once with `OPS_SYNC_CLAUDE=true` to bootstrap the directory.
 
 ---
 

@@ -4,50 +4,128 @@
 # Usage:
 #   ./install.sh
 #
-# What it does:
-#   1. Copies skills to ~/.config/opencode/skills/ (global)
-#   2. Copies skills to ~/.codex/skills/ when Codex is detected
-#   3. Copies skills and agents to ~/.claude/{skills,agents}/ when Claude Code is detected
-#   4. Copies agent definitions to ~/.config/opencode/agents/ (global)
-#   5. If config.yaml exists, injects model settings into agent frontmatter
-#   6. Creates additional delegate variants from additional_delegates config
+# Configuration (in order of precedence):
+#   1. OPS_* environment variables  (runtime overrides, for tests/CI)
+#   2. config.yaml                  (persistent user config, gitignored)
+#   3. built-in defaults            (sensible auto-detect behavior)
 #
-# Environment variables:
-#   OPENCODE_HOME          override OpenCode config dir (default ~/.config/opencode)
-#   CODEX_HOME             override Codex config dir (default ~/.codex)
-#   CLAUDE_HOME            override Claude Code config dir (default ~/.claude)
-#   ANTIGRAVITY_APP_SUPPORT override Antigravity detection path
-#                          (default ~/Library/Application Support/Antigravity)
-#   SYNC_CODEX_SKILLS      auto|1|0 — sync skills into CODEX_HOME (default auto)
-#   SYNC_CLAUDE            auto|1|0 — sync skills+agents into CLAUDE_HOME (default auto)
+# Targets:
+#   - OpenCode   -> OPENCODE_HOME/{skills,agents}  (always on)
+#   - Codex      -> CODEX_HOME/skills              (skills only)
+#   - Claude     -> CLAUDE_HOME/{skills,agents}    (also serves Antigravity
+#                                                   via anthropic.claude-code ext)
+#
+# Environment overrides (OPS_ prefix avoids collisions with tool-native vars):
+#   OPS_OPENCODE_HOME       override OpenCode home
+#   OPS_CODEX_HOME          override Codex home
+#   OPS_CLAUDE_HOME         override Claude Code home
+#   OPS_SYNC_CODEX          true|false|auto — override targets.codex.enabled
+#   OPS_SYNC_CLAUDE         true|false|auto — override targets.claude.enabled
+#   OPS_ANTIGRAVITY_PATH    override Antigravity detection path (test-only)
+#   OPS_CONFIG_FILE         alternate config.yaml path (default: <repo>/config.yaml)
 #
 # Symlink safety: existing symlinks at any destination path are preserved
-# (not overwritten) so users who deliberately symlinked the repo into their
+# (not overwritten), so users who deliberately symlinked the repo into their
 # config directories keep that layout.
+#
+# Dependency: yq v4+ (https://github.com/mikefarah/yq). Install with `brew install yq`.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/config.yaml"
+CONFIG_FILE="${OPS_CONFIG_FILE:-$SCRIPT_DIR/config.yaml}"
 
-OPENCODE_HOME="${OPENCODE_HOME:-$HOME/.config/opencode}"
-CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
-CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
-SYNC_CODEX_SKILLS="${SYNC_CODEX_SKILLS:-auto}" # auto|1|0
-SYNC_CLAUDE="${SYNC_CLAUDE:-auto}"             # auto|1|0
-ANTIGRAVITY_APP_SUPPORT="${ANTIGRAVITY_APP_SUPPORT:-$HOME/Library/Application Support/Antigravity}"
+# --- Dependency check ---
+if ! command -v yq >/dev/null 2>&1; then
+    echo "Error: 'yq' (v4+) is required but not installed." >&2
+    echo "  Install with: brew install yq" >&2
+    echo "  Or see:       https://github.com/mikefarah/yq#install" >&2
+    exit 1
+fi
+
+# --- Helper: read a value from config.yaml via yq, with default ---
+# Usage: yaml_get <yq_path> <default>
+# Returns the value at <yq_path>, or <default> if the path is null/missing
+# or the config file does not exist.
+yaml_get() {
+    local path="$1"
+    local default="$2"
+    if [ ! -f "$CONFIG_FILE" ]; then
+        printf '%s' "$default"
+        return
+    fi
+    local val
+    val=$(yq eval "$path" "$CONFIG_FILE" 2>/dev/null || true)
+    if [ -z "$val" ] || [ "$val" = "null" ]; then
+        printf '%s' "$default"
+    else
+        printf '%s' "$val"
+    fi
+}
+
+# --- Helper: expand leading ~ in a path ---
+expand_home() {
+    local p="$1"
+    printf '%s' "${p/#\~/$HOME}"
+}
+
+# --- Helper: is a target enabled given a tri-state value and its home dir ---
+# Returns 0 (enabled) or 1 (disabled).
+# <state> accepts: true|1|yes, false|0|no, auto (= enabled iff <home> exists).
+is_enabled() {
+    local state="$1"
+    local home="$2"
+    case "$state" in
+        true|1|yes) return 0 ;;
+        false|0|no) return 1 ;;
+        auto|"")    [ -d "$home" ] && return 0 || return 1 ;;
+        *)
+            echo "  Warning: unknown enabled value '$state', treating as 'auto'" >&2
+            [ -d "$home" ] && return 0 || return 1
+            ;;
+    esac
+}
 
 echo "OpenCode Processing Skills - Installer"
 echo "======================================="
 echo ""
 echo "Source:  $SCRIPT_DIR"
+if [ -f "$CONFIG_FILE" ]; then
+    echo "Config:  $CONFIG_FILE"
+else
+    echo "Config:  (none — using built-in defaults)"
+fi
 echo ""
+
+# --- Resolve targets: config.yaml first, OPS_* env vars override ---
+
+# OpenCode (always required)
+OPENCODE_HOME_RAW=$(yaml_get '.targets.opencode.home' "$HOME/.config/opencode")
+OPENCODE_HOME="${OPS_OPENCODE_HOME:-$OPENCODE_HOME_RAW}"
+OPENCODE_HOME=$(expand_home "$OPENCODE_HOME")
+
+# Codex
+CODEX_HOME_RAW=$(yaml_get '.targets.codex.home' "$HOME/.codex")
+CODEX_HOME="${OPS_CODEX_HOME:-$CODEX_HOME_RAW}"
+CODEX_HOME=$(expand_home "$CODEX_HOME")
+CODEX_STATE_RAW=$(yaml_get '.targets.codex.enabled' 'auto')
+CODEX_STATE="${OPS_SYNC_CODEX:-$CODEX_STATE_RAW}"
+
+# Claude Code
+CLAUDE_HOME_RAW=$(yaml_get '.targets.claude.home' "$HOME/.claude")
+CLAUDE_HOME="${OPS_CLAUDE_HOME:-$CLAUDE_HOME_RAW}"
+CLAUDE_HOME=$(expand_home "$CLAUDE_HOME")
+CLAUDE_STATE_RAW=$(yaml_get '.targets.claude.enabled' 'auto')
+CLAUDE_STATE="${OPS_SYNC_CLAUDE:-$CLAUDE_STATE_RAW}"
+
+# Antigravity detection path (test-only override; not a yaml target)
+ANTIGRAVITY_PATH="${OPS_ANTIGRAVITY_PATH:-$HOME/Library/Application Support/Antigravity}"
 
 # --- Installation targets ---
 SKILLS_DESTS=("$OPENCODE_HOME/skills")
 AGENTS_DESTS=("$OPENCODE_HOME/agents")
 
-if [ "$SYNC_CODEX_SKILLS" = "1" ] || { [ "$SYNC_CODEX_SKILLS" = "auto" ] && [ -d "$CODEX_HOME" ]; }; then
+if is_enabled "$CODEX_STATE" "$CODEX_HOME"; then
     SKILLS_DESTS+=("$CODEX_HOME/skills")
     echo "Codex integration: enabled (skills -> $CODEX_HOME/skills)"
 else
@@ -55,7 +133,7 @@ else
 fi
 
 claude_enabled=0
-if [ "$SYNC_CLAUDE" = "1" ] || { [ "$SYNC_CLAUDE" = "auto" ] && [ -d "$CLAUDE_HOME" ]; }; then
+if is_enabled "$CLAUDE_STATE" "$CLAUDE_HOME"; then
     SKILLS_DESTS+=("$CLAUDE_HOME/skills")
     AGENTS_DESTS+=("$CLAUDE_HOME/agents")
     claude_enabled=1
@@ -67,12 +145,12 @@ fi
 # Antigravity is a VS Code fork that loads skills/agents via the
 # `anthropic.claude-code` extension, which reads from CLAUDE_HOME. It has no
 # config path of its own, so the Claude Code target covers it automatically.
-if [ -d "$ANTIGRAVITY_APP_SUPPORT" ]; then
+if [ -d "$ANTIGRAVITY_PATH" ]; then
     if [ "$claude_enabled" = "1" ]; then
         echo "Antigravity detected: served by Claude Code target at $CLAUDE_HOME"
     else
         echo "Antigravity detected: WARNING — Claude Code sync is disabled, so Antigravity will not receive updates."
-        echo "  Re-run with SYNC_CLAUDE=1 (or create $CLAUDE_HOME) to sync."
+        echo "  Re-run with OPS_SYNC_CLAUDE=true (or enable claude in config.yaml) to sync."
     fi
 fi
 
@@ -82,15 +160,7 @@ echo ""
 # Returns the model string, or empty if not configured.
 get_model_for_agent() {
     local agent_name="$1"
-    if [ ! -f "$CONFIG_FILE" ]; then
-        return
-    fi
-    # Parse simple "key: value" YAML (no nesting, no quotes needed)
-    # Skips comments and empty lines, matches exact agent name at root level
-    # (not indented, so not under additional_delegates)
-    local model
-    model=$(grep -E "^${agent_name}:" "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/^[^:]*:[[:space:]]*//' | sed 's/[[:space:]]*$//')
-    echo "$model"
+    yaml_get ".${agent_name}" ""
 }
 
 # --- Helper: inject or remove model line in agent frontmatter ---
@@ -101,50 +171,23 @@ inject_model() {
     local model="$2"
 
     if [ -n "$model" ]; then
-        # Check if model line already exists
         if grep -q "^model:" "$file"; then
-            # Replace existing model line
             sed -i "s|^model:.*|model: ${model}|" "$file"
         else
-            # Insert model line after description line
             sed -i "/^description:/a model: ${model}" "$file"
         fi
     else
-        # Remove model line if present (no config = use default)
         sed -i '/^model:/d' "$file"
     fi
 }
 
-# --- Helper: parse additional_delegates from config.yaml ---
+# --- Helper: parse additional_delegates from config.yaml via yq ---
 # Returns lines of "suffix model" pairs
 get_additional_delegates() {
     if [ ! -f "$CONFIG_FILE" ]; then
         return
     fi
-    # Find the additional_delegates section and extract indented entries
-    # Each entry is "  suffix: model" under the additional_delegates: key
-    awk '
-        /^additional_delegates:/ { in_section=1; next }
-        /^[a-zA-Z]/ && in_section { exit }  # Exit on next root-level key
-        in_section && /^[[:space:]]+[a-zA-Z]/ {
-            # Remove leading whitespace
-            gsub(/^[[:space:]]+/, "")
-            # Skip commented lines
-            if (substr($0, 1, 1) == "#") next
-            # Split on first colon
-            colon = index($0, ":")
-            if (colon > 0) {
-                suffix = substr($0, 1, colon - 1)
-                model = substr($0, colon + 1)
-                # Trim whitespace from model
-                gsub(/^[[:space:]]+/, "", model)
-                gsub(/[[:space:]]+$/, "", model)
-                if (suffix != "" && model != "") {
-                    print suffix, model
-                }
-            }
-        }
-    ' "$CONFIG_FILE"
+    yq eval '.additional_delegates // {} | to_entries | .[] | .key + " " + .value' "$CONFIG_FILE" 2>/dev/null | grep -v '^null$' || true
 }
 
 # --- Helper: create a delegate variant from the delegate template ---
@@ -155,16 +198,11 @@ create_delegate_variant() {
     local template="$SCRIPT_DIR/agents/delegate.md"
     local dest="$agents_dest/delegate-${suffix}.md"
 
-    # Copy template
     cp "$template" "$dest"
 
-    # Update description to indicate this is a variant
     sed -i "s|^description:.*|description: Delegate variant '${suffix}' with model ${model}. Use for specific delegation needs.|" "$dest"
-
-    # Update the heading (match "# Delegate" at start of line, with optional trailing content)
     sed -i 's|^# Delegate\b.*|# Delegate ('"${suffix}"')|' "$dest"
 
-    # Inject the model
     inject_model "$dest" "$model"
 
     echo "  Generated: delegate-${suffix}.md -> model: $model"
@@ -260,10 +298,10 @@ fi
 
 # --- Summary ---
 if [ -f "$CONFIG_FILE" ]; then
-    echo "Model config: $CONFIG_FILE (applied)"
+    echo "Config:  $CONFIG_FILE (applied)"
 else
-    echo "Model config: not found (using default models)"
-    echo "  Tip: Copy config.yaml.example to config.yaml to set custom models."
+    echo "Config:  not found (using built-in defaults)"
+    echo "  Tip: Copy config.yaml.example to config.yaml to set targets and models."
 fi
 
 echo ""
