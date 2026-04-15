@@ -132,6 +132,8 @@ CLAUDE_HOME=~/work/.claude ./install.sh     # install into a non-default locatio
 
 **Symlink safety.** If a destination path is already a symlink — common when you've linked the repo into `~/.claude/skills/` yourself so `git pull` keeps everything fresh — the installer skips it and logs `Symlink (skipping): <name>`. This lets you mix copy-based targets (OpenCode, where model injection rewrites files) with symlink-based targets (Claude, where you want live updates from the repo).
 
+**Antigravity.** Antigravity is a VS Code fork that ships the `anthropic.claude-code` extension, which reads from `CLAUDE_HOME`. It has no config path of its own, so the Claude Code target covers it automatically — if `~/Library/Application Support/Antigravity/` is present, the installer logs `Antigravity detected: served by Claude Code target`. If you have Antigravity but no `~/.claude/`, run once with `SYNC_CLAUDE=1` to bootstrap the directory.
+
 ---
 
 ## Updating

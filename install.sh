@@ -13,11 +13,13 @@
 #   6. Creates additional delegate variants from additional_delegates config
 #
 # Environment variables:
-#   OPENCODE_HOME         override OpenCode config dir (default ~/.config/opencode)
-#   CODEX_HOME            override Codex config dir (default ~/.codex)
-#   CLAUDE_HOME           override Claude Code config dir (default ~/.claude)
-#   SYNC_CODEX_SKILLS     auto|1|0 — sync skills into CODEX_HOME (default auto)
-#   SYNC_CLAUDE           auto|1|0 — sync skills+agents into CLAUDE_HOME (default auto)
+#   OPENCODE_HOME          override OpenCode config dir (default ~/.config/opencode)
+#   CODEX_HOME             override Codex config dir (default ~/.codex)
+#   CLAUDE_HOME            override Claude Code config dir (default ~/.claude)
+#   ANTIGRAVITY_APP_SUPPORT override Antigravity detection path
+#                          (default ~/Library/Application Support/Antigravity)
+#   SYNC_CODEX_SKILLS      auto|1|0 — sync skills into CODEX_HOME (default auto)
+#   SYNC_CLAUDE            auto|1|0 — sync skills+agents into CLAUDE_HOME (default auto)
 #
 # Symlink safety: existing symlinks at any destination path are preserved
 # (not overwritten) so users who deliberately symlinked the repo into their
@@ -33,7 +35,7 @@ CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
 SYNC_CODEX_SKILLS="${SYNC_CODEX_SKILLS:-auto}" # auto|1|0
 SYNC_CLAUDE="${SYNC_CLAUDE:-auto}"             # auto|1|0
-ANTIGRAVITY_APP_SUPPORT="$HOME/Library/Application Support/Antigravity"
+ANTIGRAVITY_APP_SUPPORT="${ANTIGRAVITY_APP_SUPPORT:-$HOME/Library/Application Support/Antigravity}"
 
 echo "OpenCode Processing Skills - Installer"
 echo "======================================="
@@ -52,18 +54,26 @@ else
     echo "Codex integration: disabled"
 fi
 
+claude_enabled=0
 if [ "$SYNC_CLAUDE" = "1" ] || { [ "$SYNC_CLAUDE" = "auto" ] && [ -d "$CLAUDE_HOME" ]; }; then
     SKILLS_DESTS+=("$CLAUDE_HOME/skills")
     AGENTS_DESTS+=("$CLAUDE_HOME/agents")
+    claude_enabled=1
     echo "Claude Code integration: enabled (skills -> $CLAUDE_HOME/skills, agents -> $CLAUDE_HOME/agents)"
 else
     echo "Claude Code integration: disabled"
 fi
 
-# Antigravity is a separate desktop app but uses OpenCode's ~/.config/opencode
-# paths for these artifacts. No extra destination is required.
+# Antigravity is a VS Code fork that loads skills/agents via the
+# `anthropic.claude-code` extension, which reads from CLAUDE_HOME. It has no
+# config path of its own, so the Claude Code target covers it automatically.
 if [ -d "$ANTIGRAVITY_APP_SUPPORT" ]; then
-    echo "Antigravity detected: using OpenCode paths under $OPENCODE_HOME"
+    if [ "$claude_enabled" = "1" ]; then
+        echo "Antigravity detected: served by Claude Code target at $CLAUDE_HOME"
+    else
+        echo "Antigravity detected: WARNING — Claude Code sync is disabled, so Antigravity will not receive updates."
+        echo "  Re-run with SYNC_CLAUDE=1 (or create $CLAUDE_HOME) to sync."
+    fi
 fi
 
 echo ""
