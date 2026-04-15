@@ -11,6 +11,9 @@ cp config.yaml.example config.yaml   # optional: configure models
 
 This copies skills to `~/.config/opencode/skills/` and agents to `~/.config/opencode/agents/`.
 
+If Codex is installed (`~/.codex` exists), the installer also syncs skills to `~/.codex/skills/`.
+Antigravity uses the same OpenCode paths, so no separate Antigravity target is needed.
+
 After installation, restart OpenCode and select the `@maintainer` agent. It knows when to load which skill and how to delegate to the right subagent.
 
 ---
@@ -117,6 +120,18 @@ With Agent Teams enabled, session resumption uses `SendMessage(to="<agent_id>")`
 
 > **Note:** Claude Code requires v2.1.32+ for Agent Teams. Check with `claude --version`.
 
+### Installing into Claude Code
+
+`./install.sh` auto-detects Claude Code: if `~/.claude/` exists, skills are copied to `~/.claude/skills/` and agents to `~/.claude/agents/` alongside the OpenCode targets. Override with environment variables:
+
+```bash
+SYNC_CLAUDE=0 ./install.sh                  # skip Claude even if ~/.claude exists
+SYNC_CLAUDE=1 ./install.sh                  # force Claude install
+CLAUDE_HOME=~/work/.claude ./install.sh     # install into a non-default location
+```
+
+**Symlink safety.** If a destination path is already a symlink — common when you've linked the repo into `~/.claude/skills/` yourself so `git pull` keeps everything fresh — the installer skips it and logs `Symlink (skipping): <name>`. This lets you mix copy-based targets (OpenCode, where model injection rewrites files) with symlink-based targets (Claude, where you want live updates from the repo).
+
 ---
 
 ## Updating
@@ -129,4 +144,4 @@ git pull
 ./install.sh
 ```
 
-Your `config.yaml` is preserved (gitignored). The installer will re-apply your model settings to the updated agent files.
+Your `config.yaml` is preserved (gitignored). The installer will re-apply your model settings to the updated agent files. All detected targets (OpenCode, Codex, Claude Code) are synced in the same run.

@@ -6,19 +6,66 @@
 #
 # What it does:
 #   1. Copies skills to ~/.config/opencode/skills/ (global)
-#   2. Copies agent definitions to ~/.config/opencode/agents/ (global)
-#   3. If config.yaml exists, injects model settings into agent frontmatter
-#   4. Creates additional delegate variants from additional_delegates config
+#   2. Copies skills to ~/.codex/skills/ when Codex is detected
+#   3. Copies skills and agents to ~/.claude/{skills,agents}/ when Claude Code is detected
+#   4. Copies agent definitions to ~/.config/opencode/agents/ (global)
+#   5. If config.yaml exists, injects model settings into agent frontmatter
+#   6. Creates additional delegate variants from additional_delegates config
+#
+# Environment variables:
+#   OPENCODE_HOME         override OpenCode config dir (default ~/.config/opencode)
+#   CODEX_HOME            override Codex config dir (default ~/.codex)
+#   CLAUDE_HOME           override Claude Code config dir (default ~/.claude)
+#   SYNC_CODEX_SKILLS     auto|1|0 — sync skills into CODEX_HOME (default auto)
+#   SYNC_CLAUDE           auto|1|0 — sync skills+agents into CLAUDE_HOME (default auto)
+#
+# Symlink safety: existing symlinks at any destination path are preserved
+# (not overwritten) so users who deliberately symlinked the repo into their
+# config directories keep that layout.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/config.yaml"
 
+OPENCODE_HOME="${OPENCODE_HOME:-$HOME/.config/opencode}"
+CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
+SYNC_CODEX_SKILLS="${SYNC_CODEX_SKILLS:-auto}" # auto|1|0
+SYNC_CLAUDE="${SYNC_CLAUDE:-auto}"             # auto|1|0
+ANTIGRAVITY_APP_SUPPORT="$HOME/Library/Application Support/Antigravity"
+
 echo "OpenCode Processing Skills - Installer"
 echo "======================================="
 echo ""
 echo "Source:  $SCRIPT_DIR"
+echo ""
+
+# --- Installation targets ---
+SKILLS_DESTS=("$OPENCODE_HOME/skills")
+AGENTS_DESTS=("$OPENCODE_HOME/agents")
+
+if [ "$SYNC_CODEX_SKILLS" = "1" ] || { [ "$SYNC_CODEX_SKILLS" = "auto" ] && [ -d "$CODEX_HOME" ]; }; then
+    SKILLS_DESTS+=("$CODEX_HOME/skills")
+    echo "Codex integration: enabled (skills -> $CODEX_HOME/skills)"
+else
+    echo "Codex integration: disabled"
+fi
+
+if [ "$SYNC_CLAUDE" = "1" ] || { [ "$SYNC_CLAUDE" = "auto" ] && [ -d "$CLAUDE_HOME" ]; }; then
+    SKILLS_DESTS+=("$CLAUDE_HOME/skills")
+    AGENTS_DESTS+=("$CLAUDE_HOME/agents")
+    echo "Claude Code integration: enabled (skills -> $CLAUDE_HOME/skills, agents -> $CLAUDE_HOME/agents)"
+else
+    echo "Claude Code integration: disabled"
+fi
+
+# Antigravity is a separate desktop app but uses OpenCode's ~/.config/opencode
+# paths for these artifacts. No extra destination is required.
+if [ -d "$ANTIGRAVITY_APP_SUPPORT" ]; then
+    echo "Antigravity detected: using OpenCode paths under $OPENCODE_HOME"
+fi
+
 echo ""
 
 # --- Helper: read model for an agent from config.yaml ---
@@ -94,8 +141,9 @@ get_additional_delegates() {
 create_delegate_variant() {
     local suffix="$1"
     local model="$2"
+    local agents_dest="$3"
     local template="$SCRIPT_DIR/agents/delegate.md"
-    local dest="$AGENTS_DEST/delegate-${suffix}.md"
+    local dest="$agents_dest/delegate-${suffix}.md"
 
     # Copy template
     cp "$template" "$dest"
@@ -112,52 +160,74 @@ create_delegate_variant() {
     echo "  Generated: delegate-${suffix}.md -> model: $model"
 }
 
-# --- Step 1: Install Skills (global) ---
-SKILLS_DEST="$HOME/.config/opencode/skills"
-echo "Step 1: Installing skills to $SKILLS_DEST"
+# --- Step 1: Install Skills ---
+step1_count=0
+for SKILLS_DEST in "${SKILLS_DESTS[@]}"; do
+    step1_count=$((step1_count + 1))
+    echo "Step 1.${step1_count}: Installing skills to $SKILLS_DEST"
+    mkdir -p "$SKILLS_DEST"
 
-for skill_dir in "$SCRIPT_DIR/skills"/*/; do
-    skill_name="$(basename "$skill_dir")"
-    dest="$SKILLS_DEST/$skill_name"
+    for skill_dir in "$SCRIPT_DIR/skills"/*/; do
+        skill_name="$(basename "$skill_dir")"
+        dest="$SKILLS_DEST/$skill_name"
 
-    if [ -d "$dest" ]; then
-        echo "  Updating: $skill_name"
-        rm -rf "$dest"
-    else
-        echo "  Installing: $skill_name"
-    fi
+        if [ -L "$dest" ]; then
+            # Preserve user-managed symlink (points into the repo already —
+            # `git pull` keeps it fresh without us overwriting the layout).
+            echo "  Symlink (skipping): $skill_name"
+            continue
+        fi
 
-    mkdir -p "$dest"
+        if [ -d "$dest" ]; then
+            echo "  Updating: $skill_name"
+            rm -rf "$dest"
+        else
+            echo "  Installing: $skill_name"
+        fi
 
-    # Copy entire skill directory (no symlinks)
-    # Use "/." to include hidden files if present.
-    cp -R "$skill_dir/." "$dest/"
+        mkdir -p "$dest"
+
+        # Copy entire skill directory (no symlinks)
+        # Use "/." to include hidden files if present.
+        cp -R "$skill_dir/." "$dest/"
+    done
+    echo ""
 done
 
 echo ""
 
-# --- Step 2: Install Agents (global) ---
-AGENTS_DEST="$HOME/.config/opencode/agents"
-echo "Step 2: Installing agents to $AGENTS_DEST"
-mkdir -p "$AGENTS_DEST"
+# --- Step 2: Install Agents ---
+step2_count=0
+for AGENTS_DEST in "${AGENTS_DESTS[@]}"; do
+    step2_count=$((step2_count + 1))
+    echo "Step 2.${step2_count}: Installing agents to $AGENTS_DEST"
+    mkdir -p "$AGENTS_DEST"
 
-for agent_file in "$SCRIPT_DIR/agents"/*.md; do
-    agent_name="$(basename "$agent_file" .md)"
-    dest="$AGENTS_DEST/$(basename "$agent_file")"
+    for agent_file in "$SCRIPT_DIR/agents"/*.md; do
+        agent_name="$(basename "$agent_file" .md)"
+        dest="$AGENTS_DEST/$(basename "$agent_file")"
 
-    if [ -f "$dest" ]; then
-        echo "  Updating: $(basename "$agent_file")"
-    else
-        echo "  Installing: $(basename "$agent_file")"
-    fi
-    cp "$agent_file" "$dest"
+        if [ -L "$dest" ]; then
+            # Preserve user-managed symlink (e.g. into a shared superpowers repo).
+            echo "  Symlink (skipping): $(basename "$agent_file")"
+            continue
+        fi
 
-    # Inject model from config.yaml (if configured)
-    model=$(get_model_for_agent "$agent_name")
-    if [ -n "$model" ]; then
-        inject_model "$dest" "$model"
-        echo "    -> model: $model"
-    fi
+        if [ -f "$dest" ]; then
+            echo "  Updating: $(basename "$agent_file")"
+        else
+            echo "  Installing: $(basename "$agent_file")"
+        fi
+        cp "$agent_file" "$dest"
+
+        # Inject model from config.yaml (if configured)
+        model=$(get_model_for_agent "$agent_name")
+        if [ -n "$model" ]; then
+            inject_model "$dest" "$model"
+            echo "    -> model: $model"
+        fi
+    done
+    echo ""
 done
 
 echo ""
@@ -166,12 +236,14 @@ echo ""
 if [ -f "$CONFIG_FILE" ]; then
     additional=$(get_additional_delegates)
     if [ -n "$additional" ]; then
-        echo "Step 3: Creating additional delegate variants"
-        while read -r suffix model; do
-            if [ -n "$suffix" ] && [ -n "$model" ]; then
-                create_delegate_variant "$suffix" "$model"
-            fi
-        done <<< "$additional"
+        echo "Step 3: Creating additional delegate variants (OpenCode agents)"
+        for AGENTS_DEST in "${AGENTS_DESTS[@]}"; do
+            while read -r suffix model; do
+                if [ -n "$suffix" ] && [ -n "$model" ]; then
+                    create_delegate_variant "$suffix" "$model" "$AGENTS_DEST"
+                fi
+            done <<< "$additional"
+        done
         echo ""
     fi
 fi

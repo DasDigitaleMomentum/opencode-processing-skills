@@ -31,6 +31,7 @@ cp config.yaml.example config.yaml   # optional: set models
 ```
 
 Then restart OpenCode and select `@maintainer`.
+If Codex is installed locally, skills are synced to `~/.codex/skills` during install.
 
 → [Full installation guide](docs/installation.md)
 
