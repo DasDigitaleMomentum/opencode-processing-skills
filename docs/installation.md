@@ -3,7 +3,6 @@
 ## Quick Start
 
 ```bash
-brew install yq                            # hard dependency (v4+)
 git clone git@github.com:DasDigitaleMomentum/opencode-processing-skills.git
 cd opencode-processing-skills
 cp config.yaml.example config.yaml         # optional: configure targets and models

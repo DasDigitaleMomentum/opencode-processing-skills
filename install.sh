@@ -28,39 +28,80 @@
 # (not overwritten), so users who deliberately symlinked the repo into their
 # config directories keep that layout.
 #
-# Dependency: yq v4+ (https://github.com/mikefarah/yq). Install with `brew install yq`.
+# No external dependencies beyond coreutils + grep + awk + sed.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${OPS_CONFIG_FILE:-$SCRIPT_DIR/config.yaml}"
 
-# --- Dependency check ---
-if ! command -v yq >/dev/null 2>&1; then
-    echo "Error: 'yq' (v4+) is required but not installed." >&2
-    echo "  Install with: brew install yq" >&2
-    echo "  Or see:       https://github.com/mikefarah/yq#install" >&2
-    exit 1
-fi
-
-# --- Helper: read a value from config.yaml via yq, with default ---
-# Usage: yaml_get <yq_path> <default>
-# Returns the value at <yq_path>, or <default> if the path is null/missing
-# or the config file does not exist.
-yaml_get() {
-    local path="$1"
-    local default="$2"
+# --- Helper: read a simple "key: value" from config.yaml (root level) ---
+# Matches exact key at start of line (not indented = not nested).
+# Returns the value, or empty string if not found.
+yaml_get_root() {
+    local key="$1"
     if [ ! -f "$CONFIG_FILE" ]; then
-        printf '%s' "$default"
         return
     fi
-    local val
-    val=$(yq eval "$path" "$CONFIG_FILE" 2>/dev/null || true)
-    if [ -z "$val" ] || [ "$val" = "null" ]; then
-        printf '%s' "$default"
-    else
-        printf '%s' "$val"
+    # grep may return 1 (no match), which pipefail would treat as error.
+    # Use "|| true" on the full pipeline to avoid that.
+    grep -E "^${key}:" "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/^[^:]*:[[:space:]]*//' | sed 's/[[:space:]]*$//' || true
+}
+
+# --- Helper: read a value from a targets.<target>.<field> block ---
+# Parses the targets section using awk to find nested values.
+# Usage: yaml_get_target <target> <field>
+# Example: yaml_get_target "codex" "enabled" -> reads targets.codex.enabled
+yaml_get_target() {
+    local target="$1"
+    local field="$2"
+    if [ ! -f "$CONFIG_FILE" ]; then
+        return
     fi
+    awk -v target="$target" -v field="$field" '
+        /^targets:/ { in_targets=1; next }
+        /^[a-zA-Z]/ && in_targets { exit }  # Next root-level key
+        !in_targets { next }
+        # We are inside the targets: block.
+        # Detect indentation depth to distinguish target headers (2-space)
+        # from target fields (4-space).
+        {
+            line = $0
+            gsub(/^[[:space:]]+/, "", line)  # strip for parsing
+            if (substr(line, 1, 1) == "#") next  # skip comments
+
+            # Count leading spaces on original line
+            depth = 0
+            for (i = 1; i <= length($0); i++) {
+                if (substr($0, i, 1) == " ") depth++
+                else break
+            }
+        }
+        # Target header level (typically 2 spaces): "  codex:"
+        depth <= 2 && line ~ /^[a-zA-Z]/ {
+            if (line ~ "^" target ":") {
+                in_target = 1
+            } else if (in_target) {
+                exit  # Hit next sibling target
+            }
+            next
+        }
+        # Field level (typically 4 spaces): "    enabled: true"
+        in_target && depth > 2 && line ~ /^[a-zA-Z]/ {
+            colon = index(line, ":")
+            if (colon > 0) {
+                k = substr(line, 1, colon - 1)
+                v = substr(line, colon + 1)
+                gsub(/^[[:space:]]+/, "", v)
+                gsub(/[[:space:]]+$/, "", v)
+                gsub(/[[:space:]]+$/, "", k)
+                if (k == field) {
+                    print v
+                    exit
+                }
+            }
+        }
+    ' "$CONFIG_FILE"
 }
 
 # --- Helper: expand leading ~ in a path ---
@@ -72,15 +113,17 @@ expand_home() {
 # --- Helper: is a target enabled given a tri-state value and its home dir ---
 # Returns 0 (enabled) or 1 (disabled).
 # <state> accepts: true|1|yes, false|0|no, auto (= enabled iff <home> exists).
+# Case-insensitive for robustness with env vars.
 is_enabled() {
-    local state="$1"
+    local state
+    state="$(echo "$1" | tr '[:upper:]' '[:lower:]')"
     local home="$2"
     case "$state" in
         true|1|yes) return 0 ;;
         false|0|no) return 1 ;;
         auto|"")    [ -d "$home" ] && return 0 || return 1 ;;
         *)
-            echo "  Warning: unknown enabled value '$state', treating as 'auto'" >&2
+            echo "  Warning: unknown enabled value '$1', treating as 'auto'" >&2
             [ -d "$home" ] && return 0 || return 1
             ;;
     esac
@@ -100,28 +143,33 @@ echo ""
 # --- Resolve targets: config.yaml first, OPS_* env vars override ---
 
 # OpenCode (always required)
-OPENCODE_HOME_RAW=$(yaml_get '.targets.opencode.home' "$HOME/.config/opencode")
+OPENCODE_HOME_RAW=$(yaml_get_target "opencode" "home")
+OPENCODE_HOME_RAW="${OPENCODE_HOME_RAW:-$HOME/.config/opencode}"
 OPENCODE_HOME="${OPS_OPENCODE_HOME:-$OPENCODE_HOME_RAW}"
 OPENCODE_HOME=$(expand_home "$OPENCODE_HOME")
 
 # Codex
-CODEX_HOME_RAW=$(yaml_get '.targets.codex.home' "$HOME/.codex")
+CODEX_HOME_RAW=$(yaml_get_target "codex" "home")
+CODEX_HOME_RAW="${CODEX_HOME_RAW:-$HOME/.codex}"
 CODEX_HOME="${OPS_CODEX_HOME:-$CODEX_HOME_RAW}"
 CODEX_HOME=$(expand_home "$CODEX_HOME")
-CODEX_STATE_RAW=$(yaml_get '.targets.codex.enabled' 'auto')
+CODEX_STATE_RAW=$(yaml_get_target "codex" "enabled")
+CODEX_STATE_RAW="${CODEX_STATE_RAW:-auto}"
 CODEX_STATE="${OPS_SYNC_CODEX:-$CODEX_STATE_RAW}"
 
 # Claude Code
-CLAUDE_HOME_RAW=$(yaml_get '.targets.claude.home' "$HOME/.claude")
+CLAUDE_HOME_RAW=$(yaml_get_target "claude" "home")
+CLAUDE_HOME_RAW="${CLAUDE_HOME_RAW:-$HOME/.claude}"
 CLAUDE_HOME="${OPS_CLAUDE_HOME:-$CLAUDE_HOME_RAW}"
 CLAUDE_HOME=$(expand_home "$CLAUDE_HOME")
-CLAUDE_STATE_RAW=$(yaml_get '.targets.claude.enabled' 'auto')
+CLAUDE_STATE_RAW=$(yaml_get_target "claude" "enabled")
+CLAUDE_STATE_RAW="${CLAUDE_STATE_RAW:-auto}"
 CLAUDE_STATE="${OPS_SYNC_CLAUDE:-$CLAUDE_STATE_RAW}"
 
 # Antigravity detection path (test-only override; not a yaml target)
 ANTIGRAVITY_PATH="${OPS_ANTIGRAVITY_PATH:-$HOME/Library/Application Support/Antigravity}"
 
-# --- Installation targets ---
+# --- Build installation target arrays ---
 SKILLS_DESTS=("$OPENCODE_HOME/skills")
 AGENTS_DESTS=("$OPENCODE_HOME/agents")
 
@@ -158,9 +206,10 @@ echo ""
 
 # --- Helper: read model for an agent from config.yaml ---
 # Returns the model string, or empty if not configured.
+# Uses grep on root-level keys — works correctly for hyphenated names like doc-explorer.
 get_model_for_agent() {
     local agent_name="$1"
-    yaml_get ".${agent_name}" ""
+    yaml_get_root "$agent_name"
 }
 
 # --- Helper: inject or remove model line in agent frontmatter ---
@@ -181,13 +230,36 @@ inject_model() {
     fi
 }
 
-# --- Helper: parse additional_delegates from config.yaml via yq ---
+# --- Helper: parse additional_delegates from config.yaml ---
 # Returns lines of "suffix model" pairs
 get_additional_delegates() {
     if [ ! -f "$CONFIG_FILE" ]; then
         return
     fi
-    yq eval '.additional_delegates // {} | to_entries | .[] | .key + " " + .value' "$CONFIG_FILE" 2>/dev/null | grep -v '^null$' || true
+    awk '
+        /^additional_delegates:/ { in_section=1; next }
+        /^[a-zA-Z]/ && in_section { exit }  # Next root-level key
+        in_section && /^[[:space:]]+[a-zA-Z]/ {
+            gsub(/^[[:space:]]+/, "")
+            if (substr($0, 1, 1) == "#") next
+            colon = index($0, ":")
+            if (colon > 0) {
+                suffix = substr($0, 1, colon - 1)
+                model = substr($0, colon + 1)
+                gsub(/^[[:space:]]+/, "", model)
+                gsub(/[[:space:]]+$/, "", model)
+                # Strip inline comments (e.g. "azure/gpt-5.3-codex   # Code-specialized")
+                comment = index(model, "#")
+                if (comment > 0) {
+                    model = substr(model, 1, comment - 1)
+                    gsub(/[[:space:]]+$/, "", model)
+                }
+                if (suffix != "" && model != "") {
+                    print suffix, model
+                }
+            }
+        }
+    ' "$CONFIG_FILE"
 }
 
 # --- Helper: create a delegate variant from the delegate template ---
@@ -197,6 +269,12 @@ create_delegate_variant() {
     local agents_dest="$3"
     local template="$SCRIPT_DIR/agents/delegate.md"
     local dest="$agents_dest/delegate-${suffix}.md"
+
+    # Symlink safety: same check as main install loops
+    if [ -L "$dest" ]; then
+        echo "  Symlink (skipping): delegate-${suffix}.md"
+        return
+    fi
 
     cp "$template" "$dest"
 
@@ -220,8 +298,6 @@ for SKILLS_DEST in "${SKILLS_DESTS[@]}"; do
         dest="$SKILLS_DEST/$skill_name"
 
         if [ -L "$dest" ]; then
-            # Preserve user-managed symlink (points into the repo already —
-            # `git pull` keeps it fresh without us overwriting the layout).
             echo "  Symlink (skipping): $skill_name"
             continue
         fi
@@ -234,9 +310,6 @@ for SKILLS_DEST in "${SKILLS_DESTS[@]}"; do
         fi
 
         mkdir -p "$dest"
-
-        # Copy entire skill directory (no symlinks)
-        # Use "/." to include hidden files if present.
         cp -R "$skill_dir/." "$dest/"
     done
     echo ""
@@ -256,7 +329,6 @@ for AGENTS_DEST in "${AGENTS_DESTS[@]}"; do
         dest="$AGENTS_DEST/$(basename "$agent_file")"
 
         if [ -L "$dest" ]; then
-            # Preserve user-managed symlink (e.g. into a shared superpowers repo).
             echo "  Symlink (skipping): $(basename "$agent_file")"
             continue
         fi
@@ -284,7 +356,7 @@ echo ""
 if [ -f "$CONFIG_FILE" ]; then
     additional=$(get_additional_delegates)
     if [ -n "$additional" ]; then
-        echo "Step 3: Creating additional delegate variants (OpenCode agents)"
+        echo "Step 3: Creating additional delegate variants"
         for AGENTS_DEST in "${AGENTS_DESTS[@]}"; do
             while read -r suffix model; do
                 if [ -n "$suffix" ] && [ -n "$model" ]; then

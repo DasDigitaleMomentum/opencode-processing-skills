@@ -8,7 +8,7 @@
 #   2. config.yaml                  (this file — persistent user config)
 #   3. built-in defaults            (sensible auto-detect behavior)
 #
-# Dependency: install.sh requires `yq` v4+  (brew install yq)
+# No external dependencies — install.sh uses only coreutils + grep + awk + sed.
 
 
 # ============================================================================
