@@ -16,6 +16,10 @@
 # ============================================================================
 # Which harnesses to install skills and agents into.
 #
+# Indentation: use 2-space indentation (not tabs). The installer's native
+# YAML parser identifies target headers at depth 2 and fields at depth 4;
+# other indentation styles will not parse.
+#
 # Each target has:
 #   enabled: true | false | auto
 #     - true  = always install

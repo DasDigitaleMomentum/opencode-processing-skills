@@ -35,9 +35,30 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${OPS_CONFIG_FILE:-$SCRIPT_DIR/config.yaml}"
 
+# If the user explicitly set OPS_CONFIG_FILE but the file does not exist,
+# fail fast — silent fallback to defaults would be a footgun in CI/tests.
+if [ -n "${OPS_CONFIG_FILE:-}" ] && [ ! -f "$OPS_CONFIG_FILE" ]; then
+    echo "Error: OPS_CONFIG_FILE points to '$OPS_CONFIG_FILE', but the file does not exist." >&2
+    exit 1
+fi
+
+# --- Helper: normalize a YAML scalar value ---
+# Strips inline "<space>#..." comments, trims surrounding whitespace, and
+# removes surrounding single or double quotes. Only strips `#` preceded by
+# whitespace, so literal `#` inside unquoted values is preserved.
+_yaml_clean() {
+    local v="$1"
+    v=$(printf '%s' "$v" | sed 's/[[:space:]]\{1,\}#.*$//; s/^[[:space:]]*//; s/[[:space:]]*$//')
+    case "$v" in
+        \"*\") v="${v#\"}"; v="${v%\"}" ;;
+        \'*\') v="${v#\'}"; v="${v%\'}" ;;
+    esac
+    printf '%s' "$v"
+}
+
 # --- Helper: read a simple "key: value" from config.yaml (root level) ---
 # Matches exact key at start of line (not indented = not nested).
-# Returns the value, or empty string if not found.
+# Returns the cleaned value (comments/quotes stripped), or empty if not found.
 yaml_get_root() {
     local key="$1"
     if [ ! -f "$CONFIG_FILE" ]; then
@@ -45,20 +66,26 @@ yaml_get_root() {
     fi
     # grep may return 1 (no match), which pipefail would treat as error.
     # Use "|| true" on the full pipeline to avoid that.
-    grep -E "^${key}:" "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/^[^:]*:[[:space:]]*//' | sed 's/[[:space:]]*$//' || true
+    local raw
+    raw=$(grep -E "^${key}:" "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/^[^:]*:[[:space:]]*//' || true)
+    _yaml_clean "$raw"
 }
 
 # --- Helper: read a value from a targets.<target>.<field> block ---
 # Parses the targets section using awk to find nested values.
 # Usage: yaml_get_target <target> <field>
 # Example: yaml_get_target "codex" "enabled" -> reads targets.codex.enabled
+#
+# NOTE: Expects 2-space YAML indentation (target headers at depth ≤ 2,
+# fields at depth > 2). Tabs or unusual indentation will not parse.
 yaml_get_target() {
     local target="$1"
     local field="$2"
     if [ ! -f "$CONFIG_FILE" ]; then
         return
     fi
-    awk -v target="$target" -v field="$field" '
+    local raw
+    raw=$(awk -v target="$target" -v field="$field" '
         /^targets:/ { in_targets=1; next }
         /^[a-zA-Z]/ && in_targets { exit }  # Next root-level key
         !in_targets { next }
@@ -101,7 +128,8 @@ yaml_get_target() {
                 }
             }
         }
-    ' "$CONFIG_FILE"
+    ' "$CONFIG_FILE")
+    _yaml_clean "$raw"
 }
 
 # --- Helper: expand leading ~ in a path ---
@@ -166,7 +194,9 @@ CLAUDE_STATE_RAW=$(yaml_get_target "claude" "enabled")
 CLAUDE_STATE_RAW="${CLAUDE_STATE_RAW:-auto}"
 CLAUDE_STATE="${OPS_SYNC_CLAUDE:-$CLAUDE_STATE_RAW}"
 
-# Antigravity detection path (test-only override; not a yaml target)
+# Antigravity detection path (test-only override; not a yaml target).
+# Default is the macOS app-support path — Antigravity is currently macOS-only.
+# Override with OPS_ANTIGRAVITY_PATH for tests or future non-macOS support.
 ANTIGRAVITY_PATH="${OPS_ANTIGRAVITY_PATH:-$HOME/Library/Application Support/Antigravity}"
 
 # --- Build installation target arrays ---
@@ -315,8 +345,6 @@ for SKILLS_DEST in "${SKILLS_DESTS[@]}"; do
     echo ""
 done
 
-echo ""
-
 # --- Step 2: Install Agents ---
 step2_count=0
 for AGENTS_DEST in "${AGENTS_DESTS[@]}"; do
@@ -349,8 +377,6 @@ for AGENTS_DEST in "${AGENTS_DESTS[@]}"; do
     done
     echo ""
 done
-
-echo ""
 
 # --- Step 3: Create additional delegate variants ---
 if [ -f "$CONFIG_FILE" ]; then
