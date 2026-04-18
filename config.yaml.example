@@ -72,12 +72,13 @@ legacy-curator: openai/gpt-5.3-codex
 #   "use delegate-review for this review"
 #   "delegate to delegate-fast for a quick lookup"
 
-# additional_delegates:
-#   codex: azure/gpt-5.3-codex           # Code-specialized
-#   fast:  github-copilot/gpt-5.4-mini   # Lightweight
-#   gpt:   azure/gpt-5.4                 # General GPT
-#   opus:  anthropic/claude-opus-4.6     # Frontier, thorough reviews
-#   qwen:  alibaba/qwen3.6-plus          # Alternative perspective
+additional_delegates:
+  codex:   azure/gpt-5.3-codex           # Code-specialized
+  fast:    github-copilot/gpt-5.4-mini   # Lightweight, default workhorse
+  gpt:     azure/gpt-5.4                 # General GPT
+  opus:    github-copilot/claude-opus-4.6 # Frontier, thorough reviews
+  strong:  github-copilot/claude-opus-4.6 # Escalation slot — hardest problems
+  qwen:    alibaba-eu/qwen3.6-plus       # Alternative perspective
 
 
 # ============================================================================

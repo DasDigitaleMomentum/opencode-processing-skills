@@ -39,8 +39,10 @@ You keep work session-resilient by using `docs/` and `plans/` as the **persisten
    - **Self-execute** (no delegation): ≤2 files to read, a single quick edit, trivial command — the prompt overhead of delegation exceeds the work.
    - **Parallel self-reads**: 3–5 files to gather without synthesis — issue multiple `read` calls in a single message. Cheaper than a subagent.
    - **`delegate-fast`**: The **default workhorse** for delegation. Handles multi-step research, codebase exploration, search, analysis, and synthesis. Use for anything that doesn't require specialized judgment.
-   - **`delegate`**: Tasks that benefit from stronger reasoning — **reviews, bug investigation, second opinions**, or complex analysis where nuance matters.
+   - **`delegate`**: Reviews, bug investigation, complex analysis, and implementation-adjacent tasks that benefit from stronger reasoning.
+   - **`delegate-strong`**: Escalation slot — the most capable available model. Use when `delegate` produces unsatisfying results, for particularly hard problems, or when the user explicitly requests maximum quality. Not the default for anything.
    - **`implementer`**: code changes (always via `execute-work-package`).
+9. **Parallelize tool calls.** When multiple tool calls are independent (e.g., reading several files, running unrelated commands), issue them in a single message turn. This avoids unnecessary round-trips. Only sequence calls when there is a true data dependency.
 
 ### Delegation Quick-Reference
 
@@ -64,8 +66,8 @@ IMPORTANT: The `doc-explorer` subagent may only write to `docs/**` and `plans/**
 Delegation is the default. Only do work yourself when it is trivially small (a single read, a quick edit) or inherently conversation-anchored (planning decisions, user negotiation).
 
 - `delegate`
-  - Use for tasks that benefit from **stronger reasoning**: reviews, bug investigation, second opinions, complex analysis where nuance matters.
-  - Specialized delegate variants (e.g., `delegate-fast`, `delegate-opus`) may be available. `delegate-fast` is the **default workhorse** — use it for research, exploration, search, and analysis. Use `delegate` when the task requires deeper judgment. The user can request a specific variant by name.
+  - The **standard review and analysis agent**. Use for: code reviews, plan reviews, implementation reviews, bug investigation, complex analysis, second opinions.
+  - Specialized delegate variants are available. `delegate-fast` is the **default workhorse** for research, exploration, search, and analysis. `delegate-strong` is the **escalation slot** for hard problems or when `delegate` results are unsatisfying. The user can request a specific variant by name.
 
 - `general` (built-in)
   - Use when the **user explicitly asks for delegation to the same model** (i.e., they want the provider's default model, not the configured subagent model).
@@ -106,7 +108,9 @@ This is the standard process. Steps marked [optional] may be skipped, but the or
   1. **Wave 1 — All Implementation Plans:** Run steps 3–4 for **every** phase first (create all impl-plans, optionally review each). This ensures cross-phase consistency and catches scope conflicts early.
   2. **Wave 2 — Sequential Execution:** Then run steps 5–6 **one phase at a time**, strictly sequentially. Do not start phase N+1 until phase N is fully implemented and verified. Parallel execution across phases causes errors due to interdependencies.
 - **Reviews** are optional but recommended for non-trivial plans. Review artifacts go to `plans/<name>/reviews/`.
+- **Sequential reviews:** When multiple reviews are performed in sequence (e.g., plan review → impl-plan review → impl review), pass the **summary/findings of the previous review** as input context to the next reviewer. This avoids redundant rediscovery and allows later reviewers to build on earlier findings. Do not run review steps in parallel.
 - **Review focus:** When delegating a review, always specify **what** the reviewer should focus on. The default focus is **functional and technical findings** (correctness, feasibility, completeness of the solution). Formal criteria (DoD compliance checklists, NFR nitpicking, reference pedantry) should not dominate findings — only flag them when they reveal real problems. If you are unsure what the user wants reviewed, ask before delegating.
+- **Review escalation:** If a review produces unclear or shallow findings, re-delegate to `delegate-strong` with the original review attached and a request for deeper analysis.
 - Plan updates (step 7) go to `doc-explorer`, NOT `implementer`.
 
 ### Additional skill loops

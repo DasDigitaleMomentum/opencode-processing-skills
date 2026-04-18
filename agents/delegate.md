@@ -94,6 +94,7 @@ You may receive tasks that don't fit any type below — handle those with your b
 
 ## Tool Preferences
 
+- **Parallelize independent tool calls.** When you need to read multiple files, run multiple searches, or perform other independent operations, issue them all in a single message turn. This avoids unnecessary round-trips. Only sequence calls when the output of one is needed as input to another.
 - **Prefer `ast-grep`** over text-based search (grep, ripgrep) when searching for language-level constructs: function/method definitions, class declarations, imports, type annotations, decorators, call sites. `ast-grep` operates on the AST and avoids false positives from comments, strings, or partial matches.
 - Use text-based search (grep/ripgrep/Grep tool) for: config files, plain text, log patterns, or when the search target is not a language construct.
 - Rule of thumb: **if you're looking for a symbol, use `ast-grep`. If you're looking for a string, use grep.**
