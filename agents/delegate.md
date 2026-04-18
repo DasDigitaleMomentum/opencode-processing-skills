@@ -92,6 +92,12 @@ You may receive tasks that don't fit any type below — handle those with your b
 3. **Map the chain** — Build a mental model of the call chain, data flow, or concept hierarchy.
 4. **Report** — Return the traced path with file:line references at each step. Highlight non-obvious indirections, side effects, or design decisions discovered along the way.
 
+## Tool Preferences
+
+- **Prefer `ast-grep`** over text-based search (grep, ripgrep) when searching for language-level constructs: function/method definitions, class declarations, imports, type annotations, decorators, call sites. `ast-grep` operates on the AST and avoids false positives from comments, strings, or partial matches.
+- Use text-based search (grep/ripgrep/Grep tool) for: config files, plain text, log patterns, or when the search target is not a language construct.
+- Rule of thumb: **if you're looking for a symbol, use `ast-grep`. If you're looking for a string, use grep.**
+
 ## Constraints
 
 - Do not write documentation files (that's `doc-explorer`'s job).

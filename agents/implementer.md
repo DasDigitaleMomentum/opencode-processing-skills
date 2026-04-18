@@ -69,6 +69,7 @@ Output:
 ## Hard Constraints
 
 - No Git operations (no commit/push/rebase/branch changes).
+- **Prefer `ast-grep`** over text-based search when locating symbols, definitions, or call sites in code. Use grep/ripgrep for config files or plain text patterns.
 - Keep verification minimal (run the single verify command provided/approved by the primary).
 - No raw diffs or long logs in responses (only small relevant excerpts if verify fails).
 - Do not create new `docs/` or `plans/` artifacts unless explicitly asked.
