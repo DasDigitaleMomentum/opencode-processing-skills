@@ -4,6 +4,12 @@ tmp/
 # User-specific model config (use config.yaml.example as template)
 config.yaml
 
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Test screenshots
+*.png
+
 # OS / editor
 .DS_Store
 .idea/

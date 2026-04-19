@@ -35,5 +35,5 @@ Your goal is to establish a clean, defined state **before** new documentation/pl
 - Do NOT commit or push.
 - Do NOT refactor code.
 - Do NOT create new `docs/` or `plans/` framework artifacts (only `docs-legacy/**`).
-- **Prefer `ast-grep`** over text-based search when looking for code constructs (e.g., tracing imports or references). Use grep for plain text and config files.
+- Use glob/grep to discover documentation artifacts. Inspect code only when needed to infer a document's origin, scope, or ownership.
 - If a move looks risky/ambiguous, stop and report it to the primary.
