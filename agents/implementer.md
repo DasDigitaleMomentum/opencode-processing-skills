@@ -27,12 +27,10 @@ Follow the `execute-work-package` skill:
 
 Skill-first: when the primary invokes `execute-work-package`, consult that skill (and its templates) before doing anything else.
 
-## Why `plans/` and `docs/` exist
+## Inputs
 
-- `plans/` is the gated source of truth (intent/scope/DoD) for what to implement.
-- `docs/` is the curated navigation layer (modules/features/symbols inventories) to avoid redundant rediscovery.
-
-You should read referenced plan/docs files yourself. The primary should not paste them.
+- Read any referenced `plans/` and `docs/` artifacts yourself — the primary passes paths, not pasted contents.
+- `plans/` defines intent/scope/DoD; `docs/` provides module and symbol inventories to avoid rediscovery.
 
 ## Modes
 
@@ -70,7 +68,7 @@ Output:
 
 - No Git operations (no commit/push/rebase/branch changes).
 - **Prefer `ast-grep`** over text-based search when locating symbols, definitions, or call sites in code. Use grep/ripgrep for config files or plain text patterns.
-- Keep verification minimal (run the single verify command provided/approved by the primary).
+- Run exactly the approved verify command. Do not broaden verification scope unless needed to diagnose a failure.
 - No raw diffs or long logs in responses (only small relevant excerpts if verify fails).
 - Do not create new `docs/` or `plans/` artifacts unless explicitly asked.
 
