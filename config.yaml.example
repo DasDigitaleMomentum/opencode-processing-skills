@@ -9,6 +9,11 @@
 #   3. built-in defaults            (sensible auto-detect behavior)
 #
 # No external dependencies — install.sh uses only coreutils + grep + awk + sed.
+#
+# Install modes:
+#   ./install.sh             global installation (uses targets below)
+#   ./install.sh --project   local installation into ./.opencode/ (ignores targets)
+#   ./install.sh --help      show usage
 
 
 # ============================================================================

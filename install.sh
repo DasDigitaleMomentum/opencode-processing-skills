@@ -2,7 +2,13 @@
 # install.sh - Install OpenCode Processing Skills globally
 #
 # Usage:
-#   ./install.sh
+#   ./install.sh             # global installation
+#   ./install.sh --project   # local installation into ./.opencode/
+#   ./install.sh --help      # show usage
+#
+# The --project flag installs skills and agents into ./.opencode/ in the
+# current directory, instead of the global config directory. Use this for
+# per-project installation (e.g., versioning in-repo, CI reproducibility).
 #
 # Configuration (in order of precedence):
 #   1. OPS_* environment variables  (runtime overrides, for tests/CI)
@@ -31,6 +37,29 @@
 # No external dependencies beyond coreutils + grep + awk + sed.
 
 set -euo pipefail
+
+# --- Argument parsing ---
+PROJECT_MODE=false
+for arg in "$@"; do
+    case "$arg" in
+        --project)
+            PROJECT_MODE=true
+            ;;
+        --help|-h)
+            echo "Usage: ./install.sh [--project] [--help]"
+            echo ""
+            echo "  (no flags)    Global installation into configured targets"
+            echo "  --project     Local installation into ./.opencode/"
+            echo "  --help, -h    Show this help"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $arg" >&2
+            echo "Usage: ./install.sh [--project] [--help]" >&2
+            exit 1
+            ;;
+    esac
+done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${OPS_CONFIG_FILE:-$SCRIPT_DIR/config.yaml}"
@@ -230,6 +259,16 @@ if [ -d "$ANTIGRAVITY_PATH" ]; then
         echo "Antigravity detected: WARNING — Claude Code sync is disabled, so Antigravity will not receive updates."
         echo "  Re-run with OPS_SYNC_CLAUDE=true (or enable claude in config.yaml) to sync."
     fi
+fi
+
+# --- Project mode override ---
+if [ "$PROJECT_MODE" = true ]; then
+    PROJECT_HOME="$PWD/.opencode"
+    echo "Project mode: installing into $PROJECT_HOME"
+    echo ""
+    SKILLS_DESTS=("$PROJECT_HOME/skills")
+    AGENTS_DESTS=("$PROJECT_HOME/agents")
+    # In project mode, skip Codex/Claude sync — only OpenCode structure
 fi
 
 echo ""
