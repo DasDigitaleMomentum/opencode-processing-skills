@@ -27,7 +27,8 @@ That's what this repo does. It gives OpenCode:
 git clone git@github.com:DasDigitaleMomentum/opencode-processing-skills.git
 cd opencode-processing-skills
 cp config.yaml.example config.yaml   # optional: set models
-./install.sh
+./install.sh                         # global install
+# OR: ./install.sh --project         # local install into ./.opencode/
 ```
 
 Then restart OpenCode and select `@maintainer`.
@@ -54,6 +55,10 @@ The maintainer delegates to specialized subagents:
 - `implementer` — code changes with gated execution
 - `legacy-curator` — archive cleanup
 
+Two maintainer variants are available:
+- `@maintainer` — interactive: asks for confirmation at decision points
+- `@maintainer-direct` — non-interactive: acts and reports, asks only for genuine choices
+
 Everything persists to files. New session? Read the plan and continue.
 
 → [Skills reference](docs/skills.md)
@@ -65,7 +70,9 @@ Everything persists to files. New session? Read the plan and continue.
 
 **Subagents where they help, not everywhere.** Codebase exploration? Subagent. Writing docs? Subagent. But planning stays with the primary — delegating a plan means serializing the entire conversation into a prompt.
 
-**Gated execution.** The subagent proposes a blueprint. The primary reviews and approves. Then execution happens. Same session, no context loss.
+**Delegate by default.** Context is a budget — every file read costs tokens better spent on judgment. The maintainer defaults to delegation: one trivial single-file edit is the only thing done locally. Everything else goes through subagents.
+
+**Gated execution.** The subagent proposes a blueprint. The primary reviews and approves. Then execution happens. Same session, no context loss. The blueprint is a Chain-of-Thought equivalent — it forces structured thinking before any code is written.
 
 **Everything persists to files.** `docs/` and `plans/` are the interface. Readable by humans and AI. No hidden state.
 

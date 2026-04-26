@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
 - **Additional delegates**: Support for named delegate variants (e.g., `delegate-review`, `delegate-fast`) with different models via `additional_delegates` config section
 - **Testing & Verification Policy**: New maintainer section covering test integrity, inter-phase verification, e2e defaults, and Playwright/PTY capabilities
 - **Model configuration**: `config.yaml.example` template for per-agent model selection; install.sh injects models during installation
+- **`maintainer-direct` agent**: Non-interactive maintainer variant for environments without the `question` tool. Asks only for genuine choice decisions, ends turns with status statements
+- **`install.sh --project`**: Local installation flag that installs into `./.opencode/` instead of the global config directory, for per-project versioning and CI reproducibility
+- **Delegation anti-patterns**: Concrete "wrong → right" table in maintainer Operating Rules, covering exploration, multi-file edits, bug investigation, and research
 
 ### Changed
 - **Renamed**: `execute-work-packet` → `execute-work-package` (skill directory and all references)
@@ -17,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - **Maintainer agent**: Rewritten Operating Rules – numbered priorities with clear hierarchy (docs first, ask before assuming, delegate with references, context hygiene via DCP, coding standards reference)
 - **Maintainer agent**: New Plan-to-Implementation Lifecycle table (8 steps: CREATE → REVIEW → IMPL PLAN → REVIEW → EXECUTE → REVIEW → UPDATE → HANDOVER)
 - **Maintainer agent**: Clear agent routing – doc-explorer for docs/plans only, implementer for code only
+- **Maintainer agent**: Delegation rules sharpened — "default to delegation" culture, context-as-budget rule, Blueprint-as-default for all non-trivial edits (single trivial edit → self; everything else → implementer)
 - **execute-work-package skill**: Added Coding Standards section (no hardcoded defaults, root cause analysis, minimal changes, preserve patterns, no silent failures, respect dependency boundaries)
 - **execute-work-package skill**: Reworked post-processing – three clear paths based on digest outcome (passed/failed/blocked), discourages re-running full test suites in primary session
 - **author-and-verify-implementation-plan skill**: Added sequential processing rule to prevent cross-phase drift
