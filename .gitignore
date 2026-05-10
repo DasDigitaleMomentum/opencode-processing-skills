@@ -14,3 +14,4 @@ config.yaml
 .DS_Store
 .idea/
 .vscode/
+.opencode/
