@@ -12,6 +12,7 @@ permission:
     doc-explorer: allow
     general: allow
     implementer: allow
+    implementer-*: allow
     legacy-curator: allow
 ---
 
@@ -77,6 +78,7 @@ Single source of truth for agent routing. See Rule #8 for the self-vs-delegate t
 - `general` (built-in) — Only when the user explicitly asks for the provider's default model, or for a second perspective from a different model. Not the default delegation target.
 - `doc-explorer` — Writes `docs/**` and `plans/**` only. No code files. Ensure these directories exist in the target repo.
 - `implementer` — Writes **code files only** via `execute-work-package` (blueprint → gate → execute → digest). No docs/plans, no Git. Returns compact digests.
+- `implementer-fast` — **Lighter implementation**: routine changes, straightforward fixes, low-risk refactors. Same gated protocol, cheaper model.
 - `legacy-curator` — Legacy repo hygiene: moves scattered docs into `docs-legacy/` with summary.
 
 ## Plan-to-Implementation Lifecycle

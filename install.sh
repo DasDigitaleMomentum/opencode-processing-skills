@@ -281,53 +281,174 @@ get_model_for_agent() {
     yaml_get_root "$agent_name"
 }
 
-# --- Helper: inject or remove model line in agent frontmatter ---
-# If model is non-empty, adds/replaces "model: <value>" after the description line.
-# If model is empty, removes any existing model line.
-inject_model() {
+# --- Helper: inject model and options into agent frontmatter ---
+# Writes "model: <model>" and optionally "options:" block after the description line.
+# Also handles removal if model is empty.
+# Usage: inject_agent_config <file> <model> [options_str]
+#   options_str format: "key1=val1 key2=val2" (space-separated key=value pairs)
+inject_agent_config() {
     local file="$1"
     local model="$2"
+    local options_str="${3:-}"
+
+    # Escape forward slashes in model for safe sed usage
+    local model_safe="${model//\//\\/}"
+
+    # Remove any existing injected model/options block (between --- and --- frontmatter)
+    sed -i '/^model:/d' "$file"
+    sed -i '/^options:/,/^[a-z]/{ /^options:/d; /^[a-z]/!d; }' "$file"
 
     if [ -n "$model" ]; then
-        if grep -q "^model:" "$file"; then
-            sed -i "s|^model:.*|model: ${model}|" "$file"
+        sed -i "/^description:/a model: ${model}" "$file"
+    fi
+
+    if [ -n "$options_str" ]; then
+        # Insert options block after model line (or after description if no model)
+        if [ -n "$model" ]; then
+            sed -i "/^model: ${model_safe}/a options:" "$file"
         else
-            sed -i "/^description:/a model: ${model}" "$file"
+            sed -i "/^description:/a options:" "$file"
         fi
-    else
-        sed -i '/^model:/d' "$file"
+        # Append each option key=value pair under the options block
+        local IFS=' '
+        for kv in $options_str; do
+            local key="${kv%%=*}"
+            local val="${kv#*=}"
+            # Insert after the "options:" line we just added
+            sed -i "/^options:/a \ \ ${key}: ${val}" "$file"
+        done
     fi
 }
 
 # --- Helper: parse additional_delegates from config.yaml ---
-# Returns lines of "suffix model" pairs
+# Returns lines of "suffix model [key=val ...]"
+# Supports both scalar (fast: provider/model) and object syntax:
+#   fast:
+#     model: provider/model
+#     reasoningEffort: high
 get_additional_delegates() {
     if [ ! -f "$CONFIG_FILE" ]; then
         return
     fi
     awk '
+        function flush() {
+            if (cur_suffix != "" && cur_model != "") {
+                gsub(/^[[:space:]]+/, "", cur_opts)
+                print cur_suffix, cur_model, cur_opts
+            }
+            cur_suffix = ""; cur_model = ""; cur_opts = ""; in_obj = 0
+        }
         /^additional_delegates:/ { in_section=1; next }
-        /^[a-zA-Z]/ && in_section { exit }  # Next root-level key
-        in_section && /^[[:space:]]+[a-zA-Z]/ {
+        /^[a-zA-Z]/ && in_section { flush(); exit }
+        !in_section { next }
+        {
+            line = $0
+            depth = 0
+            for (i = 1; i <= length(line); i++) {
+                if (substr(line, i, 1) == " ") depth++
+                else break
+            }
             gsub(/^[[:space:]]+/, "")
             if (substr($0, 1, 1) == "#") next
+
             colon = index($0, ":")
-            if (colon > 0) {
-                suffix = substr($0, 1, colon - 1)
-                model = substr($0, colon + 1)
-                gsub(/^[[:space:]]+/, "", model)
-                gsub(/[[:space:]]+$/, "", model)
-                # Strip inline comments (e.g. "azure/gpt-5.3-codex   # Code-specialized")
-                comment = index(model, "#")
-                if (comment > 0) {
-                    model = substr(model, 1, comment - 1)
-                    gsub(/[[:space:]]+$/, "", model)
-                }
-                if (suffix != "" && model != "") {
-                    print suffix, model
-                }
+            if (colon == 0) next
+            key = substr($0, 1, colon - 1)
+            val = substr($0, colon + 1)
+            gsub(/^[[:space:]]+/, "", val)
+            gsub(/[[:space:]]+$/, "", key)
+
+            cpos = index(val, "#")
+            if (cpos > 0) {
+                val = substr(val, 1, cpos - 1)
+                gsub(/[[:space:]]+$/, "", val)
+            }
+
+            if (depth <= 4 && val == "") {
+                # Object header: new suffix — flush previous first
+                flush()
+                cur_suffix = key
+                in_obj = 1
+                next
+            }
+            if (in_obj && depth >= 4) {
+                # Inside object: collect fields
+                if (key == "model") cur_model = val
+                else if (val != "") cur_opts = cur_opts " " key "=" val
+                next
+            }
+            if (depth <= 4 && val != "" && val ~ /\//) {
+                # Scalar: suffix model
+                flush()
+                cur_suffix = key
+                cur_model = val
+                in_obj = 0
             }
         }
+        END { flush() }
+    ' "$CONFIG_FILE"
+}
+
+# --- Helper: parse additional_implementers from config.yaml ---
+# Returns lines of "suffix model [key=val ...]"
+# Same format and rules as get_additional_delegates
+get_additional_implementers() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        return
+    fi
+    awk '
+        function flush() {
+            if (cur_suffix != "" && cur_model != "") {
+                gsub(/^[[:space:]]+/, "", cur_opts)
+                print cur_suffix, cur_model, cur_opts
+            }
+            cur_suffix = ""; cur_model = ""; cur_opts = ""; in_obj = 0
+        }
+        /^additional_implementers:/ { in_section=1; next }
+        /^[a-zA-Z]/ && in_section { flush(); exit }
+        !in_section { next }
+        {
+            line = $0
+            depth = 0
+            for (i = 1; i <= length(line); i++) {
+                if (substr(line, i, 1) == " ") depth++
+                else break
+            }
+            gsub(/^[[:space:]]+/, "")
+            if (substr($0, 1, 1) == "#") next
+
+            colon = index($0, ":")
+            if (colon == 0) next
+            key = substr($0, 1, colon - 1)
+            val = substr($0, colon + 1)
+            gsub(/^[[:space:]]+/, "", val)
+            gsub(/[[:space:]]+$/, "", key)
+
+            cpos = index(val, "#")
+            if (cpos > 0) {
+                val = substr(val, 1, cpos - 1)
+                gsub(/[[:space:]]+$/, "", val)
+            }
+
+            if (depth <= 4 && val == "") {
+                flush()
+                cur_suffix = key
+                in_obj = 1
+                next
+            }
+            if (in_obj && depth >= 4) {
+                if (key == "model") cur_model = val
+                else if (val != "") cur_opts = cur_opts " " key "=" val
+                next
+            }
+            if (depth <= 4 && val != "" && val ~ /\//) {
+                flush()
+                cur_suffix = key
+                cur_model = val
+                in_obj = 0
+            }
+        }
+        END { flush() }
     ' "$CONFIG_FILE"
 }
 
@@ -336,6 +457,7 @@ create_delegate_variant() {
     local suffix="$1"
     local model="$2"
     local agents_dest="$3"
+    local options_str="$4"
     local template="$SCRIPT_DIR/agents/delegate.md"
     local dest="$agents_dest/delegate-${suffix}.md"
 
@@ -350,9 +472,102 @@ create_delegate_variant() {
     sed -i "s|^description:.*|description: Delegate variant '${suffix}' with model ${model}. Use for specific delegation needs.|" "$dest"
     sed -i 's|^# Delegate\b.*|# Delegate ('"${suffix}"')|' "$dest"
 
-    inject_model "$dest" "$model"
+    inject_agent_config "$dest" "$model" "$options_str"
 
-    echo "  Generated: delegate-${suffix}.md -> model: $model"
+    local opts_note=""
+    [ -n "$options_str" ] && opts_note=", options: $options_str"
+    echo "  Generated: delegate-${suffix}.md -> model: $model${opts_note}"
+}
+
+# --- Helper: parse additional_implementers from config.yaml ---
+# Returns lines of "suffix model [key=val ...]"
+# Same format and rules as get_additional_delegates
+get_additional_implementers() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        return
+    fi
+    awk '
+        function flush() {
+            if (cur_suffix != "" && cur_model != "") {
+                gsub(/^[[:space:]]+/, "", cur_opts)
+                print cur_suffix, cur_model, cur_opts
+            }
+            cur_suffix = ""; cur_model = ""; cur_opts = ""; in_obj = 0
+        }
+        /^additional_implementers:/ { in_section=1; next }
+        /^[a-zA-Z]/ && in_section { flush(); exit }
+        !in_section { next }
+        {
+            line = $0
+            depth = 0
+            for (i = 1; i <= length(line); i++) {
+                if (substr(line, i, 1) == " ") depth++
+                else break
+            }
+            gsub(/^[[:space:]]+/, "")
+            if (substr($0, 1, 1) == "#") next
+
+            colon = index($0, ":")
+            if (colon == 0) next
+            key = substr($0, 1, colon - 1)
+            val = substr($0, colon + 1)
+            gsub(/^[[:space:]]+/, "", val)
+            gsub(/[[:space:]]+$/, "", key)
+
+            cpos = index(val, "#")
+            if (cpos > 0) {
+                val = substr(val, 1, cpos - 1)
+                gsub(/[[:space:]]+$/, "", val)
+            }
+
+            if (depth <= 4 && val == "") {
+                flush()
+                cur_suffix = key
+                in_obj = 1
+                next
+            }
+            if (in_obj && depth >= 4) {
+                if (key == "model") cur_model = val
+                else if (val != "") cur_opts = cur_opts " " key "=" val
+                next
+            }
+            if (depth <= 4 && val != "" && val ~ /\//) {
+                # Scalar: suffix model
+                flush()
+                cur_suffix = key
+                cur_model = val
+                in_obj = 0
+            }
+        }
+        END { flush() }
+    ' "$CONFIG_FILE"
+}
+
+# --- Helper: create an implementer variant from the implementer template ---
+create_implementer_variant() {
+    local suffix="$1"
+    local model="$2"
+    local agents_dest="$3"
+    local options_str="$4"
+    local template="$SCRIPT_DIR/agents/implementer.md"
+    local dest="$agents_dest/implementer-${suffix}.md"
+
+    # Symlink safety: same check as main install loops
+    if [ -L "$dest" ]; then
+        echo "  Symlink (skipping): implementer-${suffix}.md"
+        return
+    fi
+
+    cp "$template" "$dest"
+
+    sed -i "s|^description:.*|description: Implementer variant '${suffix}' with model ${model}. Use for specific implementation needs.|" "$dest"
+    sed -i 's|^# Implementer\b.*|# Implementer ('"${suffix}"')|' "$dest"
+
+    inject_agent_config "$dest" "$model" "$options_str"
+
+    local opts_note=""
+    [ -n "$options_str" ] && opts_note=", options: $options_str"
+    echo "  Generated: implementer-${suffix}.md -> model: $model${opts_note}"
 }
 
 # --- Step 1: Install Skills ---
@@ -410,7 +625,7 @@ for AGENTS_DEST in "${AGENTS_DESTS[@]}"; do
         # Inject model from config.yaml (if configured)
         model=$(get_model_for_agent "$agent_name")
         if [ -n "$model" ]; then
-            inject_model "$dest" "$model"
+            inject_agent_config "$dest" "$model"
             echo "    -> model: $model"
         fi
     done
@@ -423,9 +638,25 @@ if [ -f "$CONFIG_FILE" ]; then
     if [ -n "$additional" ]; then
         echo "Step 3: Creating additional delegate variants"
         for AGENTS_DEST in "${AGENTS_DESTS[@]}"; do
-            while read -r suffix model; do
+            while read -r suffix model opts; do
                 if [ -n "$suffix" ] && [ -n "$model" ]; then
-                    create_delegate_variant "$suffix" "$model" "$AGENTS_DEST"
+                    create_delegate_variant "$suffix" "$model" "$AGENTS_DEST" "$opts"
+                fi
+            done <<< "$additional"
+        done
+        echo ""
+    fi
+fi
+
+# --- Step 4: Create additional implementer variants ---
+if [ -f "$CONFIG_FILE" ]; then
+    additional=$(get_additional_implementers)
+    if [ -n "$additional" ]; then
+        echo "Step 4: Creating additional implementer variants"
+        for AGENTS_DEST in "${AGENTS_DESTS[@]}"; do
+            while read -r suffix model opts; do
+                if [ -n "$suffix" ] && [ -n "$model" ]; then
+                    create_implementer_variant "$suffix" "$model" "$AGENTS_DEST" "$opts"
                 fi
             done <<< "$additional"
         done
