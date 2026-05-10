@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 - **`maintainer-direct` agent**: Non-interactive maintainer variant for environments without the `question` tool. Asks only for genuine choice decisions, ends turns with status statements
 - **`install.sh --project`**: Local installation flag that installs into `./.opencode/` instead of the global config directory, for per-project versioning and CI reproducibility
 - **Delegation anti-patterns**: Concrete "wrong → right" table in maintainer Operating Rules, covering exploration, multi-file edits, bug investigation, and research
+- **Additional implementers**: Support for named implementer variants (e.g., `implementer-fast`) with different models via `additional_implementers` config section — same pattern as additional_delegates
+- **Agent options injection**: `install.sh` now supports per-agent model parameters (`reasoningEffort`, `temperature`, `top_p`, `maxTokens`) via object syntax in `additional_*` config sections, injected into agent frontmatter as an `options:` block
 
 ### Changed
 - **Renamed**: `execute-work-packet` → `execute-work-package` (skill directory and all references)

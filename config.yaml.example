@@ -87,6 +87,39 @@ additional_delegates:
 
 
 # ============================================================================
+# Additional implementer variants
+# ============================================================================
+# Each entry creates a new agent `implementer-<suffix>` based on the implementer
+# template, with a different model. Same gated execution protocol
+# (blueprint → gate → execute → digest), different model choices.
+#
+# Two syntaxes are supported:
+#
+#   Scalar (model only, backward compatible):
+#     fast: github-copilot/gpt-5.4-mini
+#
+#   Object (model + options for reasoning, temperature, etc.):
+#     fast:
+#       model: github-copilot/gpt-5.4-mini
+#       reasoningEffort: high
+#       temperature: 0.0
+#
+# Supported options keys (routed to OpenCode provider options):
+#   reasoningEffort: low | medium | high
+#   temperature: <float>
+#   top_p: <float>
+#   maxTokens: <int>
+#
+# The primary agent can then target a specific variant:
+#   "use implementer-fast for this work package"
+
+additional_implementers:
+  fast:
+    model: github-copilot/gpt-5.4-mini   # Lightweight, for routine changes
+    reasoningEffort: high
+
+
+# ============================================================================
 # Alternative model examples (uncomment to use)
 # ============================================================================
 # delegate: github-copilot/gpt-5.4-mini
