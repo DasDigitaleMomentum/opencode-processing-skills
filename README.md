@@ -1,23 +1,23 @@
 # OpenCode Processing Skills
 
-Agents, skills, and templates for **structured AI-assisted development** with [OpenCode](https://github.com/opencode-ai/opencode). Workflows for documenting codebases, persisting plans across sessions, and delegating work to specialized subagents.
+Agents, skills, and templates for **structured AI-assisted development** with [OpenCode](https://github.com/sst/opencode). Workflows for documenting codebases, persisting plans across sessions, and delegating work to specialized subagents.
 
-> **Note:** This project is not built by or affiliated with the OpenCode team ("anomalyco").
+> **Note:** This project is not built by or affiliated with the OpenCode team ("sst").
 
 ---
 
 ## Why this exists
 
-I use GitHub Copilot as my provider. GHCP caps context at 128k — even for models that support more. The economics are simple: keep your primary session lean, delegate expensive exploration to subagents, and make sure nothing gets lost between sessions.
+AI-assisted development has a context problem. Every file you read, every search result you inspect — it all counts against a finite context window. When that window fills up, quality degrades. The most expensive thing you can do is rediscover what you already figured out yesterday.
 
-That's what this repo does. It gives OpenCode:
+This repo solves that. It gives OpenCode:
 
-- **Structured documentation** — generated from code, with symbol inventories that both humans and AI can navigate
-- **Multi-session planning** — plans with phases, implementation details, persistent todos, and handover docs
-- **Gated implementation** — the primary reviews what a subagent proposes before execution happens
-- **File-based persistence** — `docs/` and `plans/` are the interface, not chat history
-- **Consistent templates** — every artifact (plan, phase, implementation plan, handover) uses the same structure, so information is always where you expect it
-- **Blueprint verification** — before any code is written, the subagent proposes a step list that the primary reviews and approves, reducing misunderstandings
+- **Structured documentation** — generated from code, with symbol inventories that both humans and AI can navigate. Stop re-reading files you've already explored.
+- **Multi-session planning** — plans with phases, persistent todos, and handover docs. Close your laptop, open it tomorrow, pick up exactly where you left off.
+- **Gated implementation** — subagents propose a blueprint before writing code. The primary reviews and approves. Catches misunderstandings before they become bugs.
+- **File-based persistence** — `docs/` and `plans/` are the interface, not chat history. Knowledge survives session boundaries.
+- **Consistent templates** — every artifact uses the same structure. Information is always where you expect it.
+- **Provider-agnostic** — works with any model you configure: OpenAI, Anthropic, DeepSeek, Alibaba, and more. The architecture doesn't depend on any single provider's pricing or behavior.
 
 ---
 
@@ -68,13 +68,13 @@ Everything persists to files. New session? Read the plan and continue.
 
 ## Principles
 
-**Subagents where they help, not everywhere.** Codebase exploration? Subagent. Writing docs? Subagent. But planning stays with the primary — delegating a plan means serializing the entire conversation into a prompt.
+**Delegate by default.** Context is a budget — every file read costs tokens better spent on judgment. The maintainer delegates by default: one trivial single-file edit is the only thing done locally. Everything else goes through specialized subagents.
 
-**Delegate by default.** Context is a budget — every file read costs tokens better spent on judgment. The maintainer defaults to delegation: one trivial single-file edit is the only thing done locally. Everything else goes through subagents.
+**Gated execution.** Subagents propose a blueprint (step list) before writing any code. The primary reviews and approves. Then execution happens. The blueprint acts as Chain-of-Thought — it forces structured thinking before implementation.
 
-**Gated execution.** The subagent proposes a blueprint. The primary reviews and approves. Then execution happens. Same session, no context loss. The blueprint is a Chain-of-Thought equivalent — it forces structured thinking before any code is written.
+**File-based persistence.** `docs/` and `plans/` are the interface. Readable by humans and AI. No hidden state. Your knowledge survives session boundaries.
 
-**Everything persists to files.** `docs/` and `plans/` are the interface. Readable by humans and AI. No hidden state.
+→ [Full architecture rationale](AGENTS.md)
 
 ---
 
