@@ -69,21 +69,35 @@ legacy-curator: openai/gpt-5.3-codex
 # Each entry creates a new agent `delegate-<suffix>` based on the delegate
 # template, with a different model. Useful for task-specific routing:
 #
-#   - delegate-review: frontier model for thorough code reviews
-#   - delegate-fast:   lightweight model for quick lookups
-#   - delegate-codex:  code-specialized model for implementation analysis
+#   - delegate-strong:  frontier model for escalation / hardest problems
+#   - delegate-fast:    lightweight model for quick lookups
+#   - delegate-codex:   code-specialized model for implementation analysis
 #
 # The primary agent can then target a specific variant:
-#   "use delegate-review for this review"
+#   "use delegate-strong for this review"
 #   "delegate to delegate-fast for a quick lookup"
+#
+# Two syntaxes are supported:
+#
+#   Scalar (model only):
+#     fast: openai/gpt-5.4-mini
+#
+#   Object (model + options for reasoning, temperature, etc.):
+#     strong:
+#       model: openai/gpt-5.5
+#       reasoningEffort: high
 
 additional_delegates:
-  codex:   azure/gpt-5.3-codex           # Code-specialized
-  fast:    github-copilot/gpt-5.4-mini   # Lightweight, default workhorse
-  gpt:     azure/gpt-5.4                 # General GPT
-  opus:    github-copilot/claude-opus-4.6 # Frontier, thorough reviews
-  strong:  github-copilot/claude-opus-4.6 # Escalation slot — hardest problems
-  qwen:    alibaba-eu/qwen3.6-plus       # Alternative perspective
+  codex:   openai/gpt-5.3-codex           # Code-specialized
+  fast:    openai/gpt-5.4-mini            # Lightweight, default workhorse
+  gpt:     openai/gpt-5.4                 # General GPT
+  strong:
+    model: openai/gpt-5.5                 # Escalation slot — hardest problems
+    reasoningEffort: high
+  opus:    anthropic/claude-opus-4-5      # Frontier, thorough reviews
+  qwen:    alibaba-eu/qwen3.7-max         # Alternative perspective
+  ds:      deepseek/deepseek-v4-pro       # DeepSeek, strong reasoning
+  ds-flash: deepseek/deepseek-v4-flash    # DeepSeek, fast/lightweight
 
 
 # ============================================================================
@@ -93,19 +107,8 @@ additional_delegates:
 # template, with a different model. Same gated execution protocol
 # (blueprint → gate → execute → digest), different model choices.
 #
-# Two syntaxes are supported:
-#
-#   Scalar (model only, backward compatible):
-#     fast: github-copilot/gpt-5.4-mini
-#
-#   Object (model + options for reasoning, temperature, etc.):
-#     fast:
-#       model: github-copilot/gpt-5.4-mini
-#       reasoningEffort: high
-#       temperature: 0.0
-#
 # Supported options keys (routed to OpenCode provider options):
-#   reasoningEffort: low | medium | high
+#   reasoningEffort: low | medium | high | max
 #   temperature: <float>
 #   top_p: <float>
 #   maxTokens: <int>
@@ -115,14 +118,19 @@ additional_delegates:
 
 additional_implementers:
   fast:
-    model: github-copilot/gpt-5.4-mini   # Lightweight, for routine changes
+    model: openai/gpt-5.4-mini            # Lightweight, for routine changes
+    reasoningEffort: high
+  safe:
+    model: deepseek/deepseek-v4-pro       # Safe, strong reasoning
     reasoningEffort: high
 
 
 # ============================================================================
 # Alternative model examples (uncomment to use)
 # ============================================================================
-# delegate: github-copilot/gpt-5.4-mini
-# doc-explorer: github-copilot/gpt-5.4-mini
-# implementer: github-copilot/gpt-5.4-mini
-# legacy-curator: github-copilot/gpt-5.4-mini
+# delegate: openai/gpt-5.4-mini
+# doc-explorer: openai/gpt-5.4-mini
+# implementer: openai/gpt-5.4-mini
+# legacy-curator: openai/gpt-5.4-mini
+# delegate: deepseek/deepseek-v4-pro
+# implementer: deepseek/deepseek-v4-pro
