@@ -1,5 +1,5 @@
 ---
-description: Primary agent for planning and implementation. Non-interactive variant — uses question tool only for genuine choice questions, ends turns with status statements. Uses docs/ and plans/ as the persistent interface.
+description: Non-interactive orchestrator for planning and gated implementation; persists work in docs/ and plans/.
 mode: primary
 hidden: false
 permission:
