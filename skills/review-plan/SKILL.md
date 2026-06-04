@@ -47,25 +47,25 @@ The primary passes the focus via `{{focus}}` in the delegation prompt. If no foc
 
 - **Primary (maintainer)**
   - Invokes the review skill.
-  - Delegates the review to `delegate` (default) or `general` (for same-model perspective).
+  - Delegates the review to `delegate-strong` (default) or `general` (for same-model perspective).
   - Receives the review summary and decides on follow-up actions.
   - Updates the plan via `update-plan` if findings require changes.
 
-- **Subagent (delegate / general)**
+- **Subagent (delegate-strong / general)**
   - Reads plan + phase documents with **no prior context** (fresh eyes).
   - Evaluates against the structured criteria embedded in the review template.
   - Writes the review artifact to `plans/<name>/reviews/plan-review.md`.
 
-### Why `delegate` (not `doc-explorer`)
+### Why `delegate-strong` (not `doc-explorer`)
 
-The reviewer intentionally approaches the plan without authoring context. `delegate` is a general-purpose agent that looks at the artifacts cold — this prevents the "author reviews their own work" anti-pattern. `doc-explorer` is for writing plans/docs, not reviewing them.
+The reviewer must approach the plan without authoring context — fresh eyes catch what familiarity misses. `delegate-strong` provides the judgment depth needed to evaluate scope, consistency, and completeness. `doc-explorer` is for writing plans/docs, not reviewing them.
 
 ## Routing Matrix (Who does what)
 
 - **Writes**: `plans/<name>/reviews/plan-review.md`
 - **Does NOT write**: `plans/<name>/plan.md`, `plans/<name>/phases/**`, or any other plan artifact.
 - **Primary**: owns the decision of whether to act on findings.
-- **delegate/general**: performs the review and writes the review artifact.
+- **delegate-strong/general**: performs the review and writes the review artifact.
 
 ---
 
@@ -80,7 +80,7 @@ Primary gathers:
 
 ### 2) Delegate
 
-Primary delegates to `delegate` (or `general`) using `tpl-review-plan-prompt.md`.
+Primary delegates to `delegate-strong` (or `general`) using `tpl-review-plan-prompt.md`.
 
 Provide:
 - Plan path
@@ -129,4 +129,4 @@ The review artifact `plans/<name>/reviews/plan-review.md` MUST:
 ## Templates
 
 - `tpl-plan-review.md` — Canonical review output format with embedded review criteria
-- `tpl-review-plan-prompt.md` — Primary → delegate delegation prompt
+- `tpl-review-plan-prompt.md` — Primary → delegate-strong delegation prompt

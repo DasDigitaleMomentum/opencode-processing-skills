@@ -47,24 +47,24 @@ The primary passes the focus via `{{focus}}` in the delegation prompt. If no foc
 
 - **Primary (maintainer)**
   - Invokes the review skill.
-  - Delegates to `delegate` (default) or `general` (for same-model perspective).
+  - Delegates to `delegate-strong` (default) or `general` (for same-model perspective).
   - Receives review summary and decides on follow-up actions.
 
-- **Subagent (delegate / general)**
+- **Subagent (delegate-strong / general)**
   - Reads plan, phase, and implementation plan with **no prior context**.
   - Examines the **actual codebase** to verify references and feasibility.
   - Writes the review artifact to `plans/<name>/reviews/impl-plan-review-phase-N.md`.
 
-### Why `delegate` (not `doc-explorer`)
+### Why `delegate-strong` (not `doc-explorer`)
 
-Same rationale as `review-plan`: the reviewer must approach the artifact cold, without authoring context. The review is a quality check, not a documentation task.
+Same rationale as `review-plan`: the reviewer must approach the artifact cold, without authoring context. `delegate-strong` provides the judgment depth needed to evaluate implementation feasibility and cross-reference plan claims against real code.
 
 ## Routing Matrix (Who does what)
 
 - **Writes**: `plans/<name>/reviews/impl-plan-review-phase-N.md`
 - **Does NOT write**: implementation plans, phase docs, or any other plan artifact.
 - **Primary**: owns the decision of whether to act on findings.
-- **delegate/general**: performs the review, including codebase verification.
+- **delegate-strong/general**: performs the review, including codebase verification.
 
 ---
 
@@ -81,7 +81,7 @@ Primary gathers:
 
 ### 2) Delegate
 
-Primary delegates to `delegate` (or `general`) using `tpl-review-impl-plan-prompt.md`.
+Primary delegates to `delegate-strong` (or `general`) using `tpl-review-impl-plan-prompt.md`.
 
 Provide:
 - Plan, phase, and implementation plan paths
@@ -131,4 +131,4 @@ The review artifact `plans/<name>/reviews/impl-plan-review-phase-N.md` MUST:
 ## Templates
 
 - `tpl-impl-plan-review.md` — Canonical review output format with embedded review criteria
-- `tpl-review-impl-plan-prompt.md` — Primary → delegate delegation prompt
+- `tpl-review-impl-plan-prompt.md` — Primary → delegate-strong delegation prompt
