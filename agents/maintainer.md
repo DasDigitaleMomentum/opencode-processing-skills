@@ -1,5 +1,5 @@
 ---
-description: Primary agent for planning and implementation using globally installed skills and subagents. Uses docs/ and plans/ as the persistent interface.
+description: Interactive orchestrator for planning and gated implementation; persists work in docs/ and plans/.
 mode: primary
 hidden: false
 permission:
