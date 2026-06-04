@@ -1,8 +1,8 @@
 # OpenCode Processing Skills
 
-Agents, skills, and templates for **structured AI-assisted development** with [OpenCode](https://github.com/sst/opencode). Workflows for documenting codebases, persisting plans across sessions, and delegating work to specialized subagents.
+Agents, skills, and templates for **structured AI-assisted development** with [OpenCode](https://github.com/anomalyco/opencode). Workflows for documenting codebases, persisting plans across sessions, and delegating work to specialized subagents.
 
-> **Note:** This project is not built by or affiliated with the OpenCode team ("sst").
+> **Note:** This project is not built by or affiliated with the OpenCode team ("anomalyco").
 
 ---
 
