@@ -186,6 +186,17 @@ is_enabled() {
     esac
 }
 
+# --- Helper: portable in-place sed (GNU/BSD) ---
+sed_inplace() {
+    local script="$1"
+    local file="$2"
+    if sed --version >/dev/null 2>&1; then
+        sed -i "$script" "$file"
+    else
+        sed -i '' "$script" "$file"
+    fi
+}
+
 echo "OpenCode Processing Skills - Installer"
 echo "======================================="
 echo ""
@@ -290,34 +301,57 @@ inject_agent_config() {
     local file="$1"
     local model="$2"
     local options_str="${3:-}"
+    local tmp_file
+    tmp_file="$(mktemp)"
 
-    # Escape forward slashes in model for safe sed usage
-    local model_safe="${model//\//\\/}"
+    awk -v model="$model" -v options_str="$options_str" '
+        BEGIN {
+            in_options = 0
+            n_opts = 0
+            if (options_str != "") {
+                n_opts = split(options_str, opts, " ")
+            }
+        }
+        {
+            # Remove existing model line.
+            if ($0 ~ /^model:[[:space:]]*/) next
 
-    # Remove any existing injected model/options block (between --- and --- frontmatter)
-    sed -i '/^model:/d' "$file"
-    sed -i '/^options:/,/^[a-z]/{ /^options:/d; /^[a-z]/!d; }' "$file"
+            # Remove existing options block.
+            if (in_options) {
+                if ($0 ~ /^[a-z][a-zA-Z0-9_-]*:[[:space:]]*/) {
+                    in_options = 0
+                } else {
+                    next
+                }
+            }
+            if ($0 ~ /^options:[[:space:]]*$/) {
+                in_options = 1
+                next
+            }
 
-    if [ -n "$model" ]; then
-        sed -i "/^description:/a model: ${model}" "$file"
-    fi
+            print $0
 
-    if [ -n "$options_str" ]; then
-        # Insert options block after model line (or after description if no model)
-        if [ -n "$model" ]; then
-            sed -i "/^model: ${model_safe}/a options:" "$file"
-        else
-            sed -i "/^description:/a options:" "$file"
-        fi
-        # Append each option key=value pair under the options block
-        local IFS=' '
-        for kv in $options_str; do
-            local key="${kv%%=*}"
-            local val="${kv#*=}"
-            # Insert after the "options:" line we just added
-            sed -i "/^options:/a \ \ ${key}: ${val}" "$file"
-        done
-    fi
+            # Insert model/options directly after description.
+            if ($0 ~ /^description:/) {
+                if (model != "") {
+                    print "model: " model
+                }
+                if (n_opts > 0) {
+                    print "options:"
+                    for (i = 1; i <= n_opts; i++) {
+                        if (opts[i] == "") continue
+                        split(opts[i], kv, "=")
+                        key = kv[1]
+                        val = substr(opts[i], length(key) + 2)
+                        print "  " key ": " val
+                    }
+                }
+            }
+        }
+    ' "$file" > "$tmp_file"
+
+    cat "$tmp_file" > "$file"
+    rm "$tmp_file"
 }
 
 # --- Helper: parse additional_delegates from config.yaml ---
@@ -469,8 +503,8 @@ create_delegate_variant() {
 
     cp "$template" "$dest"
 
-    sed -i "s|^description:.*|description: Delegate variant '${suffix}' with model ${model}. Use for specific delegation needs.|" "$dest"
-    sed -i 's|^# Delegate\b.*|# Delegate ('"${suffix}"')|' "$dest"
+    sed_inplace "s|^description:.*|description: Delegate variant '${suffix}' with model ${model}. Use for specific delegation needs.|" "$dest"
+    sed_inplace "s|^# Delegate.*|# Delegate (${suffix})|" "$dest"
 
     inject_agent_config "$dest" "$model" "$options_str"
 
@@ -560,8 +594,8 @@ create_implementer_variant() {
 
     cp "$template" "$dest"
 
-    sed -i "s|^description:.*|description: Implementer variant '${suffix}' with model ${model}. Use for specific implementation needs.|" "$dest"
-    sed -i 's|^# Implementer\b.*|# Implementer ('"${suffix}"')|' "$dest"
+    sed_inplace "s|^description:.*|description: Implementer variant '${suffix}' with model ${model}. Use for specific implementation needs.|" "$dest"
+    sed_inplace "s|^# Implementer.*|# Implementer (${suffix})|" "$dest"
 
     inject_agent_config "$dest" "$model" "$options_str"
 
