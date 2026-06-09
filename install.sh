@@ -17,7 +17,8 @@
 #
 # Targets:
 #   - OpenCode   -> OPENCODE_HOME/{skills,agents}  (always on)
-#   - Codex      -> CODEX_HOME/skills              (skills only)
+#   - Codex      -> CODEX_HOME/skills              (skills only, no agents)
+#                   + CODEX_HOME/ops/AGENTS.snippet.md bootstrap from codex/
 #   - Claude     -> CLAUDE_HOME/{skills,agents}    (also serves Antigravity
 #                                                   via anthropic.claude-code ext)
 #
@@ -243,8 +244,10 @@ ANTIGRAVITY_PATH="${OPS_ANTIGRAVITY_PATH:-$HOME/Library/Application Support/Anti
 SKILLS_DESTS=("$OPENCODE_HOME/skills")
 AGENTS_DESTS=("$OPENCODE_HOME/agents")
 
+codex_enabled=0
 if is_enabled "$CODEX_STATE" "$CODEX_HOME"; then
     SKILLS_DESTS+=("$CODEX_HOME/skills")
+    codex_enabled=1
     echo "Codex integration: enabled (skills -> $CODEX_HOME/skills)"
 else
     echo "Codex integration: disabled"
@@ -604,6 +607,29 @@ create_implementer_variant() {
     echo "  Generated: implementer-${suffix}.md -> model: $model${opts_note}"
 }
 
+# --- Codex target: AGENTS.md bootstrap snippet ---
+# Codex has no agent definitions, so the orchestration workflow is delivered
+# as a snippet the user merges into ~/.codex/AGENTS.md (or a project AGENTS.md).
+# The installer never modifies AGENTS.md itself.
+codex_install_ops_bootstrap() {
+    local script_dir="$1"
+    local codex_home="$2"
+    local src="$script_dir/codex/AGENTS.snippet.md"
+    local dest="$codex_home/ops/AGENTS.snippet.md"
+
+    if [ ! -f "$src" ]; then
+        echo "  Warning: $src not found (skipping ops bootstrap)" >&2
+        return
+    fi
+    if [ -L "$dest" ]; then
+        echo "  Symlink (skipping): ops/AGENTS.snippet.md"
+        return
+    fi
+    mkdir -p "$codex_home/ops"
+    cp "$src" "$dest"
+    echo "  Ops bootstrap -> $dest"
+}
+
 # --- Step 1: Install Skills ---
 step1_count=0
 for SKILLS_DEST in "${SKILLS_DESTS[@]}"; do
@@ -698,6 +724,14 @@ if [ -f "$CONFIG_FILE" ]; then
     fi
 fi
 
+# --- Step 5: Codex AGENTS bootstrap ---
+# Global mode only — project mode skips Codex sync entirely (see above).
+if [ "$codex_enabled" = "1" ] && [ "$PROJECT_MODE" = false ]; then
+    echo "Step 5: Installing Codex AGENTS snippet"
+    codex_install_ops_bootstrap "$SCRIPT_DIR" "$CODEX_HOME"
+    echo ""
+fi
+
 # --- Summary ---
 if [ -f "$CONFIG_FILE" ]; then
     echo "Config:  $CONFIG_FILE (applied)"
@@ -713,4 +747,11 @@ echo "Next steps:"
 echo "  1. In OpenCode, select the new primary agent (e.g. '@maintainer')"
 echo "  2. Generate project documentation: load the 'generate-docs' skill"
 echo "  3. Create an implementation plan: load the 'create-plan' skill"
+if [ "$codex_enabled" = "1" ] && [ "$PROJECT_MODE" = false ]; then
+    echo ""
+    echo "Codex:"
+    echo "  Workflow skills:  $CODEX_HOME/skills/"
+    echo "  AGENTS bootstrap: $CODEX_HOME/ops/AGENTS.snippet.md"
+    echo "  Merge the snippet into ~/.codex/AGENTS.md or your project AGENTS.md"
+fi
 echo ""
