@@ -12,7 +12,7 @@ cp config.yaml.example config.yaml         # optional: configure targets and mod
 The installer auto-detects which harnesses to sync into. Out of the box:
 
 - **OpenCode** (always): skills + agents to `~/.config/opencode/`
-- **Codex** (if `~/.codex/` exists): skills to `~/.codex/skills/`
+- **Codex** (if `~/.codex/` exists): skills to `~/.codex/skills/` + AGENTS snippet to `~/.codex/ops/`
 - **Claude Code** (if `~/.claude/` exists): skills + agents to `~/.claude/`
 - **Antigravity**: served transitively by the Claude Code target (it loads skills through the bundled `anthropic.claude-code` extension, which reads from the same path)
 
@@ -133,6 +133,50 @@ If you're using GitHub Copilot as your provider, be aware that GHCP enforces rat
 - **The `delegate` vs `general` split exists for this reason.** `delegate` runs on your configured model (cheap, fast, predictable). The built-in `general` uses the provider default — use it when you want the provider's best model for a specific task.
 
 If you have direct API access to a model provider (Azure, OpenAI, etc.), rate limits are typically more generous, and you can configure more powerful models for subagents without concern.
+
+---
+
+## Codex Compatibility
+
+The Codex target syncs the **workflow skills** (same files as OpenCode) to `~/.codex/skills/`, where Codex discovers them natively. Codex has no subagent tool and no agent definitions, so the OpenCode agents (`maintainer`, `delegate`, `implementer`, …) are not installed. Instead, the installer places an **AGENTS snippet** at `~/.codex/ops/AGENTS.snippet.md` that maps the orchestration workflow onto a single Codex session.
+
+### What gets installed
+
+| Artifact | Codex location | Installed? |
+|----------|----------------|------------|
+| Workflow skills + templates | `~/.codex/skills/<skill>/` | Yes (from `skills/`) |
+| AGENTS bootstrap | `~/.codex/ops/AGENTS.snippet.md` | Yes (from `codex/`) |
+| Agent definitions | — | No — Codex has no subagent tool |
+| `config.yaml` model settings | — | No — model injection applies to OpenCode agents only |
+
+### Activating the snippet
+
+The installer never modifies your `AGENTS.md` — merge the snippet yourself:
+
+- **Global:** append the contents of `~/.codex/ops/AGENTS.snippet.md` to `~/.codex/AGENTS.md`
+- **Per project:** merge it into the repo's `AGENTS.md`
+
+### Single-session orchestration
+
+All framework roles collapse into the primary Codex session:
+
+- Where a skill says "delegate to `<agent>`", Codex executes the task inline, honoring that agent's output contract (e.g. `doc-explorer` writes only `docs/**` and `plans/**`; `implementer` touches code files only).
+- `execute-work-package` runs in file-backed single-session mode: the blueprint is written to a file, the **user** acts as the gate (explicit approval token, e.g. `APPROVE-WP1`), then execution happens in the same session. Blueprint and execute never share a turn.
+- Review skills (`review-plan`, `review-implementation-plan`, `review-implementation`) run inline as structured checklists. For an independent second opinion, run them in a fresh Codex session pointed at the review artifact.
+
+### Installing into Codex
+
+`./install.sh` auto-detects Codex when `~/.codex/` exists. Pin the choice in `config.yaml` or override per run:
+
+```bash
+OPS_SYNC_CODEX=false ./install.sh             # skip Codex even if ~/.codex exists
+OPS_SYNC_CODEX=true  ./install.sh             # force Codex install
+OPS_CODEX_HOME=$(mktemp -d) ./install.sh      # sandbox install (tests/CI)
+```
+
+**Project mode:** `./install.sh --project` skips the Codex target entirely (same as Claude Code) — it only writes the local `./.opencode/` structure.
+
+**Symlink safety.** Same as other targets — an existing symlink at `~/.codex/ops/AGENTS.snippet.md` or under `~/.codex/skills/<name>` is preserved.
 
 ---
 

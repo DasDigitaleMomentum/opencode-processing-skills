@@ -99,6 +99,7 @@ The two-call pattern requires **session resumption** — continuing a subagent i
 | **OpenCode** | `task(task_id="<from call 1>", ...)` | Pass `task_id` from Call 1 into Call 2. Native support. |
 | **Claude Code** (with Agent Teams) | `SendMessage(to="<agent_id>", ...)` | Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. The `agent_id` is received after Call 1 completes. |
 | **Claude Code** (without Agent Teams) | ❌ Not supported | Each `Agent` call creates a fresh context. **Workaround:** Write the Blueprint to a temp file, then start a second `Agent` call that reads the Blueprint file and executes. The subagent loses conversational context but retains the step list. |
+| **Codex** | ❌ No subagent tool | All roles run in the primary session. **Workaround:** file-backed single-session mode — write the Blueprint to a file, let the **user** gate it with the approval token, then execute in the same session. See `codex/AGENTS.snippet.md`. |
 
 > **Note:** In Claude Code v2.1.63+, the `Task` tool was renamed to `Agent` (the old name still works as an alias). The `SendMessage` tool is only available when Agent Teams are enabled.
 

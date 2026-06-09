@@ -33,7 +33,9 @@
 #   home: filesystem path (supports ~)
 #
 # OpenCode is always required; `enabled` is fixed to true for that target.
-# Codex installs only skills (no agents).
+# Codex installs skills plus an AGENTS.md snippet (ops/AGENTS.snippet.md) —
+# Codex has no agent definitions; the snippet maps the orchestration workflow
+# onto a single session. See docs/installation.md and codex/README.md.
 # Claude installs both skills and agents. Antigravity is served transitively
 # via the bundled `anthropic.claude-code` extension, which reads from CLAUDE_HOME.
 
