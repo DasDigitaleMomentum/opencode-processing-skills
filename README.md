@@ -32,7 +32,7 @@ cp config.yaml.example config.yaml   # optional: set models
 ```
 
 Then restart OpenCode and select `@maintainer`.
-If Codex or Claude Code are installed locally, skills are synced to their config directories during install.
+If Codex or Claude Code are installed locally, skills are synced to their config directories during install. The Codex target additionally stages an `AGENTS.md` bootstrap snippet at `~/.codex/ops/`.
 
 → [Full installation guide](docs/installation.md)
 
