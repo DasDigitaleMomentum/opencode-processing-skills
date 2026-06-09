@@ -1,0 +1,11 @@
+---
+description: Structured planning and gated implementation via docs/ and plans/ (OpenCode Processing Skills for Cursor)
+alwaysApply: false
+---
+
+When the user asks to plan, document, implement a plan phase, or resume multi-session work:
+
+1. Read `docs/` and `plans/` before exploring the codebase.
+2. Load the `ops-orchestrator` skill (or `ops-orchestrator-direct` if non-interactive).
+3. Delegate via the Cursor `Task` tool using personas from `.cursor/subagents/` (see `task-delegation.md` in the ops-orchestrator skill).
+4. Use blueprint → approve → execute for non-trivial code changes (`execute-work-package` skill).

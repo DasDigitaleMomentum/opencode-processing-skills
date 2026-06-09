@@ -20,13 +20,17 @@
 #   - Codex      -> CODEX_HOME/skills              (skills only)
 #   - Claude     -> CLAUDE_HOME/{skills,agents}    (also serves Antigravity
 #                                                   via anthropic.claude-code ext)
+#   - Cursor     -> CURSOR_HOME/skills              (workflow skills, same as OpenCode)
+#                   + subagents/, ops/, orchestrator skills from cursor/
 #
 # Environment overrides (OPS_ prefix avoids collisions with tool-native vars):
 #   OPS_OPENCODE_HOME       override OpenCode home
 #   OPS_CODEX_HOME          override Codex home
 #   OPS_CLAUDE_HOME         override Claude Code home
+#   OPS_CURSOR_HOME         override Cursor home
 #   OPS_SYNC_CODEX          true|false|auto — override targets.codex.enabled
 #   OPS_SYNC_CLAUDE         true|false|auto — override targets.claude.enabled
+#   OPS_SYNC_CURSOR         true|false|auto — override targets.cursor.enabled
 #   OPS_ANTIGRAVITY_PATH    override Antigravity detection path (test-only)
 #   OPS_CONFIG_FILE         alternate config.yaml path (default: <repo>/config.yaml)
 #
@@ -234,6 +238,15 @@ CLAUDE_STATE_RAW=$(yaml_get_target "claude" "enabled")
 CLAUDE_STATE_RAW="${CLAUDE_STATE_RAW:-auto}"
 CLAUDE_STATE="${OPS_SYNC_CLAUDE:-$CLAUDE_STATE_RAW}"
 
+# Cursor
+CURSOR_HOME_RAW=$(yaml_get_target "cursor" "home")
+CURSOR_HOME_RAW="${CURSOR_HOME_RAW:-$HOME/.cursor}"
+CURSOR_HOME="${OPS_CURSOR_HOME:-$CURSOR_HOME_RAW}"
+CURSOR_HOME=$(expand_home "$CURSOR_HOME")
+CURSOR_STATE_RAW=$(yaml_get_target "cursor" "enabled")
+CURSOR_STATE_RAW="${CURSOR_STATE_RAW:-auto}"
+CURSOR_STATE="${OPS_SYNC_CURSOR:-$CURSOR_STATE_RAW}"
+
 # Antigravity detection path (test-only override; not a yaml target).
 # Default is the macOS app-support path — Antigravity is currently macOS-only.
 # Override with OPS_ANTIGRAVITY_PATH for tests or future non-macOS support.
@@ -260,6 +273,13 @@ else
     echo "Claude Code integration: disabled"
 fi
 
+if is_enabled "$CURSOR_STATE" "$CURSOR_HOME"; then
+    SKILLS_DESTS+=("$CURSOR_HOME/skills")
+    echo "Cursor integration: enabled (skills -> $CURSOR_HOME/skills)"
+else
+    echo "Cursor integration: disabled"
+fi
+
 # Antigravity is a VS Code fork that loads skills/agents via the
 # `anthropic.claude-code` extension, which reads from CLAUDE_HOME. It has no
 # config path of its own, so the Claude Code target covers it automatically.
@@ -273,13 +293,22 @@ if [ -d "$ANTIGRAVITY_PATH" ]; then
 fi
 
 # --- Project mode override ---
+CURSOR_TARGET_HOME=""
 if [ "$PROJECT_MODE" = true ]; then
     PROJECT_HOME="$PWD/.opencode"
     echo "Project mode: installing into $PROJECT_HOME"
     echo ""
     SKILLS_DESTS=("$PROJECT_HOME/skills")
     AGENTS_DESTS=("$PROJECT_HOME/agents")
-    # In project mode, skip Codex/Claude sync — only OpenCode structure
+    if is_enabled "$CURSOR_STATE" "$CURSOR_HOME"; then
+        CURSOR_TARGET_HOME="$PWD/.cursor"
+        SKILLS_DESTS+=("$CURSOR_TARGET_HOME/skills")
+        echo "Project mode: Cursor target -> $CURSOR_TARGET_HOME"
+        echo ""
+    fi
+    # In project mode, skip Codex/Claude global sync — only local OpenCode structure
+elif is_enabled "$CURSOR_STATE" "$CURSOR_HOME"; then
+    CURSOR_TARGET_HOME="$CURSOR_HOME"
 fi
 
 echo ""
@@ -604,6 +633,124 @@ create_implementer_variant() {
     echo "  Generated: implementer-${suffix}.md -> model: $model${opts_note}"
 }
 
+# --- Cursor target: subagents, ops bootstrap, orchestrator skills ---
+CURSOR_SUBAGENT_NAMES=(delegate doc-explorer implementer legacy-curator)
+
+cursor_strip_frontmatter() {
+    awk 'BEGIN { in_fm=0; fm_done=0 }
+        /^---$/ { if (!fm_done) { in_fm = !in_fm; if (!in_fm) fm_done=1; next } }
+        fm_done { print }' "$1"
+}
+
+cursor_install_subagents() {
+    local script_dir="$1"
+    local cursor_home="$2"
+    local dest="$cursor_home/subagents"
+    local name agent_file out
+
+    echo "  Subagents -> $dest"
+    mkdir -p "$dest"
+
+    for name in "${CURSOR_SUBAGENT_NAMES[@]}"; do
+        agent_file="$script_dir/agents/${name}.md"
+        out="$dest/${name}.md"
+        if [ ! -f "$agent_file" ]; then
+            echo "    Warning: missing $agent_file (skipping)" >&2
+            continue
+        fi
+        if [ -L "$out" ]; then
+            echo "    Symlink (skipping): ${name}.md"
+            continue
+        fi
+        cursor_strip_frontmatter "$agent_file" > "$out"
+        echo "    Installed: ${name}.md"
+    done
+}
+
+cursor_install_ops_bootstrap() {
+    local script_dir="$1"
+    local cursor_home="$2"
+    local src="$script_dir/cursor/AGENTS.snippet.md"
+    local dest="$cursor_home/ops/AGENTS.snippet.md"
+
+    if [ ! -f "$src" ]; then
+        echo "  Warning: $src not found (skipping ops bootstrap)" >&2
+        return
+    fi
+    if [ -L "$dest" ]; then
+        echo "  Symlink (skipping): ops/AGENTS.snippet.md"
+        return
+    fi
+    mkdir -p "$cursor_home/ops"
+    cp "$src" "$dest"
+    echo "  Ops bootstrap -> $dest"
+}
+
+cursor_install_orchestrator_skills() {
+    local script_dir="$1"
+    local cursor_home="$2"
+    local skills_dest="$cursor_home/skills"
+    local skill_dir skill_name dest task_src
+
+    echo "  Orchestrator skills -> $skills_dest"
+    mkdir -p "$skills_dest"
+
+    for skill_dir in "$script_dir/cursor/skills"/*/; do
+        [ -d "$skill_dir" ] || continue
+        skill_name="$(basename "$skill_dir")"
+        dest="$skills_dest/$skill_name"
+
+        if [ -L "$dest" ]; then
+            echo "    Symlink (skipping): $skill_name"
+            continue
+        fi
+        if [ -d "$dest" ]; then
+            echo "    Updating: $skill_name"
+            rm -rf "$dest"
+        else
+            echo "    Installing: $skill_name"
+        fi
+        mkdir -p "$dest"
+        cp -R "$skill_dir/." "$dest/"
+
+        task_src="$script_dir/cursor/task-delegation.md"
+        if [ -f "$task_src" ]; then
+            cp "$task_src" "$dest/task-delegation.md"
+        fi
+    done
+}
+
+cursor_install_project_rule() {
+    local script_dir="$1"
+    local cursor_home="$2"
+    local src="$script_dir/cursor/tpl-orchestrator.mdc"
+    local dest="$cursor_home/rules/ops-orchestrator.mdc"
+
+    if [ ! -f "$src" ]; then
+        return
+    fi
+    if [ -L "$dest" ]; then
+        echo "  Symlink (skipping): rules/ops-orchestrator.mdc"
+        return
+    fi
+    mkdir -p "$cursor_home/rules"
+    cp "$src" "$dest"
+    echo "  Project rule -> $dest"
+}
+
+cursor_install_extras() {
+    local script_dir="$1"
+    local cursor_home="$2"
+    local project_mode="$3"
+
+    cursor_install_subagents "$script_dir" "$cursor_home"
+    cursor_install_ops_bootstrap "$script_dir" "$cursor_home"
+    cursor_install_orchestrator_skills "$script_dir" "$cursor_home"
+    if [ "$project_mode" = true ]; then
+        cursor_install_project_rule "$script_dir" "$cursor_home"
+    fi
+}
+
 # --- Step 1: Install Skills ---
 step1_count=0
 for SKILLS_DEST in "${SKILLS_DESTS[@]}"; do
@@ -698,6 +845,13 @@ if [ -f "$CONFIG_FILE" ]; then
     fi
 fi
 
+# --- Step 5: Cursor orchestration layer (subagents, ops, orchestrator skills) ---
+if [ -n "$CURSOR_TARGET_HOME" ]; then
+    echo "Step 5: Installing Cursor orchestration layer to $CURSOR_TARGET_HOME"
+    cursor_install_extras "$SCRIPT_DIR" "$CURSOR_TARGET_HOME" "$PROJECT_MODE"
+    echo ""
+fi
+
 # --- Summary ---
 if [ -f "$CONFIG_FILE" ]; then
     echo "Config:  $CONFIG_FILE (applied)"
@@ -713,4 +867,16 @@ echo "Next steps:"
 echo "  1. In OpenCode, select the new primary agent (e.g. '@maintainer')"
 echo "  2. Generate project documentation: load the 'generate-docs' skill"
 echo "  3. Create an implementation plan: load the 'create-plan' skill"
+if [ -n "$CURSOR_TARGET_HOME" ]; then
+    echo ""
+    echo "Cursor:"
+    echo "  Workflow skills:     $CURSOR_TARGET_HOME/skills/"
+    echo "  Subagent personas:   $CURSOR_TARGET_HOME/subagents/"
+    echo "  AGENTS bootstrap:    $CURSOR_TARGET_HOME/ops/AGENTS.snippet.md"
+    echo "  Orchestrator skills: ops-orchestrator, ops-orchestrator-direct"
+    if [ "$PROJECT_MODE" = true ]; then
+        echo "  Project rule:        $CURSOR_TARGET_HOME/rules/ops-orchestrator.mdc"
+        echo "  Merge AGENTS.snippet into your project AGENTS.md"
+    fi
+fi
 echo ""
