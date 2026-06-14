@@ -36,6 +36,9 @@
 # Codex installs only skills (no agents).
 # Claude installs both skills and agents. Antigravity is served transitively
 # via the bundled `anthropic.claude-code` extension, which reads from CLAUDE_HOME.
+# Cursor installs workflow skills + orchestration layer (subagents, ops-orchestrator
+# skills). See docs/installation.md and cursor/README.md. Use ./install.sh --project
+# to install into ./.cursor/ per repo.
 
 targets:
   opencode:
@@ -49,6 +52,10 @@ targets:
   claude:
     enabled: auto
     home: ~/.claude
+
+  cursor:
+    enabled: auto
+    home: ~/.cursor
 
 
 # ============================================================================
