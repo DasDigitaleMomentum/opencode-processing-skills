@@ -14,6 +14,7 @@ The installer auto-detects which harnesses to sync into. Out of the box:
 - **OpenCode** (always): skills + agents to `~/.config/opencode/`
 - **Codex** (if `~/.codex/` exists): skills to `~/.codex/skills/`
 - **Claude Code** (if `~/.claude/` exists): skills + agents to `~/.claude/`
+- **Cursor** (if `~/.cursor/` exists): adapted skills + orchestrator to `~/.cursor/skills/`
 - **Antigravity**: served transitively by the Claude Code target (it loads skills through the bundled `anthropic.claude-code` extension, which reads from the same path)
 
 After installation, restart OpenCode and select the `@maintainer` agent. It knows when to load which skill and how to delegate to the right subagent.
@@ -55,9 +56,11 @@ Use these when you need to override `config.yaml` for one run — typically in t
 |---|---|
 | `OPS_SYNC_CODEX` | `targets.codex.enabled` |
 | `OPS_SYNC_CLAUDE` | `targets.claude.enabled` |
+| `OPS_SYNC_CURSOR` | `targets.cursor.enabled` |
 | `OPS_OPENCODE_HOME` | `targets.opencode.home` |
 | `OPS_CODEX_HOME` | `targets.codex.home` |
 | `OPS_CLAUDE_HOME` | `targets.claude.home` |
+| `OPS_CURSOR_HOME` | `targets.cursor.home` |
 | `OPS_CONFIG_FILE` | path to an alternate `config.yaml` |
 | `OPS_ANTIGRAVITY_PATH` | Antigravity detection path (test-only) |
 
@@ -200,6 +203,67 @@ targets:
 
 ---
 
+## Cursor Compatibility
+
+The Cursor target installs **workflow skills** (same files as OpenCode) plus a thin **orchestration layer** that maps OpenCode agents to Cursor `Task` delegation. Workflow skills are not transformed at install time.
+
+### What gets installed
+
+| Artifact | Cursor location | Installed? |
+|----------|-----------------|------------|
+| Workflow skills + templates | `~/.cursor/skills/<skill>/` | Yes (from `skills/`) |
+| Orchestrator skills | `~/.cursor/skills/ops-orchestrator/` (+ `-direct`) | Yes (from `cursor/skills/`) |
+| Subagent personas | `~/.cursor/subagents/*.md` | Yes (from `agents/`, frontmatter stripped) |
+| AGENTS bootstrap | `~/.cursor/ops/AGENTS.snippet.md` | Yes |
+| Project rule (`--project`) | `.cursor/rules/ops-orchestrator.mdc` | Yes |
+| `maintainer` as agent picker | — | No — use `ops-orchestrator` skill instead |
+| `config.yaml` model settings | — | No — OpenCode agents only |
+
+Model configuration in `config.yaml` does not apply to Cursor; the IDE uses its own model settings.
+
+### Installing into Cursor
+
+`./install.sh` auto-detects Cursor when `~/.cursor/` exists:
+
+```yaml
+targets:
+  cursor:
+    enabled: auto          # auto | true | false
+    home: ~/.cursor
+```
+
+```bash
+OPS_SYNC_CURSOR=false ./install.sh              # skip Cursor even if ~/.cursor exists
+OPS_SYNC_CURSOR=true  ./install.sh              # force Cursor install
+OPS_CURSOR_HOME=/tmp/cursor-test ./install.sh   # sandbox install (tests/CI)
+```
+
+**Per-project install:** `./install.sh --project` also syncs skills to `./.cursor/skills/` when the Cursor target is enabled.
+
+**Symlink safety.** Same as other targets — existing symlinks under `~/.cursor/skills/<name>` are preserved.
+
+### Subagent activation
+
+The orchestrator skills (`ops-orchestrator`) and `task-delegation.md` define how framework roles map to Cursor's `Task` tool:
+
+| Framework role | `subagent_type` | Persona file |
+|----------------|-----------------|--------------|
+| `delegate-fast` | `explore` | `subagents/delegate.md` |
+| `delegate-strong` | `generalPurpose` | `subagents/delegate.md` |
+| `doc-explorer` | `generalPurpose` | `subagents/doc-explorer.md` |
+| `implementer` | `generalPurpose` | `subagents/implementer.md` |
+| `legacy-curator` | `generalPurpose` | `subagents/legacy-curator.md` |
+
+Gated implementation: two `Task` calls with `resume` between blueprint and execute (see `execute-work-package` skill).
+
+### Workflow skills vs orchestration
+
+**Workflow skills** (`create-plan`, `execute-work-package`, …) still contain some OpenCode naming (`task()`, `task_id`). The orchestrator skill and `task-delegation.md` tell the primary how to map these to Cursor. Subagent persona files are synced from `agents/` at install time — no duplicate maintenance in `cursor/subagents/`.
+
+**Optional:** merge `ops/AGENTS.snippet.md` into your project `AGENTS.md` for persistent orchestration without relying on skill auto-load.
+
+---
+
 ## Updating
 
 To update to the latest version:
@@ -210,4 +274,4 @@ git pull
 ./install.sh
 ```
 
-Your `config.yaml` is preserved (gitignored). The installer will re-apply your model settings to the updated agent files. All detected targets (OpenCode, Codex, Claude Code) are synced in the same run.
+Your `config.yaml` is preserved (gitignored). The installer will re-apply your model settings to the updated agent files. All detected targets (OpenCode, Codex, Claude Code, Cursor) are synced in the same run.
