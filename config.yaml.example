@@ -64,10 +64,14 @@ targets:
 # Set a specific model per agent. Agents not listed here (or with an empty
 # value) keep the provider default. Format: <agent-name>: <provider/model-id>
 
-delegate: openai/gpt-5.3-codex
-doc-explorer: openai/gpt-5.3-codex
-implementer: openai/gpt-5.3-codex
-legacy-curator: openai/gpt-5.3-codex
+delegate: openai/gpt-5.6-terra
+doc-explorer:
+  model: openai/gpt-5.6-luna
+  reasoningEffort: high
+implementer:
+  model: openai/gpt-5.6-terra
+  reasoningEffort: high
+legacy-curator: openai/gpt-5.6-luna
 
 
 # ============================================================================
@@ -88,24 +92,21 @@ legacy-curator: openai/gpt-5.3-codex
 # Two syntaxes are supported:
 #
 #   Scalar (model only):
-#     fast: openai/gpt-5.4-mini
+#     fast: openai/gpt-5.6-luna
 #
 #   Object (model + options for reasoning, temperature, etc.):
 #     strong:
-#       model: openai/gpt-5.5
+#       model: openai/gpt-5.6-sol
 #       reasoningEffort: high
 
 additional_delegates:
-#  codex:   openai/gpt-5.3-codex           # Code-specialized
-#  fast:    openai/gpt-5.4-mini            # Lightweight, default workhorse
-#  gpt:     openai/gpt-5.4                 # General GPT
-  strong:
-    model: openai/gpt-5.5                 # Escalation slot — hardest problems
+#  codex: openai/gpt-5.3-codex           #  in case its available ( e.g. API or Azure)
+  fast:
+    model: openai/gpt-5.6-luna
     reasoningEffort: high
-#  opus:    anthropic/claude-opus-4-5      # Frontier, thorough reviews
-#  qwen:    alibaba/qwen3.7-max         # Alternative perspective
-#  ds:      deepseek/deepseek-v4-pro       # DeepSeek, strong reasoning
-#  ds-flash: deepseek/deepseek-v4-flash    # DeepSeek, fast/lightweight
+  strong:
+    model: openai/gpt-5.6-sol             # Escalation slot — hardest problems
+    reasoningEffort: high
 
 
 # ============================================================================
@@ -125,20 +126,21 @@ additional_delegates:
 #   "use implementer-fast for this work package"
 
 additional_implementers:
-  fast:
-    model: openai/gpt-5.4-mini            # Lightweight, for routine changes
-    reasoningEffort: high
   safe:
-    model: deepseek/deepseek-v4-pro       # Safe, strong reasoning
+    model: deepseek/deepseek-v4-pro       # less guardrails
+    reasoningEffort: high
+  fast:
+    model: openai/gpt-5.6-luna            # Lightweight, for routine changes
+    reasoningEffort: high
+  strong:
+    model: openai/gpt-5.6-sol             # Strong, high-risk work
     reasoningEffort: high
 
 
 # ============================================================================
 # Alternative model examples (uncomment to use)
 # ============================================================================
-# delegate: openai/gpt-5.4-mini
-# doc-explorer: openai/gpt-5.4-mini
-# implementer: openai/gpt-5.4-mini
-# legacy-curator: openai/gpt-5.4-mini
-# delegate: deepseek/deepseek-v4-pro
-# implementer: deepseek/deepseek-v4-pro
+# delegate: openai/gpt-5.6-luna
+# doc-explorer: openai/gpt-5.6-luna
+# implementer: openai/gpt-5.6-luna
+# legacy-curator: openai/gpt-5.6-luna
