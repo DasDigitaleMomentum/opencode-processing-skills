@@ -73,10 +73,11 @@ legacy-curator: openai/gpt-5.3-codex
 # ============================================================================
 # Additional delegate variants
 # ============================================================================
-# Each entry creates a new agent `delegate-<suffix>` based on the delegate
-# template, with a different model. Useful for task-specific routing:
+# Each entry creates a model alias `delegate-<suffix>` from the one canonical
+# delegate persona. Expertise and write boundaries come from loaded skills;
+# variants change model capacity only:
 #
-#   - delegate-strong:  frontier model for escalation / hardest problems
+#   - delegate-strong:  frontier model for independent reviews / hardest problems
 #   - delegate-fast:    lightweight model for quick lookups
 #   - delegate-codex:   code-specialized model for implementation analysis
 #

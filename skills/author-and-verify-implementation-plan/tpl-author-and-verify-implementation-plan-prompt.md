@@ -5,9 +5,9 @@ skill: author-and-verify-implementation-plan
 created: "{{date}}"
 ---
 
-# Doc-Explorer Delegation: Author and Verify Implementation Plan
+# Delegate Task: Author and Verify Implementation Plan
 
-You are `doc-explorer`.
+Load and follow the `author-and-verify-implementation-plan` skill. Your delegate model/variant does not change this workflow.
 
 Task:
 - Author or update the phase implementation plan at:
@@ -16,6 +16,9 @@ Task:
 Constraints:
 - Do NOT change phase scope/DoD. If you find mismatches, capture them under **Reality Check** and report to primary.
 - Use existing project docs inventories if present (`docs/**`).
+- You may write exactly this implementation-plan artifact: `{{implementation_plan_path}}`.
+- Do NOT edit code/config files, perform Git operations, or change unrelated docs/plans artifacts.
+- Use the canonical template/headings and frontmatter keys from `skills/author-and-verify-implementation-plan/tpl-implementation-plan.md`.
 
 ## References (read these yourself)
 
@@ -38,6 +41,7 @@ Constraints:
 - Update `{{implementation_plan_path}}` using the canonical template:
   - `skills/author-and-verify-implementation-plan/tpl-implementation-plan.md`
 
-Return to the primary only:
-- which files you changed
-- a 3–6 bullet summary of what you grounded/verified
+Return a compact digest only:
+- changed file path
+- 3–6 bullet summary of what you grounded/verified
+- any Reality Check items requiring primary review

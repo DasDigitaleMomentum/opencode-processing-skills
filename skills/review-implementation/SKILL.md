@@ -30,11 +30,19 @@ Do **not** use this skill to:
 
 - Review the plan itself (use `review-plan`).
 - Review an implementation plan before execution (use `review-implementation-plan`).
-- Fix implementation issues (the reviewer only reports findings; fixes go through `execute-work-package`).
+- Fix implementation issues during the independent review pass. After the review is complete, accepted related findings may transition to `review-fix` in the same reviewer session.
 
 ## Review Focus
 
 The primary specifies the review focus when delegating. The default focus is **functional and technical findings** — correctness, feasibility, completeness of the solution.
+
+### Review posture
+
+**No Gold-Plating. No Adversarial Reviewing. No Scope Creep.** Report only
+evidence-backed problems that affect correctness, security, acceptance, or the
+reviewed objective. Do not hunt for gotchas, invent improvements, or keep a
+review/fix loop alive to create more work. This does not mean overlooking real
+defects.
 
 **Formal criteria** (DoD compliance checklists, NFR conformance, reference consistency, documentation cleanup) are secondary. Only include formal findings when they reveal **real problems** — not as standard checkboxes to fill. A review cluttered with formal nitpicking buries the findings that matter.
 
@@ -50,6 +58,7 @@ The primary passes the focus via `{{focus}}` in the delegation prompt. If no foc
   - Invokes the review skill after implementation is complete.
   - Delegates to `delegate-strong` (default) or `general` (for same-model perspective).
   - Receives review summary and decides on follow-up actions.
+  - Retains the reviewer `task_id` for possible remediation.
 
 - **Subagent (delegate-strong / general)**
   - Reads plan, phase, implementation plan, and execution digest with **no prior context**.
@@ -103,8 +112,11 @@ Subagent returns:
 
 Primary decides:
 - **Accepted**: Proceed to commit/merge. Update plan via `update-plan`.
-- **Needs Rework**: Delegate fixes via `execute-work-package` (new work package for specific fixes).
+- **Needs Rework**: Prefer accepting the findings and resuming the same reviewer `task_id` through `review-fix`. Related fixes may span multiple files, call sites, tests, and runtime code; size alone does not require a new work package.
+- **New work package**: Use `execute-work-package` only when the objective/gated scope changes, a new dependency or primary decision is required, the reviewer session is unavailable, or the primary explicitly wants a fresh implementation context.
 - **Rejected**: Discuss with user. May require replanning via `update-plan`.
+
+The review pass ends before remediation begins. A reviewer that applies fixes is no longer independent; an additional review is optional and requires an explicit primary or user decision. Do not automatically chain review and remediation loops.
 
 ---
 
@@ -128,6 +140,7 @@ The review artifact `plans/<name>/reviews/impl-review-phase-N.md` MUST:
 - The reviewer must approach the implementation **without prior context**. Independent perspective is the value.
 - Findings are **advisory**. The primary decides whether and how to act.
 - Do not modify code or plan artifacts during review — only produce the review artifact.
+- Do not discard the reviewer `task_id` until the primary has decided whether remediation is needed.
 - Ensure the `reviews/` directory exists before delegating (create if needed).
 - **Test quality is a first-class concern.** A review that only checks "tests pass" without evaluating test meaningfulness is incomplete.
 - Flag mock-only testing as a limitation unless the user explicitly waived real-world testing.
@@ -137,4 +150,4 @@ The review artifact `plans/<name>/reviews/impl-review-phase-N.md` MUST:
 ## Templates
 
 - `tpl-impl-review.md` — Canonical review output format with embedded review criteria
-- `tpl-review-impl-prompt.md` — Primary → delegate-strong delegation prompt
+- `tpl-review-impl-prompt.md` — Primary → reviewer delegation prompt

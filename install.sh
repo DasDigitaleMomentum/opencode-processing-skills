@@ -317,8 +317,135 @@ echo ""
 # Returns the model string, or empty if not configured.
 # Uses grep on root-level keys — works correctly for hyphenated names like doc-explorer.
 get_model_for_agent() {
+    local config
+    config=$(get_agent_config "$1" 2>/dev/null)
+    echo "${config%% *}"
+}
+
+# --- Helper: read model + options for a root-level agent key from config.yaml ---
+# Output format: "model [key=val ...]" (space-separated)
+# Supports both scalar and object syntax:
+#   delegate: provider/model
+#   delegate:
+#     model: provider/model
+#     reasoningEffort: high
+get_agent_config() {
     local agent_name="$1"
-    yaml_get_root "$agent_name"
+    if [ ! -f "$CONFIG_FILE" ]; then
+        return
+    fi
+
+    awk -v agent_name="$agent_name" '
+        function ltrim(s) { sub(/^[[:space:]]+/, "", s); return s }
+        function rtrim(s) { sub(/[[:space:]]+$/, "", s); return s }
+        function trim(s)  { return rtrim(ltrim(s)) }
+
+        function strip_inline_comment(s,    i, ch, out, in_sq, in_dq, prev) {
+            out = ""
+            in_sq = 0
+            in_dq = 0
+            prev = ""
+
+            for (i = 1; i <= length(s); i++) {
+                ch = substr(s, i, 1)
+
+                if (ch == "\"" && !in_sq && prev != "\\") in_dq = !in_dq
+                else if (ch == "\x27" && !in_dq && prev != "\\") in_sq = !in_sq
+
+                if (ch == "#" && !in_sq && !in_dq) {
+                    if (i == 1 || substr(s, i - 1, 1) ~ /[[:space:]]/) break
+                }
+
+                out = out ch
+                prev = ch
+            }
+
+            return rtrim(out)
+        }
+
+        function unquote(s,    q) {
+            s = trim(s)
+            if (length(s) >= 2) {
+                q = substr(s, 1, 1)
+                if ((q == "\"" || q == "\x27") && substr(s, length(s), 1) == q) {
+                    s = substr(s, 2, length(s) - 2)
+                }
+            }
+            return s
+        }
+
+        BEGIN {
+            in_block = 0
+            model = ""
+            opts = ""
+        }
+
+        {
+            line = $0
+
+            if (!in_block) {
+                if (line ~ ("^" agent_name ":[[:space:]]*")) {
+                    rest = substr(line, length(agent_name) + 2)
+                    rest = strip_inline_comment(rest)
+                    rest = trim(rest)
+
+                    # Scalar syntax: agent: provider/model
+                    if (rest != "") {
+                        model = unquote(rest)
+                        if (model != "") print model
+                        exit
+                    }
+
+                    # Object syntax starts on following indented lines
+                    in_block = 1
+                }
+                next
+            }
+
+            # End of object block at next root-level key
+            if (line ~ /^[^[:space:]#][^:]*:[[:space:]]*/) {
+                if (model != "") {
+                    out = model
+                    if (opts != "") out = out " " opts
+                    print out
+                }
+                in_block = 0  # Prevent END block from printing again
+                exit
+            }
+
+            # Skip empty/comment lines inside block
+            if (line ~ /^[[:space:]]*$/ || line ~ /^[[:space:]]*#/) next
+
+            # Object entries must be indented
+            if (line ~ /^[^[:space:]]/) next
+
+            entry = line
+            sub(/^[[:space:]]+/, "", entry)
+
+            colon = index(entry, ":")
+            if (colon == 0) next
+
+            key = substr(entry, 1, colon - 1)
+            val = substr(entry, colon + 1)
+            key = rtrim(key)
+            val = strip_inline_comment(val)
+            val = unquote(val)
+
+            # Ignore nested object/list fields for options output
+            if (val == "") next
+
+            if (key == "model") model = val
+            else opts = (opts == "" ? key "=" val : opts " " key "=" val)
+        }
+
+        END {
+            if (in_block && model != "") {
+                out = model
+                if (opts != "") out = out " " opts
+                print out
+            }
+        }
+    ' "$CONFIG_FILE"
 }
 
 # --- Helper: inject model and options into agent frontmatter ---
@@ -532,7 +659,7 @@ create_delegate_variant() {
 
     cp "$template" "$dest"
 
-    sed_inplace "s|^description:.*|description: Delegate variant '${suffix}' with model ${model}. Use for specific delegation needs.|" "$dest"
+    sed_inplace "s|^description:.*|description: Model alias '${suffix}' of the canonical delegate persona, using ${model}.|" "$dest"
     sed_inplace "s|^# Delegate.*|# Delegate (${suffix})|" "$dest"
 
     inject_agent_config "$dest" "$model" "$options_str"
@@ -803,11 +930,16 @@ for AGENTS_DEST in "${AGENTS_DESTS[@]}"; do
         fi
         cp "$agent_file" "$dest"
 
-        # Inject model from config.yaml (if configured)
-        model=$(get_model_for_agent "$agent_name")
-        if [ -n "$model" ]; then
-            inject_agent_config "$dest" "$model"
-            echo "    -> model: $model"
+        # Inject model and options from config.yaml (if configured)
+        agent_config=$(get_agent_config "$agent_name")
+        if [ -n "$agent_config" ]; then
+            model="${agent_config%% *}"
+            options_str="${agent_config#* }"
+            [ "$options_str" = "$agent_config" ] && options_str=""
+            inject_agent_config "$dest" "$model" "$options_str"
+            opts_note=""
+            [ -n "$options_str" ] && opts_note=", options: $options_str"
+            echo "    -> model: $model${opts_note}"
         fi
     done
     echo ""

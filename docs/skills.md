@@ -49,9 +49,16 @@ plans/<name>/
 5. Review Impl    → review-implementation-plan (optional)
 6. Implement      → execute-work-package (gated: blueprint → approve → execute)
 7. Review Code    → review-implementation (optional)
-8. Update Plan    → update-plan (track progress, transition phases)
-9. Handover       → generate-handover (end of session)
+8. Fix Findings   → review-fix (same reviewer session, related findings)
+9. Update Plan    → update-plan (track progress, transition phases)
+10. Handover      → generate-handover (end of session)
 ```
+
+All review workflows use the same informal reminder: **No Gold-Plating. No
+Adversarial Reviewing. No Scope Creep.** Findings should be evidence-backed and
+relevant to correctness, security, acceptance, or the reviewed objective — not
+gotchas or a pretext for extra work. This focus rule does not suppress real
+defects or required related fixes.
 
 **Key insight:** Phases define *what* and *why*. Implementation plans define *how*. This separation lets you change the technical approach without changing the scope.
 
@@ -112,6 +119,8 @@ This is a conversation, not a one-shot prompt. The model asks clarifying questio
 
 Authors per-phase implementation plans (`implementation/phase-N-impl.md`) grounded against the actual codebase. Cross-checks file paths and symbols to prevent hand-wavy plans.
 
+Default routing: the canonical `delegate` writes the explicit implementation-plan artifact using the skill's template. Use `delegate-strong` only when phase complexity or risk justifies the premium model.
+
 ```
 > Write the implementation plans and verify them against the codebase
 ```
@@ -170,9 +179,21 @@ Reviews completed code against acceptance criteria, test quality, coding standar
 > Review the implementation before I commit
 ```
 
+### `review-fix`
+
+Resumes the same reviewer session to apply accepted related findings from an implementation or implementation-plan review. Related fixes may span multiple files, call sites, tests, and runtime code. The review artifact stays immutable. A new implementation or authoring session is reserved for changed scope/objective, missing context, new primary decisions, or an explicit fresh perspective. Further reviews are optional and never loop automatically.
+
+```
+> Fix findings F-1 and F-3 from that review in the same delegate session
+```
+
 ---
 
 ## Execution Skills
+
+### `delegate-analysis`
+
+Provides the canonical delegate with explicit modes for code exploration, targeted reading, web research, and deep-dive investigation. Model variants use this same skill and persona.
 
 ### `execute-work-package`
 

@@ -31,6 +31,10 @@ updated: "2026-04-26"
 - [ ] Phase 3: Add `--project` flag to `install.sh` <!-- added: 2026-04-26 -->
 - [ ] Phase 3: Update `config.yaml.example` with `--project` mention <!-- added: 2026-04-26 -->
 - [ ] Phase 3: Verify backward compatibility of `install.sh` <!-- added: 2026-04-26 -->
+- [ ] Phase 4: Make `delegate.md` the canonical skill-driven delegate <!-- added: 2026-07-11 -->
+- [ ] Phase 4: Prefer same-session `review-fix` for related findings <!-- added: 2026-07-11 -->
+- [ ] Phase 4: Remove automatic review/fix loop and unnecessary gate requirements <!-- added: 2026-07-11 -->
+- [ ] Phase 4: Apply the no-gold-plating, no-adversarial-reviewing, no-scope-creep reminder <!-- added: 2026-07-11 -->
 
 ### In Progress
 

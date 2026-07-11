@@ -50,8 +50,8 @@ Skills load automatically when you describe what you need:
 
 The maintainer delegates to specialized subagents:
 
-- `delegate` — exploration, research, commands
-- `doc-explorer` — writes `docs/` and `plans/`
+- `delegate` — one canonical skill-driven persona for exploration, research, reviews, review fixes, and implementation plans; model variants are aliases
+- `doc-explorer` — writes `docs/` and selected skill-governed planning artifacts
 - `implementer` — code changes with gated execution
 - `legacy-curator` — archive cleanup
 
@@ -68,9 +68,13 @@ Everything persists to files. New session? Read the plan and continue.
 
 ## Principles
 
-**Delegate by default.** Context is a budget — every file read costs tokens better spent on judgment. The maintainer delegates by default: one trivial single-file edit is the only thing done locally. Everything else goes through specialized subagents.
+**Delegate deliberately.** Context is a budget, but delegation also has setup cost. Routine analysis uses the canonical delegate with an explicit skill; independent reviews may use a stronger model alias. Bounded low-risk edits can stay local.
 
 **Gated execution.** Subagents propose a blueprint (step list) before writing any code. The primary reviews and approves. Then execution happens. The blueprint acts as Chain-of-Thought — it forces structured thinking before implementation.
+
+**Reuse review context.** Accepted related findings return to the same reviewer session through `review-fix`, including multi-file runtime fixes. A new implementation or authoring session is reserved for changed scope/objective, missing context, new primary decisions, or an explicit fresh perspective. Further reviews are optional and never loop automatically.
+
+**Keep reviews disciplined.** No Gold-Plating. No Adversarial Reviewing. No Scope Creep. Report evidence-backed defects and required related changes, not gotchas or invented work.
 
 **File-based persistence.** `docs/` and `plans/` are the interface. Readable by humans and AI. No hidden state. Your knowledge survives session boundaries.
 
@@ -92,7 +96,7 @@ This project works well with the [DCP plugin](https://github.com/Opencode-DCP/op
 
 ## Design rationale
 
-Why phases are separate from implementation plans. Why the primary authors plans instead of delegating. Why there's one `doc-explorer` instead of separate analysis and writing agents.
+Why phases are separate from implementation plans. Why the primary authors plans instead of delegating. Why one canonical skill-driven delegate works alongside workflow-owned writers.
 
 → [AGENTS.md](AGENTS.md)
 

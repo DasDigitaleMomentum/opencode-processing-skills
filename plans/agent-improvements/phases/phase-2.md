@@ -14,7 +14,7 @@ updated: "2026-04-26"
 
 ## Objective
 
-Sharpen the delegation culture in both maintainer agents. The Blueprint mechanism (`implementer` proposes a step list, maintainer reviews, then executes) becomes the **default** for all non-trivial edits — not just large phases. The delegation threshold drops from "≤2 files + quick edit → self" to "trivial single-edit, single-file → self".
+Sharpen the delegation culture in both maintainer agents. The Blueprint mechanism (`implementer` proposes a step list, maintainer reviews, then executes) is used when behavior, risk, uncertainty, or scope requires a gate. Bounded, reversible, low-risk edits in known files may remain local.
 
 ## Scope
 
@@ -22,7 +22,7 @@ Sharpen the delegation culture in both maintainer agents. The Blueprint mechanis
 
 - **`agents/maintainer.md`** — Operating Rules refined:
   - Rule #3 (Delegate over self-execute): strengthened to "default to delegation"
-  - Rule #8 (Right-size delegation): threshold tightened to single-edit/single-file
+  - Rule #8 (Right-size delegation): threshold based on risk, uncertainty, and scope rather than file count alone
   - New: Anti-pattern table with concrete "wrong → right" examples
   - New: Operating Rule "Context is a budget" (or fold into existing rules)
 - **`agents/maintainer-direct.md`** — Apply identical delegation rules (shared DNA)
@@ -31,8 +31,7 @@ Sharpen the delegation culture in both maintainer agents. The Blueprint mechanis
 ### Excludes (deferred to later phases)
 
 - Installer changes — Phase 3
-- Any changes to subagent definitions (`implementer.md`, `delegate.md`, etc.)
-- Changes to the `execute-work-package` skill
+- Review remediation and canonical delegate changes — handled by Phase 4
 
 ## Prerequisites
 
@@ -42,7 +41,7 @@ Sharpen the delegation culture in both maintainer agents. The Blueprint mechanis
 ## Deliverables
 
 - [ ] `maintainer.md` Rule #3 reworded for "default to delegation"
-- [ ] `maintainer.md` Rule #8 threshold: trivial single-edit/single-file → self; everything else → implementer with Blueprint
+- [ ] `maintainer.md` Rule #8 threshold: bounded low-risk known-file changes may remain local; behavior, uncertainty, or risk → delegated workflow
 - [ ] Anti-pattern table added near Rule #8 with concrete examples:
   - Understanding code structure → delegate code-exploration, don't read 5 files yourself
   - Small multi-file edits → delegate to implementer, don't DIY
@@ -53,7 +52,7 @@ Sharpen the delegation culture in both maintainer agents. The Blueprint mechanis
 
 ## Acceptance Criteria
 
-- [ ] `maintainer.md` Rule #8 clearly states: one trivial edit in one file → self; anything else → implementer
+- [ ] `maintainer.md` Rule #8 clearly distinguishes low-risk local work from gated behavioral or uncertain work
 - [ ] Anti-pattern table is present and contains at least 4 concrete examples
 - [ ] Rules are internally consistent — nothing contradicts the new delegation threshold
 - [ ] `maintainer-direct.md` delegation rules match `maintainer.md` exactly (same text or minor variant)
@@ -68,5 +67,5 @@ Sharpen the delegation culture in both maintainer agents. The Blueprint mechanis
 ## Notes
 
 - The key insight from the user: Blueprint is a **Chain-of-Thought equivalent** — it forces the implementer to think through the plan and the maintainer to review it. This improves quality even for small changes.
-- "Trivial" threshold examples: adding a comment, fixing a typo in a string, renaming a local variable (single occurrence). Everything else goes through implementer.
+- Low-risk threshold examples: mechanical edits in known files with an obvious verify step. Behavioral changes, uncertain debugging, and architectural work use the appropriate delegated workflow.
 - The anti-pattern table should be placed near Rule #8 for immediate reference, not buried elsewhere.
