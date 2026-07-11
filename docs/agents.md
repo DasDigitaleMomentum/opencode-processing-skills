@@ -18,8 +18,12 @@ The orchestrator. Handles planning decisions, user interaction, and Git operatio
 - Commits only when you ask
 
 **When it works itself vs. delegates:**
-- Works itself: planning decisions, user negotiation, trivially small edits
+- Works itself: planning decisions, user negotiation, and bounded low-risk changes in known files
 - Delegates: codebase exploration, doc generation, implementation, reviews
+
+### `maintainer-direct`
+
+Non-interactive variant of `maintainer`. It uses the same routing, safety, testing, and planning rules, but asks questions only for genuine decisions and otherwise reports progress directly.
 
 ---
 
@@ -27,7 +31,7 @@ The orchestrator. Handles planning decisions, user interaction, and Git operatio
 
 ### `delegate`
 
-General-purpose subagent for any task the primary needs to offload.
+The one canonical, skill-driven delegate persona. Skills provide task expertise, workflow, write boundaries, and output contracts.
 
 **Typical tasks:**
 - Codebase exploration
@@ -35,21 +39,25 @@ General-purpose subagent for any task the primary needs to offload.
 - Analyzing data or logs
 - Quick lookups and research
 
+**Write boundary:** `delegate` is read/analyze/verify by default. It may write skill-defined artifacts with explicit output paths/templates, such as reviews and implementation plans. Larger ad-hoc writes with undefined shape/targets should start with an informal Blueprint for primary approval. Code changes normally route to `implementer`; delegates do not perform Git operations.
+
+After an implementation or implementation-plan review, `review-fix` is the preferred same-session remediation path for accepted related findings, including multi-file runtime changes. The review artifact remains unchanged. A new implementation or authoring session is reserved for changed scope/objective, missing context, new primary decisions, or an explicit fresh perspective.
+
 **Model:** Configured via `config.yaml`. Defaults to provider's choice if not set.
 
 **Why it exists:** The built-in `general` uses the provider's default model. `delegate` uses your configured model — cheaper, faster, and predictable for routine tasks.
 
 ### `doc-explorer`
 
-Writes documentation and planning artifacts.
+Docs-focused subagent for project documentation and selected template-governed planning artifacts.
 
 **Writes to:**
 - `docs/` — project documentation
-- `plans/` — planning artifacts
+- `plans/` — selected framework planning artifacts when explicitly routed by relevant skills
 
-**Does NOT write:** Code files.
+**Does NOT write:** Code files or ad-hoc analysis writeups; use `delegate` for those. Implementation plans default to the canonical delegate via `author-and-verify-implementation-plan`.
 
-**Used by:** `generate-docs`, `update-docs`, `create-plan`, `update-plan`, `author-and-verify-implementation-plan`, `generate-handover`
+**Used by:** `generate-docs`, `update-docs`, `create-plan`, `update-plan`, `generate-handover`
 
 ### `implementer`
 
@@ -80,13 +88,21 @@ Handles legacy repo cleanup before generating fresh docs.
 
 ## Delegation Philosophy
 
+### Scope and review posture
+
+**No Gold-Plating. No Adversarial Reviewing. No Scope Creep.** Maintainers and
+delegates should pursue evidence-backed problems, not invent improvements,
+hunt for gotchas, or broaden the objective. Related files, call sites,
+integration points, and tests remain discoverable when they are required for
+accepted work. Real defects must still be reported and fixed.
+
 ### Why delegate instead of doing everything in the primary?
 
 **Context limits.** The primary reads a lot during exploration — file contents, search results, tool outputs. Most of it isn't needed long-term. Delegating keeps the primary lean.
 
 **Cost predictability.** Subagents run on your configured model. The primary can use a frontier model for planning; subagents can use cheaper models for routine work.
 
-**Separation of concerns.** Subagents write to specific domains (docs, plans, code). The primary orchestrates and owns the conversation.
+**Separation of concerns.** Subagents write according to workflow ownership: docs-focused artifacts, skill-defined review/implementation-plan artifacts, or gated code execution. The primary orchestrates and owns the conversation.
 
 ### When to use `delegate` vs `general`
 
@@ -95,9 +111,13 @@ Handles legacy repo cleanup before generating fresh docs.
 | `delegate` | Your config | Default for routine tasks |
 | `general` (built-in) | Provider default | User explicitly asks, or you want a different perspective |
 
+### Stateful delegate reuse
+
+The primary should resume an existing delegate `task_id` for follow-ups within the same analysis, review, or debugging thread. This includes loading `review-fix` after an implementation or implementation-plan review. Start a new delegate for changed scope, parallel work, model/variant changes, fresh independent opinions, or stale context. `task_id`s are session-local; durable continuity belongs in `docs/`, `plans/`, todos, and handovers.
+
 ### When to use delegate variants
 
-Additional delegates (`delegate-review`, `delegate-fast`, etc.) let you switch models on demand:
+Additional delegates (`delegate-strong`, `delegate-fast`, etc.) are generated model aliases of `agents/delegate.md`, not separate personas. They let you change capacity without duplicating task expertise:
 
 ```
 > use delegate-opus for this review
@@ -121,11 +141,11 @@ You ──prompt──▸ @maintainer ──delegates──▸ subagents
                                          when you ask)
 
 Delegation targets:
-  delegate ......... exploration, research, commands
-  doc-explorer ..... docs/ and plans/ artifacts
+  delegate ......... exploration, research, reviews, implementation plans
+  doc-explorer ..... docs/ and selected skill-governed plans/ artifacts
   implementer ...... code changes (gated execution)
   legacy-curator ... docs-legacy/ archive
   general (built-in) second opinion, user-requested
 ```
 
-The file structure IS the interface. Subagents write to `docs/` and `plans/`, the primary reads from them. No magic state, no hidden context — just files.
+The file structure IS the interface. Framework docs/plans persist in `docs/` and `plans/`, and the primary reads from them. No magic state, no hidden context — just files.

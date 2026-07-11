@@ -44,7 +44,7 @@ Do **not** use this skill to:
   - Delegates authoring/verification of the implementation plan when helpful.
   - Reviews the resulting implementation plan for scope compliance.
 
-- **Subagent (doc-explorer)**
+- **Subagent (delegate or justified model alias)**
   - Reads: phase + existing implementation plan (if any) + relevant docs + relevant code.
   - Writes: `plans/**/implementation/phase-N-impl.md`.
 
@@ -53,7 +53,7 @@ Do **not** use this skill to:
 - **Writes**: `plans/<plan>/implementation/phase-N-impl.md` (authoring/refinement grounded against current code).
 - **Does NOT write**: `plans/<plan>/plan.md` or `plans/<plan>/phases/**` (phase intent/scope/DoD remain gated by the primary).
 - **Primary**: owns phase gating; reviews impl-plan for scope compliance.
-- **doc-explorer**: performs the author+verify pass and writes the impl-plan.
+- **delegate**: performs the author+verify pass and writes the impl-plan. Use `delegate-strong` only when phase complexity or risk justifies it.
 - **implementer**: not used for plan artifacts in this skill.
 
 ### Why `plans/` and `docs/` matter
@@ -65,7 +65,7 @@ Do **not** use this skill to:
 
 ## Workflow
 
-### 0) Inputs (Primary → doc-explorer)
+### 0) Inputs (Primary → delegate)
 
 Provide:
 
@@ -83,7 +83,9 @@ Provide:
 
 ### 1) Author + verify
 
-doc-explorer:
+Primary delegates directly to the canonical `delegate` using the bundled prompt template. A justified model alias may be selected without changing the workflow. This is a skill-defined artifact with an explicit output path and canonical template, so it does **not** require an informal Blueprint.
+
+The delegate:
 
 1. Reads the plan (for global context) and the phase intent/DoD.
 2. Locates the relevant code areas using docs inventories and targeted code search.
@@ -93,7 +95,7 @@ doc-explorer:
    - includes a **single** proposed verify command (or preserves the given one)
    - captures mismatches as “Reality Check” notes
 
-If the phase depends on previous phases, doc-explorer should read the necessary prior implementation plans to keep continuity.
+If the phase depends on previous phases, the delegate should read the necessary prior implementation plans to keep continuity.
 
 ### 2) Primary review
 
@@ -134,4 +136,4 @@ The implementation plan must follow the canonical headings and frontmatter keys 
 ## Templates
 
 - `tpl-implementation-plan.md` — canonical implementation plan format with “Reality Check” grounding section
-- `tpl-author-and-verify-implementation-plan-prompt.md` — Primary → doc-explorer delegation prompt
+- `tpl-author-and-verify-implementation-plan-prompt.md` — Primary → delegate delegation prompt

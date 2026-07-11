@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+- **`delegate-analysis` skill**: Moves routine exploration, targeted reading, web research, and deep-dive expertise out of the delegate persona.
+- **`review-fix` skill**: Resumes the same reviewer session for accepted related implementation or implementation-plan findings.
+
+### Changed
+- **Canonical delegate persona**: Generated `delegate-*` agents are model aliases of one skill-driven definition rather than separate role definitions.
+- **Delegation routing**: Routine analysis uses `delegate`; `delegate-strong` is reserved for independent reviews and genuinely difficult or high-risk work.
+- **Delegation threshold**: Bounded low-risk mechanical edits may remain in the primary even when they touch multiple known files.
+- **Review workflow**: Review findings now receive stable IDs and same-session remediation preserves the original reviewer context.
+- **Review remediation policy**: Same-session `review-fix` is now the preferred path for accepted related findings, including multi-file runtime fixes. New work packages and follow-up reviews require an actual scope/context/decision reason or explicit request; automatic review loops are prohibited.
+- **Review discipline**: Maintainers, delegates, Cursor rules, and review skills now share the explicit reminder: “No Gold-Plating. No Adversarial Reviewing. No Scope Creep.” Evidence-backed defects and required related changes remain in scope.
+
 ## 0.2.0 — 2026-06-04
 
 ### Added

@@ -35,6 +35,13 @@ Do **not** use this skill to:
 
 The primary specifies the review focus when delegating. The default focus is **functional and technical findings** — correctness, feasibility, completeness of the solution.
 
+### Review posture
+
+**No Gold-Plating. No Adversarial Reviewing. No Scope Creep.** Report only
+evidence-backed problems that affect correctness, security, acceptance, or the
+reviewed objective. Do not hunt for gotchas, invent improvements, or turn a
+review into a search for work. This does not mean overlooking real defects.
+
 **Formal criteria** (DoD compliance checklists, NFR conformance, reference consistency, documentation cleanup) are secondary. Only include formal findings when they reveal **real problems** — not as standard checkboxes to fill. A review cluttered with formal nitpicking buries the findings that matter.
 
 The primary passes the focus via `{{focus}}` in the delegation prompt. If no focus is specified, use the default.
@@ -58,7 +65,7 @@ The primary passes the focus via `{{focus}}` in the delegation prompt. If no foc
 
 ### Why `delegate-strong` (not `doc-explorer`)
 
-The reviewer must approach the plan without authoring context — fresh eyes catch what familiarity misses. `delegate-strong` provides the judgment depth needed to evaluate scope, consistency, and completeness. `doc-explorer` is for writing plans/docs, not reviewing them.
+The reviewer must approach the plan without authoring context — fresh eyes catch what familiarity misses. `delegate-strong` provides the judgment depth needed to evaluate scope, consistency, and completeness. Writing docs or selected plan artifacts belongs to the relevant authoring workflow, not the review workflow.
 
 ## Routing Matrix (Who does what)
 
@@ -102,6 +109,8 @@ Primary decides:
 - **Needs Revision**: Update plan via `update-plan`, then optionally re-review.
 - **Major Gaps**: Discuss with user before proceeding.
 
+Plans remain conversation-owned by the primary. Resume the same reviewer `task_id` for clarification of findings instead of creating a new delegate, but apply plan changes through `update-plan`. `review-fix` is reserved for implementation plans and implementations.
+
 ---
 
 ## Output Contract
@@ -121,6 +130,7 @@ The review artifact `plans/<name>/reviews/plan-review.md` MUST:
 - The reviewer must approach the plan **without prior context**. Do not include plan content in the delegation prompt — the reviewer reads it themselves.
 - Findings are **advisory**. The primary decides whether and how to act.
 - Do not rewrite or modify the plan during review — only produce the review artifact.
+- Retain the reviewer `task_id` until finding clarification is complete.
 - Ensure the `reviews/` directory exists before delegating (create if needed).
 - A review that finds zero issues is likely not thorough enough — flag this to the user.
 
@@ -129,4 +139,4 @@ The review artifact `plans/<name>/reviews/plan-review.md` MUST:
 ## Templates
 
 - `tpl-plan-review.md` — Canonical review output format with embedded review criteria
-- `tpl-review-plan-prompt.md` — Primary → delegate-strong delegation prompt
+- `tpl-review-plan-prompt.md` — Primary → reviewer delegation prompt

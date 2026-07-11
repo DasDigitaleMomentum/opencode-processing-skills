@@ -138,9 +138,9 @@ created: "{{date}}"
      - Minor: Improvement opportunity. Can proceed but should be addressed.
      - Note: Observation for awareness. No action required. -->
 
-| # | Severity | Area | Finding | Recommendation |
-| - | -------- | ---- | ------- | -------------- |
-| 1 | {{sev}}  | {{}} | {{}}    | {{}}           |
+| ID  | Severity | Area | Finding | Recommendation |
+| --- | -------- | ---- | ------- | -------------- |
+| F-1 | {{sev}}  | {{}} | {{}}    | {{}}           |
 
 ## Recommendations
 

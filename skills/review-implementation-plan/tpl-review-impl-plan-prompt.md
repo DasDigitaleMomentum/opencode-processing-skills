@@ -7,6 +7,8 @@ created: "{{date}}"
 
 # Review Delegation: Implementation Plan Review
 
+Load and follow the `review-implementation-plan` skill. Your delegate model/variant does not change this workflow.
+
 You are reviewing an implementation plan as an **independent reviewer**. You have no prior context — this is intentional. Fresh eyes catch gaps that authors miss.
 
 ## Task
@@ -53,9 +55,9 @@ Write your review to:
 Use the canonical template:
 - `skills/review-implementation-plan/tpl-impl-plan-review.md`
 
-**Be honest and thorough — with focus.** Prioritize findings that matter for the stated focus. Rate by severity (Critical/Major/Minor/Note). Formal criteria that show no real problems may be omitted entirely.
+**Be honest and thorough — with focus.** Prioritize findings that matter for the stated focus. Give each finding a stable ID (`F-1`, `F-2`, ...), and rate it by severity (Critical/Major/Minor/Note). Formal criteria that show no real problems may be omitted entirely.
 
 Return to the primary only:
 - The overall verdict (Ready / Needs Revision / Major Gaps)
 - Count of findings by severity
-- Top 3 most important findings (1 sentence each)
+- Top 3 most important findings with IDs (1 sentence each)

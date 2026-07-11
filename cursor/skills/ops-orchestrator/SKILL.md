@@ -23,13 +23,19 @@ Persist work in `docs/` and `plans/` — the file structure is the interface, no
 - `plans/` — gated source of truth for scope/DoD and phase intent.
 - `docs/` — curated navigation layer (module/feature inventories) to reduce rediscovery.
 
+## Scope reminder
+
+**No Gold-Plating. No Adversarial Reviewing. No Scope Creep.** Pursue
+evidence-backed defects, not gotchas or extra work. Keep the reviewed objective
+intact while discovering related files and tests required for accepted work.
+
 ## Operating Rules
 
 1. **Always use existing documentation.** Check `docs/` and `plans/` before exploring the codebase.
 2. **Ask, don't assume.** Use the `AskQuestion` tool (when available) or ask conversationally before ambiguous multi-step work. **Always ask before:** destructive actions or external effects (git push, deployments, production API calls) unless explicitly requested.
-3. **Default to delegation.** Before reading or editing, ask: can a `Task` subagent do this and return a compact digest? Route reviews and synthesis to `delegate-strong` (`generalPurpose`). Quick lookups → `delegate-fast` (`explore`). Keep prompts focused — task + references, not chat history.
+3. **Delegate by task, not prestige.** Routine analysis uses the canonical delegate persona with `delegate-analysis`. Independent reviews use the `delegate-strong` routing role; quick lookups may use `delegate-fast`. These semantic roles share one installed persona, while Cursor selects model capacity through the mapped Task type. Do not escalate merely because a task is multi-step.
 4. **Context hygiene.** Keep the primary session lean. Delegate exploration; read only what informs your next decision.
-5. **Trivial edits only inline** — single-file typo/comment/string fix with no architectural reasoning. Everything else → subagent. Non-trivial code → `implementer` with blueprint gate (`execute-work-package` skill).
+5. **Bounded low-risk edits may be inline** when files are known and verification is obvious. Behavioral, architectural, or uncertain new work uses `implementer` with the blueprint gate. Accepted related review findings may use `review-fix` in the existing reviewer session, including multi-file fixes.
 6. **Search:** prefer `SemanticSearch` / `Grep` for code navigation.
 7. **End turns with a follow-up.** Use `AskQuestion` to confirm results or offer next steps. The user decides when the conversation is done.
 8. **Parallelize** independent tool calls in one turn.
@@ -45,27 +51,32 @@ Persist work in `docs/` and `plans/` — the file structure is the interface, no
 
 ## When to use which role
 
-- **delegate-fast** (`explore`) — quick lookups, simple reads, short summaries.
-- **delegate-strong** (`generalPurpose`) — reviews, analysis, synthesis, bug investigation.
-- **doc-explorer** (`generalPurpose`) — writes `docs/**` and `plans/**` only; use with doc skills.
+- **delegate** (`generalPurpose`) — routine skill-driven analysis, research, verification, and explicit template-governed artifacts.
+- **delegate-fast** (`explore`) — lightweight routing role for quick lookups and simple reads.
+- **delegate-strong** (`generalPurpose`) — general-purpose routing role for independent reviews, hard root-cause analysis, high-risk synthesis, and second opinions.
+- **doc-explorer** (`generalPurpose`) — docs-focused; writes `docs/**` plus selected skill-governed `plans/**` maintenance where applicable. Not the default for implementation-plan authoring.
 - **implementer** (`generalPurpose`) — code files only; blueprint → gate → execute → digest.
 - **legacy-curator** (`generalPurpose`) — `docs-legacy/` archive hygiene.
+
+Skill-defined artifacts with explicit path/template (reviews, implementation plans) may be written directly by the selected delegate; do not add a Blueprint gate. Use `delegate-strong` for independent reviews, not automatically for every artifact. Larger ad-hoc writes with undefined shape/targets should start with an informal Blueprint.
 
 ## Plan-to-implementation lifecycle
 
 ```
 1. CREATE PLAN         → primary         → create-plan
 2. [REVIEW PLAN]       → delegate-strong → review-plan
-3. IMPL PLAN           → doc-explorer    → author-and-verify-implementation-plan
+3. IMPL PLAN           → delegate        → author-and-verify-implementation-plan
 4. [REVIEW IMPL PLAN]  → delegate-strong → review-implementation-plan
 5. EXECUTE             → implementer     → execute-work-package
 6. [REVIEW IMPL]       → delegate-strong → review-implementation
-7. UPDATE PLAN         → doc-explorer    → update-plan
-8. [HANDOVER]          → doc-explorer    → generate-handover
+7. [REVIEW FIX]        → same reviewer   → review-fix
+8. UPDATE PLAN         → doc-explorer    → update-plan
+9. [HANDOVER]          → doc-explorer    → generate-handover
 ```
 
 - Create **all** implementation plans before executing phases (wave 1 → wave 2).
 - Reviews go to `plans/<name>/reviews/`.
+- Accepted related review findings resume the same reviewer Task through `review-fix`, including fixes spanning multiple files or runtime code. Use a new work package or authoring pass only for changed scope/objective, a new primary decision, unavailable context, or an explicit fresh-context request. Do not create automatic review-fix loops.
 - Plan updates → doc-explorer, not implementer.
 
 ### Additional loops

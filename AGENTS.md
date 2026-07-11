@@ -38,8 +38,9 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 
 ## Architecture Principles
 
-- **File-based interface**: Subagents write to the defined file structure (templates). The file structure IS the interface, not return values. Every subagent that produces artifacts writes them to disk; the primary agent receives only a short status summary.
-- **One subagent per output domain**: Subagents are organized by what they WRITE, not by what they do. `doc-explorer` writes to `docs/` and `plans/`. There is no separate analysis agent -- analysis is an intermediate step within the writing agent's workflow.
+- **File-based interface**: Subagents write skill-/workflow-defined artifacts to the defined file structure (templates). The file structure IS the interface, not return values. Every subagent that produces artifacts writes them to disk; the primary agent receives only a short status summary.
+- **Skill-driven delegate**: `agents/delegate.md` is the single canonical analysis/review persona. Generated `delegate-*` variants are model aliases; loaded skills own expertise, write boundaries, and output contracts.
+- **Workflow-owned writers**: `doc-explorer` is docs-focused, the canonical delegate handles skill-governed analysis/reviews and explicit artifacts, and `implementer` performs gated code execution.
 - **Self-delegation for scale**: When a subagent's workload would exceed comfortable context limits (e.g., documenting a project with many modules), it spawns additional instances of itself, each scoped to a smaller unit of work.
 - **Agent extension over commands**: Skills extend the primary agent's behavior. Subagents handle expensive exploration.
 - **Stack-agnostic**: No assumptions about language or framework
@@ -47,6 +48,8 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 - **Redundancy-free**: Templates reference each other instead of duplicating content
 - **Session-resilient**: Everything persisted, handover on demand
 - **Context-aware**: Documents structured for partial loading (not everything into context at once)
+- **Policy-light**: Routing rules are defaults, not self-imposed blockers; preserve valid context and avoid automatic review/fix loops
+- **Scope-disciplined**: No Gold-Plating, No Adversarial Reviewing, No Scope Creep; pursue evidence-backed defects and required related changes without inventing extra work
 
 ## Design Decisions
 
@@ -60,9 +63,17 @@ Phases define scope and acceptance criteria independent of technical approach. T
 
 Plans are conversation-anchored: requirements emerge from user dialogue, trade-offs are negotiated, DoD is agreed upon. This context lives in the primary agent's conversation. Delegating plan creation to a subagent would require serializing all this context into a prompt, risking loss of intent and nuance. Documentation, by contrast, is codebase-anchored -- it can be derived from files without conversation context.
 
-### Why one subagent (doc-explorer) instead of separate analysis and writing agents?
+### Why keep exploration and writing within workflow agents?
 
-Earlier iterations had a separate `code-analyzer` (read-only analysis) and `doc-explorer` (writing). This created problems: (1) code-analyzer could only return text, violating the file-based interface principle; (2) the delegation chain primary -> doc-explorer -> code-analyzer added indirection without value, since doc-explorer already has the same read capabilities; (3) the primary spawning code-analyzer directly for plan creation would dump the entire analysis into the primary's context, causing token bloat. The solution: doc-explorer handles both analysis and writing. For scale, it self-delegates (spawns additional doc-explorer instances per module) rather than delegating to a different agent type.
+Earlier iterations had a separate `code-analyzer` (read-only analysis) and writer agents. This created problems: (1) code-analyzer could only return text, weakening the file-based interface; (2) extra delegation chains added indirection without value; (3) the primary spawning analyzers directly for large tasks could dump excessive analysis into the primary's context. The solution: the workflow agent that owns an artifact performs the necessary exploration and writes the artifact directly. For documentation scale, `doc-explorer` self-delegates per module; for review and implementation-plan artifacts, `delegate-*` writes the explicit output path defined by the skill.
+
+### Why one canonical delegate persona?
+
+Task expertise changes more often than generic delegate behavior. Keeping exploration, review, remediation, and artifact contracts in skills avoids persona drift and lets the same `task_id` move from review to remediation without rebuilding context. Model variants copy the canonical persona and differ only in configured model/options, so stronger models can be selected for independent reviews without duplicating workflow rules.
+
+### Why review fixes stay in the reviewer session?
+
+The reviewer already has the relevant code, findings, assumptions, and verification context. Starting a new implementer for every finding forces context reconstruction and can introduce a weaker or conflicting policy layer. Same-session remediation is therefore the default, including related multi-file fixes. A new work package is reserved for changed scope, unavailable context, an explicit fresh perspective, or a new primary decision. Review loops are never started automatically.
 
 ### Why does doc-explorer self-delegate instead of the primary spawning per-module instances?
 
