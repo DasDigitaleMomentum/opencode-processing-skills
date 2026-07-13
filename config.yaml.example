@@ -64,13 +64,15 @@ targets:
 # Set a specific model per agent. Agents not listed here (or with an empty
 # value) keep the provider default. Format: <agent-name>: <provider/model-id>
 
-delegate: openai/gpt-5.6-terra
+delegate:
+  model: openai/gpt-5.6-sol
+  reasoningEffort: medium
 doc-explorer:
-  model: openai/gpt-5.6-luna
-  reasoningEffort: high
+  model: openai/gpt-5.6-sol
+  reasoningEffort: medium
 implementer:
-  model: openai/gpt-5.6-terra
-  reasoningEffort: high
+  model: openai/gpt-5.6-sol
+  reasoningEffort: medium
 legacy-curator: openai/gpt-5.6-luna
 
 
@@ -100,13 +102,16 @@ legacy-curator: openai/gpt-5.6-luna
 #       reasoningEffort: high
 
 additional_delegates:
-#  codex: openai/gpt-5.3-codex           #  in case its available ( e.g. API or Azure)
+  strong:
+    model: openai/gpt-5.6-sol
+    reasoningEffort: xhigh
+  codex: openai/gpt-5.3-codex            # If available, e.g. via API or Azure
+  qwen: alibaba-eu/qwen3.7-max
+  ds: deepseek/deepseek-v4-pro
+  ds-flash: deepseek/deepseek-v4-flash
   fast:
     model: openai/gpt-5.6-luna
-    reasoningEffort: high
-  strong:
-    model: openai/gpt-5.6-sol             # Escalation slot — hardest problems
-    reasoningEffort: high
+    reasoningEffort: medium
 
 
 # ============================================================================
@@ -117,7 +122,7 @@ additional_delegates:
 # (blueprint → gate → execute → digest), different model choices.
 #
 # Supported options keys (routed to OpenCode provider options):
-#   reasoningEffort: low | medium | high | max
+#   reasoningEffort: low | medium | high | xhigh
 #   temperature: <float>
 #   top_p: <float>
 #   maxTokens: <int>
@@ -126,21 +131,20 @@ additional_delegates:
 #   "use implementer-fast for this work package"
 
 additional_implementers:
-  safe:
-    model: deepseek/deepseek-v4-pro       # less guardrails
-    reasoningEffort: high
-  fast:
-    model: openai/gpt-5.6-luna            # Lightweight, for routine changes
-    reasoningEffort: high
   strong:
-    model: openai/gpt-5.6-sol             # Strong, high-risk work
+    model: openai/gpt-5.6-sol
+    reasoningEffort: xhigh
+  fast:
+    model: openai/gpt-5.6-luna
+    reasoningEffort: medium
+  safe:
+    model: deepseek/deepseek-v4-pro
     reasoningEffort: high
 
 
 # ============================================================================
 # Alternative model examples (uncomment to use)
 # ============================================================================
-# delegate: openai/gpt-5.6-luna
-# doc-explorer: openai/gpt-5.6-luna
-# implementer: openai/gpt-5.6-luna
-# legacy-curator: openai/gpt-5.6-luna
+# delegate: alibaba-eu/qwen3.7-max
+# doc-explorer: deepseek/deepseek-v4-pro
+# implementer: deepseek/deepseek-v4-pro
