@@ -2,11 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 0.5.0 — 2026-07-13
 
 ### Added
 - **`delegate-analysis` skill**: Moves routine exploration, targeted reading, web research, and deep-dive expertise out of the delegate persona.
 - **`review-fix` skill**: Resumes the same reviewer session for accepted related implementation or implementation-plan findings.
+- **Cursor target**: Installer support, orchestrator skills, subagent mapping, and project-local rules for using the workflows in Cursor.
+- **GPT-5.6 model configuration**: Example routing for Sol as the core maintainer, delegate, and implementer model, with Luna and alternative-provider aliases for focused work.
 
 ### Changed
 - **Canonical delegate persona**: Generated `delegate-*` agents are model aliases of one skill-driven definition rather than separate role definitions.
@@ -15,6 +17,11 @@ All notable changes to this project will be documented in this file.
 - **Review workflow**: Review findings now receive stable IDs and same-session remediation preserves the original reviewer context.
 - **Review remediation policy**: Same-session `review-fix` is now the preferred path for accepted related findings, including multi-file runtime fixes. New work packages and follow-up reviews require an actual scope/context/decision reason or explicit request; automatic review loops are prohibited.
 - **Review discipline**: Maintainers, delegates, Cursor rules, and review skills now share the explicit reminder: “No Gold-Plating. No Adversarial Reviewing. No Scope Creep.” Evidence-backed defects and required related changes remain in scope.
+- **README story**: Documents the project's evolution from DCP-assisted frontier-model usage to fresh-context subagent orchestration and the GPT-5.6 family.
+- **DCP positioning**: Dynamic Context Pruning is now an optional companion rather than a workflow expectation.
+
+### Fixed
+- **macOS installer**: Restored compatibility with BSD `sed`.
 
 ## 0.2.0 — 2026-06-04
 

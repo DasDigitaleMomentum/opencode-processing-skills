@@ -6,6 +6,16 @@ Agents, skills, and templates for **structured AI-assisted development** with [O
 
 ---
 
+## How I got here
+
+I started working with subagents and context management through [DCP](https://github.com/Opencode-DCP/opencode-dynamic-context-pruning) to make Opus and other frontier models useful within GitHub Copilot's restrictions. The next step was orchestration: capable Chinese models such as DeepSeek V4 Pro, Qwen 3.7 Max, and GLM 5.2 formed the bracket around a task, while expensive models such as GPT-5.5 could start each focused piece of work with a fresh context.
+
+Now OpenAI has released the GPT-5.6 family. The same idea works within one model family: smaller models can steer the larger Sol model, while GPT-5.6 Sol at low or medium reasoning effort has proven itself as a very capable maintainer. Luna at high reasoning effort is also a cost-efficient option. Context discipline still matters, but DCP has moved from a requirement to an optional companion.
+
+That evolution is what this repo captures: not just a collection of prompts, but a practical way to keep strong models focused, give expensive work a clean context, and preserve everything important outside the chat.
+
+---
+
 ## Why this exists
 
 AI-assisted development has a context problem. Every file you read, every search result you inspect — it all counts against a finite context window. When that window fills up, quality degrades. The most expensive thing you can do is rediscover what you already figured out yesterday.
@@ -90,7 +100,7 @@ This is not a magic bullet. It's not a full framework like BMAD or SpecKit. It's
 
 ## Dynamic Context Pruning
 
-This project works well with the [DCP plugin](https://github.com/Opencode-DCP/opencode-dynamic-context-pruning). The primary reads a lot of files during exploration — most of which aren't needed long-term. DCP lets the model clean up its own context, keeping the session usable longer.
+[DCP](https://github.com/Opencode-DCP/opencode-dynamic-context-pruning) is an optional companion. It can still keep long sessions lean by pruning exploration output that is no longer needed, but the workflows do not depend on it: durable context lives in `docs/` and `plans/`, while focused work is delegated into fresh subagent sessions.
 
 ---
 

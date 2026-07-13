@@ -81,10 +81,16 @@ OPS_CONFIG_FILE=/tmp/test.yaml ./install.sh           # use an alternate config
 By default, subagents use whatever model your OpenCode provider assigns. To run subagents on a specific model, copy `config.yaml.example` to `config.yaml` and set a model per agent:
 
 ```yaml
-delegate: openai/gpt-5.3-codex
-doc-explorer: openai/gpt-5.3-codex
-implementer: openai/gpt-5.3-codex
-legacy-curator: openai/gpt-5.3-codex
+delegate:
+  model: openai/gpt-5.6-sol
+  reasoningEffort: medium
+doc-explorer:
+  model: openai/gpt-5.6-sol
+  reasoningEffort: medium
+implementer:
+  model: openai/gpt-5.6-sol
+  reasoningEffort: medium
+legacy-curator: openai/gpt-5.6-luna
 ```
 
 Leave an agent out (or set it to empty) to keep the provider default. Re-run `./install.sh` after changing the config.
@@ -99,15 +105,20 @@ You can create delegate variants with different models for specific use cases:
 
 ```yaml
 additional_delegates:
-  codex: azure/gpt-5.3-codex         # Code-specialized
-  fast: github-copilot/gpt-5.4-mini  # Lightweight for quick lookups
-  opus: anthropic/claude-opus-4      # Frontier for thorough reviews
+  strong:
+    model: openai/gpt-5.6-sol
+    reasoningEffort: xhigh
+  fast:
+    model: openai/gpt-5.6-luna
+    reasoningEffort: medium
+  qwen: alibaba-eu/qwen3.7-max
+  ds: deepseek/deepseek-v4-pro
 ```
 
-This creates `delegate-codex`, `delegate-fast`, `delegate-opus` agents during installation. Tell the maintainer which variant to use:
+This creates `delegate-strong`, `delegate-fast`, `delegate-qwen`, and `delegate-ds` agents during installation. Tell the maintainer which variant to use:
 
 ```
-> use delegate-opus for this review
+> use delegate-strong for this review
 > delegate to delegate-fast for a quick lookup
 ```
 
@@ -125,15 +136,15 @@ The variant system lets you configure these once and switch on demand, without e
 
 ## Rate Limits and Model Choice
 
-If you're using GitHub Copilot as your provider, be aware that GHCP enforces rate limits on frontier models — and has been tightening them over time, including for subagent usage.
+The framework grew out of working within GitHub Copilot's frontier-model restrictions. The same routing remains useful with direct provider access: use model capacity where it changes the outcome instead of spending it on every lookup.
 
 **Recommendations:**
 
-- **Use a capable but non-frontier model for subagents.** Many tasks (exploration, research, doc generation) don't need frontier reasoning. A model like GPT-5.3-Codex or GPT-5.4-Mini handles them well at lower cost and without rate-limit pressure.
+- **Match the model to the role.** GPT-5.6 Sol at medium reasoning effort is a capable default for maintainers and core subagents. GPT-5.6 Luna remains a cost-efficient option for quick retrieval at medium or high reasoning effort.
 
-- **Reserve frontier models for the primary agent** (where planning decisions and user interaction happen) or for specific tasks where you explicitly want a second opinion.
+- **Reserve maximum reasoning effort for the hard gates.** Independent reviews and genuinely difficult decisions benefit more from the strongest configuration than routine exploration does.
 
-- **The `delegate` vs `general` split exists for this reason.** `delegate` runs on your configured model (cheap, fast, predictable). The built-in `general` uses the provider default — use it when you want the provider's best model for a specific task.
+- **Keep alternative perspectives available.** Delegate aliases make it easy to route selected work to DeepSeek V4 Pro, Qwen 3.7 Max, or another configured model without changing the workflow.
 
 If you have direct API access to a model provider (Azure, OpenAI, etc.), rate limits are typically more generous, and you can configure more powerful models for subagents without concern.
 

@@ -120,7 +120,7 @@ The primary should resume an existing delegate `task_id` for follow-ups within t
 Additional delegates (`delegate-strong`, `delegate-fast`, etc.) are generated model aliases of `agents/delegate.md`, not separate personas. They let you change capacity without duplicating task expertise:
 
 ```
-> use delegate-opus for this review
+> use delegate-strong for this review
 > delegate to delegate-fast for a quick lookup
 ```
 
