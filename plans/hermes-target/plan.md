@@ -2,7 +2,7 @@
 type: planning
 entity: plan
 plan: "hermes-target"
-status: active
+status: completed
 created: "2026-07-14"
 updated: "2026-07-14"
 ---
@@ -29,19 +29,19 @@ Verified Hermes facts (from `~/.hermes/hermes-agent` source, `agent/skill_utils.
 
 ### Functional
 
-- [ ] `install.sh` resolves a `hermes` target: `targets.hermes.home` (default `~/.hermes`) and `targets.hermes.enabled` (`true|false|auto`, default `auto` = enabled iff home exists).
-- [ ] Environment overrides `OPS_HERMES_HOME` and `OPS_SYNC_HERMES` take precedence over config.yaml, consistent with the other targets.
-- [ ] When enabled, all skills are installed to `$HERMES_HOME/skills/processing/<skill-name>/` (namespaced subdirectory, see Notes/Risks).
-- [ ] A short plain-prose `DESCRIPTION.md` is written to `$HERMES_HOME/skills/processing/` so the group presents as a proper category in Hermes.
-- [ ] Hermes is a skills-only target: no agents are installed.
-- [ ] `--project` mode ignores the Hermes target (same behavior as Codex/Claude).
-- [ ] Existing symlink-safety and update semantics of the shared install loop apply unchanged.
+- [x] `install.sh` resolves a `hermes` target: `targets.hermes.home` (default `~/.hermes`) and `targets.hermes.enabled` (`true|false|auto`, default `auto` = enabled iff home exists).
+- [x] Environment overrides `OPS_HERMES_HOME` and `OPS_SYNC_HERMES` take precedence over config.yaml, consistent with the other targets.
+- [x] When enabled, all skills are installed to `$HERMES_HOME/skills/processing/<skill-name>/` (namespaced subdirectory, see Notes/Risks).
+- [x] A short plain-prose `DESCRIPTION.md` is written to `$HERMES_HOME/skills/processing/` so the group presents as a proper category in Hermes.
+- [x] Hermes is a skills-only target: no agents are installed.
+- [x] `--project` mode ignores the Hermes target (same behavior as Codex/Claude).
+- [x] Existing symlink-safety and update semantics of the shared install loop apply unchanged.
 
 ### Non-Functional
 
-- [ ] No new dependencies (coreutils + grep + awk + sed only).
-- [ ] GNU/BSD portability preserved (reuse `sed_inplace` where needed; plain `mkdir`/`cp`/`printf` otherwise).
-- [ ] Idempotent: re-running the installer updates in place without duplicates or leftovers.
+- [x] No new dependencies (coreutils + grep + awk + sed only).
+- [x] GNU/BSD portability preserved (reuse `sed_inplace` where needed; plain `mkdir`/`cp`/`printf` otherwise).
+- [x] Idempotent: re-running the installer updates in place without duplicates or leftovers.
 
 ## Scope
 
@@ -61,25 +61,25 @@ Verified Hermes facts (from `~/.hermes/hermes-agent` source, `agent/skill_utils.
 
 ## Definition of Done
 
-- [ ] `./install.sh` on a machine with `~/.hermes` present reports "Hermes integration: enabled" and installs all 14 skills to `~/.hermes/skills/processing/`.
-- [ ] `OPS_SYNC_HERMES=false` disables the target; `enabled: auto` with a missing home directory disables it silently and cleanly.
-- [ ] `./install.sh --project` produces no Hermes writes.
-- [ ] `bash -n install.sh` passes (and `shellcheck` reports no new findings, if available).
-- [ ] `config.yaml.example` and `README.md` document the new target.
-- [ ] Sandboxed verification evidence (enabled / disabled / auto-missing / project mode) captured in the PR description.
+- [x] `./install.sh` on a machine with `~/.hermes` present reports "Hermes integration: enabled" and installs all 14 skills to `~/.hermes/skills/processing/`.
+- [x] `OPS_SYNC_HERMES=false` disables the target; `enabled: auto` with a missing home directory disables it silently and cleanly.
+- [x] `./install.sh --project` produces no Hermes writes.
+- [x] `bash -n install.sh` passes (and `shellcheck` reports no new findings, if available).
+- [x] `config.yaml.example` and `README.md` document the new target.
+- [x] Sandboxed verification evidence (enabled / disabled / auto-missing / project mode) captured in the PR description.
 
 ## Testing Strategy
 
 The repo has no test harness; `install.sh` explicitly supports `OPS_*` overrides "for tests/CI". Verification is therefore scripted sandbox runs against a temp directory:
 
-- [ ] Enabled case: `OPS_HERMES_HOME=<tmp>/hermes` (pre-created) with all other targets disabled → 14 skill dirs + `DESCRIPTION.md` appear under `<tmp>/hermes/skills/processing/`; `SKILL.md` content matches repo source.
-- [ ] Override-disable case: `OPS_SYNC_HERMES=false` → no Hermes writes, "disabled" reported.
-- [ ] Auto-missing case: `OPS_HERMES_HOME` pointing at a non-existent dir, state `auto` → target disabled.
-- [ ] Idempotency: run the enabled case twice → identical tree, no duplicates.
-- [ ] Symlink safety: pre-create `<dest>/processing/<skill>` as symlink → installer skips it.
-- [ ] Project mode: `./install.sh --project` in a temp dir → only `./.opencode/` (+ `./.cursor/` if enabled) written, no Hermes paths.
-- [ ] Static check: `bash -n`; `shellcheck` if installed.
-- [ ] Real-machine smoke test: full `./install.sh` run on this Mac, verify `~/.hermes/skills/processing/`.
+- [x] Enabled case: `OPS_HERMES_HOME=<tmp>/hermes` (pre-created) with all other targets disabled → 14 skill dirs + `DESCRIPTION.md` appear under `<tmp>/hermes/skills/processing/`; `SKILL.md` content matches repo source.
+- [x] Override-disable case: `OPS_SYNC_HERMES=false` → no Hermes writes, "disabled" reported.
+- [x] Auto-missing case: `OPS_HERMES_HOME` pointing at a non-existent dir, state `auto` → target disabled.
+- [x] Idempotency: run the enabled case twice → identical tree, no duplicates.
+- [x] Symlink safety: pre-create `<dest>/processing/<skill>` as symlink → installer skips it.
+- [x] Project mode: `./install.sh --project` in a temp dir → only `./.opencode/` (+ `./.cursor/` if enabled) written, no Hermes paths.
+- [x] Static check: `bash -n`; `shellcheck` if installed.
+- [x] Real-machine smoke test: full `./install.sh` run on this Mac, verify `~/.hermes/skills/processing/`.
 
 ## Phases
 
@@ -87,7 +87,7 @@ Single-phase plan — the change is one focused session (one script, two doc fil
 
 | Phase | Title | Scope | Status |
 |-------|-------|-------|--------|
-| 1 | Hermes install target | [Detail](phases/phase-1.md) | pending |
+| 1 | Hermes install target | [Detail](phases/phase-1.md) | completed |
 
 ## Risks & Open Questions
 
@@ -104,3 +104,6 @@ Single-phase plan — the change is one focused session (one script, two doc fil
 ### 2026-07-14
 
 - Plan created
+
+- Scope addition: docs/installation.md also updated (target list + OPS_* override table) for consistency
+- Phase 1 implemented, verified (24/24 sandbox checks, shellcheck clean, real-machine smoke test incl. Hermes-code discovery check), plan completed

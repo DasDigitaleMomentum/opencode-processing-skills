@@ -15,6 +15,7 @@ The installer auto-detects which harnesses to sync into. Out of the box:
 - **Codex** (if `~/.codex/` exists): skills to `~/.codex/skills/`
 - **Claude Code** (if `~/.claude/` exists): skills + agents to `~/.claude/`
 - **Cursor** (if `~/.cursor/` exists): adapted skills + orchestrator to `~/.cursor/skills/`
+- **Hermes** (if `~/.hermes/` exists): skills to `~/.hermes/skills/processing/` (a namespaced category dir — Hermes discovers `SKILL.md` files recursively and shows top-level dirs as categories)
 - **Antigravity**: served transitively by the Claude Code target (it loads skills through the bundled `anthropic.claude-code` extension, which reads from the same path)
 
 After installation, restart OpenCode and select the `@maintainer` agent. It knows when to load which skill and how to delegate to the right subagent.
@@ -57,10 +58,12 @@ Use these when you need to override `config.yaml` for one run — typically in t
 | `OPS_SYNC_CODEX` | `targets.codex.enabled` |
 | `OPS_SYNC_CLAUDE` | `targets.claude.enabled` |
 | `OPS_SYNC_CURSOR` | `targets.cursor.enabled` |
+| `OPS_SYNC_HERMES` | `targets.hermes.enabled` |
 | `OPS_OPENCODE_HOME` | `targets.opencode.home` |
 | `OPS_CODEX_HOME` | `targets.codex.home` |
 | `OPS_CLAUDE_HOME` | `targets.claude.home` |
 | `OPS_CURSOR_HOME` | `targets.cursor.home` |
+| `OPS_HERMES_HOME` | `targets.hermes.home` |
 | `OPS_CONFIG_FILE` | path to an alternate `config.yaml` |
 | `OPS_ANTIGRAVITY_PATH` | Antigravity detection path (test-only) |
 

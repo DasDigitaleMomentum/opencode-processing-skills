@@ -39,6 +39,9 @@
 # Cursor installs workflow skills + orchestration layer (subagents, ops-orchestrator
 # skills). See docs/installation.md and cursor/README.md. Use ./install.sh --project
 # to install into ./.cursor/ per repo.
+# Hermes installs only skills (like Codex), into the namespaced category directory
+# HERMES_HOME/skills/processing/ — Hermes discovers SKILL.md files recursively
+# and shows top-level directories as categories in its skills hub.
 
 targets:
   opencode:
@@ -56,6 +59,10 @@ targets:
   cursor:
     enabled: auto
     home: ~/.cursor
+
+  hermes:
+    enabled: auto
+    home: ~/.hermes
 
 
 # ============================================================================

@@ -3,7 +3,7 @@ type: planning
 entity: phase
 plan: "hermes-target"
 phase: 1
-status: pending
+status: completed
 created: "2026-07-14"
 updated: "2026-07-14"
 ---
@@ -38,19 +38,19 @@ Wire Hermes into `install.sh` as a fifth installation target (skills-only), conf
 
 ## Deliverables
 
-- [ ] Modified `install.sh` with hermes target (resolution, dest wiring, status output, `DESCRIPTION.md` generation, summary note).
-- [ ] Updated `config.yaml.example` with `targets.hermes`.
-- [ ] Updated `README.md` target sentence.
-- [ ] Sandboxed verification transcript (for the PR description).
+- [x] Modified `install.sh` with hermes target (resolution, dest wiring, status output, `DESCRIPTION.md` generation, summary note).
+- [x] Updated `config.yaml.example` with `targets.hermes`.
+- [x] Updated `README.md` target sentence.
+- [x] Sandboxed verification transcript (for the PR description).
 
 ## Acceptance Criteria
 
-- [ ] With `~/.hermes` present and no config: installer prints `Hermes integration: enabled (skills -> ~/.hermes/skills/processing)` and installs all 14 skills there, plus `DESCRIPTION.md`.
-- [ ] `OPS_SYNC_HERMES=false` prints `Hermes integration: disabled` and writes nothing to the Hermes home.
-- [ ] `enabled: auto` + non-existent home → disabled, exit code 0.
-- [ ] Re-run is idempotent; pre-existing symlinked skill dirs are skipped with the standard message.
-- [ ] `./install.sh --project` writes no Hermes paths.
-- [ ] `bash -n install.sh` clean; `shellcheck` (if present) shows no new findings vs. `main`.
+- [x] With `~/.hermes` present and no config: installer prints `Hermes integration: enabled (skills -> ~/.hermes/skills/processing)` and installs all 14 skills there, plus `DESCRIPTION.md`.
+- [x] `OPS_SYNC_HERMES=false` prints `Hermes integration: disabled` and writes nothing to the Hermes home.
+- [x] `enabled: auto` + non-existent home → disabled, exit code 0.
+- [x] Re-run is idempotent; pre-existing symlinked skill dirs are skipped with the standard message.
+- [x] `./install.sh --project` writes no Hermes paths.
+- [x] `bash -n install.sh` clean; `shellcheck` (if present) shows no new findings vs. `main`.
 
 ## Dependencies on Other Phases
 
