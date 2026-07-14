@@ -936,15 +936,17 @@ done
 
 # --- Step 1b: Hermes category description ---
 # Top-level dirs under HERMES_HOME/skills/ act as categories and may carry a
-# plain-prose DESCRIPTION.md shown in Hermes' skills hub. Written outside the
-# shared skills loop: global mode only, never through a user-placed symlink.
+# DESCRIPTION.md whose YAML frontmatter description is shown in Hermes' skills
+# prompt. Written outside the shared skills loop: global mode only, never
+# through a user-placed symlink.
 if [ "$PROJECT_MODE" = false ] && [ "$hermes_enabled" = "1" ]; then
     if [ -L "$HERMES_SKILLS_DEST/DESCRIPTION.md" ]; then
         echo "Step 1b: Symlink (skipping): Hermes category DESCRIPTION.md"
     else
-        printf '%s\n%s\n' \
-            "OpenCode Processing Skills — plan-driven engineering workflows (docs generation," \
-            "planning, phased execution, reviews, handovers). Managed by install.sh; re-install to update." \
+        printf '%s\n%s\n%s\n' \
+            "---" \
+            "description: Plan-driven engineering workflows for documentation, planning, phased execution, reviews, and handovers." \
+            "---" \
             > "$HERMES_SKILLS_DEST/DESCRIPTION.md"
         echo "Step 1b: Wrote Hermes category DESCRIPTION.md"
     fi

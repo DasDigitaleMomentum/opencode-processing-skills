@@ -43,6 +43,7 @@ cp config.yaml.example config.yaml   # optional: set models
 
 Then restart OpenCode and select `@maintainer`.
 If Codex, Claude Code, Cursor, or Hermes are installed locally, skills are synced to their config directories during install.
+Hermes support covers installation, parsing, and discovery only; it does not port OpenCode-specific delegate personas, `Task` calls, or `task_id` continuation contracts.
 
 → [Full installation guide](docs/installation.md)
 
