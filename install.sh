@@ -22,15 +22,19 @@
 #                                                   via anthropic.claude-code ext)
 #   - Cursor     -> CURSOR_HOME/skills              (workflow skills, same as OpenCode)
 #                   + subagents/, ops/, orchestrator skills from cursor/
+#   - Hermes     -> HERMES_HOME/skills/processing   (skills only, installed into
+#                                                    a namespaced category dir)
 #
 # Environment overrides (OPS_ prefix avoids collisions with tool-native vars):
 #   OPS_OPENCODE_HOME       override OpenCode home
 #   OPS_CODEX_HOME          override Codex home
 #   OPS_CLAUDE_HOME         override Claude Code home
 #   OPS_CURSOR_HOME         override Cursor home
+#   OPS_HERMES_HOME         override Hermes home
 #   OPS_SYNC_CODEX          true|false|auto — override targets.codex.enabled
 #   OPS_SYNC_CLAUDE         true|false|auto — override targets.claude.enabled
 #   OPS_SYNC_CURSOR         true|false|auto — override targets.cursor.enabled
+#   OPS_SYNC_HERMES         true|false|auto — override targets.hermes.enabled
 #   OPS_ANTIGRAVITY_PATH    override Antigravity detection path (test-only)
 #   OPS_CONFIG_FILE         alternate config.yaml path (default: <repo>/config.yaml)
 #
@@ -247,6 +251,15 @@ CURSOR_STATE_RAW=$(yaml_get_target "cursor" "enabled")
 CURSOR_STATE_RAW="${CURSOR_STATE_RAW:-auto}"
 CURSOR_STATE="${OPS_SYNC_CURSOR:-$CURSOR_STATE_RAW}"
 
+# Hermes
+HERMES_HOME_RAW=$(yaml_get_target "hermes" "home")
+HERMES_HOME_RAW="${HERMES_HOME_RAW:-$HOME/.hermes}"
+HERMES_HOME="${OPS_HERMES_HOME:-$HERMES_HOME_RAW}"
+HERMES_HOME=$(expand_home "$HERMES_HOME")
+HERMES_STATE_RAW=$(yaml_get_target "hermes" "enabled")
+HERMES_STATE_RAW="${HERMES_STATE_RAW:-auto}"
+HERMES_STATE="${OPS_SYNC_HERMES:-$HERMES_STATE_RAW}"
+
 # Antigravity detection path (test-only override; not a yaml target).
 # Default is the macOS app-support path — Antigravity is currently macOS-only.
 # Override with OPS_ANTIGRAVITY_PATH for tests or future non-macOS support.
@@ -280,6 +293,20 @@ else
     echo "Cursor integration: disabled"
 fi
 
+# Hermes discovers SKILL.md files recursively under HERMES_HOME/skills/ and
+# treats top-level directories there as categories. Install into a dedicated
+# `processing` category dir so the curated Hermes skill tree stays tidy and
+# this repo's footprint remains identifiable (and trivially removable).
+hermes_enabled=0
+HERMES_SKILLS_DEST="$HERMES_HOME/skills/processing"
+if is_enabled "$HERMES_STATE" "$HERMES_HOME"; then
+    SKILLS_DESTS+=("$HERMES_SKILLS_DEST")
+    hermes_enabled=1
+    echo "Hermes integration: enabled (skills -> $HERMES_SKILLS_DEST)"
+else
+    echo "Hermes integration: disabled"
+fi
+
 # Antigravity is a VS Code fork that loads skills/agents via the
 # `anthropic.claude-code` extension, which reads from CLAUDE_HOME. It has no
 # config path of its own, so the Claude Code target covers it automatically.
@@ -306,7 +333,7 @@ if [ "$PROJECT_MODE" = true ]; then
         echo "Project mode: Cursor target -> $CURSOR_TARGET_HOME"
         echo ""
     fi
-    # In project mode, skip Codex/Claude global sync — only local OpenCode structure
+    # In project mode, skip Codex/Claude/Hermes global sync — only local OpenCode structure
 elif is_enabled "$CURSOR_STATE" "$CURSOR_HOME"; then
     CURSOR_TARGET_HOME="$CURSOR_HOME"
 fi
@@ -906,6 +933,25 @@ for SKILLS_DEST in "${SKILLS_DESTS[@]}"; do
     done
     echo ""
 done
+
+# --- Step 1b: Hermes category description ---
+# Top-level dirs under HERMES_HOME/skills/ act as categories and may carry a
+# DESCRIPTION.md whose YAML frontmatter description is shown in Hermes' skills
+# prompt. Written outside the shared skills loop: global mode only, never
+# through a user-placed symlink.
+if [ "$PROJECT_MODE" = false ] && [ "$hermes_enabled" = "1" ]; then
+    if [ -L "$HERMES_SKILLS_DEST/DESCRIPTION.md" ]; then
+        echo "Step 1b: Symlink (skipping): Hermes category DESCRIPTION.md"
+    else
+        printf '%s\n%s\n%s\n' \
+            "---" \
+            "description: Plan-driven engineering workflows for documentation, planning, phased execution, reviews, and handovers." \
+            "---" \
+            > "$HERMES_SKILLS_DEST/DESCRIPTION.md"
+        echo "Step 1b: Wrote Hermes category DESCRIPTION.md"
+    fi
+    echo ""
+fi
 
 # --- Step 2: Install Agents ---
 step2_count=0
