@@ -42,6 +42,8 @@
 # Hermes installs only skills (like Codex), into the namespaced category directory
 # HERMES_HOME/skills/processing/ — Hermes discovers SKILL.md files recursively
 # and shows top-level directories as categories in its skills hub.
+# Hermes support covers installation, parsing, and discovery only; it does not port
+# OpenCode-specific delegate personas, Task calls, or task_id continuation contracts.
 
 targets:
   opencode:
