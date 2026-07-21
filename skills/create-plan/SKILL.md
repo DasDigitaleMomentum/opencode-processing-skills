@@ -15,7 +15,7 @@ metadata:
 
 Creates a complete **plan** with the artifacts required to execute work in phases. This documentation shall serve Agents and Humans when working in consecutive sessions with the project:
 
-1. **Plan** (`plans/<name>/plan.md`) - Objective, requirements, DoD, phases overview
+1. **Plan** (`plans/<name>/plan.md`) - Problem/context, target outcome, guiding decisions, requirements, DoD, phases overview
 2. **Phases** (`plans/<name>/phases/phase-N.md`) - Scope definition per phase (what/why)
 3. **Todo List** (`plans/<name>/todo.md`) - Trackable items with status
 4. Creates the directory structure for future **Handovers**
@@ -54,11 +54,14 @@ Do NOT use for simple, one-shot tasks that don't need formal planning.
 Gather requirements from the user using the `question` tool:
 
 - What is the goal? (feature, bugfix, refactoring, migration)
+- What problem or current state motivates the change, and what target outcome should replace it?
+- Which user-approved decisions and constraints bind the solution?
 - What are the functional requirements?
 - What are the non-functional requirements? (performance, compatibility, etc.)
 - What is explicitly out of scope?
 - What defines "done"? (Definition of Done)
 - What testing strategy is expected?
+- Are there assumptions that materially bound scope or acceptance?
 
 If the user provided a detailed brief, extract these from the brief and confirm with the `question` tool.
 
@@ -69,6 +72,7 @@ If the plan involves changes to existing code:
 - Use the Task tool with `doc-explorer` to analyze the affected modules and symbols (results are written to `docs/`)
 - Read existing project documentation (`docs/overview.md`, module docs) if available
 - Identify dependencies and potential risks
+- Carry decision-relevant context into the plan, but reference detailed architecture documentation instead of reproducing it.
 
 ### Step 3: Design the Phase Structure
 
@@ -93,8 +97,9 @@ Guidelines for phase sizing:
 
 Create `plans/<name>/plan.md`:
 
-- Clear objective statement
-- Motivation (why is this needed)
+- Concise problem/current-state context and target outcome
+- Binding guiding decisions and constraints
+- Assumptions only when they materially bound scope or acceptance
 - Functional and non-functional requirements
 - Scope (in/out)
 - Definition of Done
@@ -107,7 +112,8 @@ Create `plans/<name>/plan.md`:
 
 For each phase, create `plans/<name>/phases/phase-N.md`:
 
-- Phase objective (What and Why)
+- Phase objective and why the phase exists
+- How the phase contributes to the plan goal
 - Scope: what this phase includes and explicitly excludes
 - Prerequisites (what must be true before starting)
 - Deliverables (concrete outputs)
@@ -159,6 +165,8 @@ Use the `question` tool to confirm the plan or gather adjustments.
 9. **Always ask for confirmation**: Use the `question` tool to validate requirements, phase structure, and scope with the user before creating artifacts.
 10. **Initialize changelog**: The plan's changelog should document its creation with the current date.
 11. **Create all directories**: Ensure the full directory structure exists: `plans/<name>/`, `phases/`, `implementation/`, `handovers/`.
+12. **Preserve framing without duplication**: Include the problem/current state, target outcome, and binding guiding decisions needed to interpret scope. Reference detailed architecture docs rather than turning the plan into an architecture inventory.
+13. **Material assumptions only**: Record an assumption only when it constrains scope, acceptance, or a later decision.
 
 ## Templates
 

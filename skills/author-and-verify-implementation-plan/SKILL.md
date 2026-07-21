@@ -92,8 +92,10 @@ The delegate:
 3. Writes/updates the implementation plan using the template.
 4. Ensures the plan is **concrete**:
    - references real file paths/symbols
+   - traces every implementation step to an authorizing requirement, scope item, acceptance criterion, or existing invariant that must be preserved
    - includes a **single** proposed verify command (or preserves the given one)
    - captures mismatches as “Reality Check” notes
+   - marks any necessary but ungated decision as blocking and does not plan work that depends on it
 
 If the phase depends on previous phases, the delegate should read the necessary prior implementation plans to keep continuity.
 
@@ -113,11 +115,13 @@ The generated/updated `plans/<plan>/implementation/phase-N-impl.md` MUST include
 
 - A **Required Context** section with specific files.
 - **Implementation Steps** that reference concrete targets (files/symbols/components).
+- An **Authorized By** reference for every implementation step.
 - A **single** verify command in the Testing Plan that exercises changed behavior.
 - A **Test Integrity Constraints** subsection identifying which existing tests are affected and how.
 - A **Reality Check** section:
   - code anchors (files/symbols) used to ground the plan
   - mismatches or open questions (if discovered)
+  - blocking decisions that prevent dependent planning
 
 The implementation plan must follow the canonical headings and frontmatter keys from the bundled template.
 
@@ -130,6 +134,9 @@ The implementation plan must follow the canonical headings and frontmatter keys 
 - **Consistency check and fix after completion.** Once all phase implementation plans are authored, verify cross-phase consistency: shared interfaces, naming, data flow assumptions, and dependency ordering. Fix any inconsistencies directly in the implementation plans – the agent is authoring them, so they should be delivered in a consistent state. Only flag issues under "Reality Check" that require a user decision or cannot be resolved without changing the gated phase scope.
 - Do not change phase scope/DoD; record mismatches under "Reality Check" and raise to the primary.
 - Prefer minimal, accurate plan updates over speculative completeness.
+- Unspecified product, policy, security, privacy, compliance, authorization, or operational behavior is not authorization to add it. Preserve applicable existing invariants and avoid concrete regressions or vulnerabilities, but do not invent new policy.
+- If a necessary decision is not gated, record it under **Reality Check → Blocking Decisions** and stop before selecting an answer or planning dependent work. Purely local, reversible technical details may be selected when they do not change observable behavior or policy.
+- Make testing, rollback, edge-case, deployment, and documentation planning proportional to the phase and concrete risk. `N/A` with a short reason is valid; do not create infrastructure merely to satisfy a template.
 
 ---
 

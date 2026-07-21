@@ -87,6 +87,8 @@ Everything persists to files. New session? Read the plan and continue.
 
 **Keep reviews disciplined.** No Gold-Plating. No Adversarial Reviewing. No Scope Creep. Report evidence-backed defects and required related changes, not gotchas or invented work.
 
+**Plan with intent.** Plans now carry problem context, target outcomes, and binding constraints into each phase. Implementation steps trace back to gated scope, while proportional reviews accept justified `N/A` and zero findings — closing the gaps that used to turn missing decisions into gold-plated policy or security work.
+
 **File-based persistence.** `docs/` and `plans/` are the interface. Readable by humans and AI. No hidden state. Your knowledge survives session boundaries.
 
 → [Full architecture rationale](AGENTS.md)

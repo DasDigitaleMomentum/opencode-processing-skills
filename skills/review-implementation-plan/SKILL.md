@@ -125,6 +125,7 @@ The review artifact `plans/<name>/reviews/impl-plan-review-phase-N.md` MUST:
 - Rate every finding with a **severity** (Critical / Major / Minor / Note).
 - Address **Real-World Testing** explicitly.
 - Validate the **Reality Check** section of the implementation plan.
+- Validate that every step cites an authorizing gated item or preserved existing invariant and that blocking decisions stop dependent planning.
 
 ---
 
@@ -136,6 +137,9 @@ The review artifact `plans/<name>/reviews/impl-plan-review-phase-N.md` MUST:
 - Do not modify the implementation plan during review — only produce the review artifact.
 - Do not discard the reviewer `task_id` until the primary has decided whether remediation is needed.
 - Ensure the `reviews/` directory exists before delegating (create if needed).
+- Review testing, rollback, edge cases, security, deployment, and documentation only where required by explicit scope or concrete risk. Accept `N/A` with a short reason and do not require infrastructure merely to satisfy a template.
+- Unspecified product, policy, security, privacy, compliance, authorization, or operational behavior is not missing scope. Flag concrete regressions or vulnerabilities, but do not invent policy.
+- A review may report zero findings when no evidence-backed defect exists; do not manufacture findings or search for extra scope.
 
 ---
 

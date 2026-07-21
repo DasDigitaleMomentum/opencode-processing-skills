@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.5.1 — 2026-07-21
+
+### Fixed
+- **Planning workflow**: Plans now preserve problem context, target outcomes, and binding constraints; implementation steps trace back to gated scope, blocking decisions remain explicit, and proportional reviews no longer turn plan gaps into gold-plated policy, security, or testing work.
+
 ## 0.5.0 — 2026-07-13
 
 ### Added
