@@ -48,7 +48,8 @@ created: "{{date}}"
      - Are "In Scope" items specific enough to be actionable?
      - Are "Out of Scope" items explicitly listed (not just implied)?
      - Could someone unfamiliar with the project understand what's included and excluded?
-     - Are there items that SHOULD be in scope but aren't? -->
+     - Are any explicit objectives, use cases, requirements, or acceptance criteria left unowned?
+     Do not propose additional scope merely because it could be useful. -->
 
 ### Findings
 
@@ -60,7 +61,8 @@ created: "{{date}}"
      CHECK: Is the DoD concrete and verifiable?
       - Can each criterion be objectively checked (yes/no)?
       - Are there implicit assumptions that should be explicit?
-      - Does the DoD cover: functionality, tests, documentation, deployment?
+      - Does the DoD cover the outputs required by explicit objectives and acceptance criteria?
+      - Are testing, documentation, and deployment included only where relevant to those obligations or concrete risk?
       - Is the DoD achievable within the planned phases? -->
 
 ### Findings
@@ -82,14 +84,13 @@ created: "{{date}}"
 
 ## Testing Strategy Assessment
 
-<!-- CHECK: Is the testing strategy adequate?
-     - Are the right TEST TYPES defined (unit, integration, e2e)?
+     <!-- CHECK: Is the testing strategy adequate and proportional?
+      - Are test types appropriate for the changed behavior and concrete risk?
      - Is each critical path covered by at least one test?
      - Are the tests MEANINGFUL (not just "it runs without errors")?
      - Do tests verify BEHAVIOR, not just structure?
-     - Is there a real-world / manual testing step defined?
-       If not: this is a finding. Mock-only testing is often insufficient.
-       If the user explicitly waived real-world testing, note that here. -->
+      - Is real-world / manual testing warranted by an explicit use case or integration risk?
+        If not, N/A with a short reason is acceptable. Do not require new infrastructure. -->
 
 ### Test Coverage Gaps
 
@@ -97,9 +98,7 @@ created: "{{date}}"
 
 ### Real-World Testing
 
-<!-- REQUIRED: State whether real-world / integration testing is planned.
-     If only mocks/unit tests: flag as a limitation and explain risk.
-     If user explicitly waived: note the waiver and date. -->
+<!-- State whether real-world / integration testing is relevant and planned, or N/A with a short reason. -->
 
 {{status}}
 
@@ -119,8 +118,8 @@ created: "{{date}}"
 ## Completeness Check
 
 <!-- SECONDARY — Only include if real problems found. Omit entirely if clean.
-     CHECK: Is the plan sufficiently detailed for execution?
-      - Could someone start implementing Phase 1 based solely on plan + phase docs?
+     CHECK: Is the plan sufficiently detailed for the later implementation-plan pass?
+      - Are intent, context, scope, guiding decisions, and acceptance clear enough to author that implementation plan?
       - Are there implicit decisions that should be made explicit?
       - Are risks and mitigations realistic?
       - Are there missing sections or empty placeholders? -->
@@ -141,6 +140,8 @@ created: "{{date}}"
 | ID  | Severity | Area | Finding | Recommendation |
 | --- | -------- | ---- | ------- | -------------- |
 | F-1 | {{sev}}  | {{}} | {{}}    | {{}}           |
+
+<!-- If no evidence-backed findings exist, state "No findings" instead of inventing one. -->
 
 ## Recommendations
 

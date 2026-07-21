@@ -15,6 +15,10 @@ Task:
 
 Constraints:
 - Do NOT change phase scope/DoD. If you find mismatches, capture them under **Reality Check** and report to primary.
+- Trace every implementation step to an authorizing requirement, scope item, acceptance criterion, or preserved existing invariant.
+- Do not invent unspecified product, policy, security, privacy, compliance, authorization, or operational behavior. Preserve existing invariants and avoid concrete regressions or vulnerabilities without creating new policy.
+- Record any necessary ungated decision under **Reality Check → Blocking Decisions** and stop before choosing it or planning dependent work. Local, reversible technical choices are allowed only when they do not change observable behavior or policy.
+- Keep testing, rollback, edge-case, deployment, and documentation content proportional to relevance and risk. `N/A` with a short reason is valid; do not create infrastructure to satisfy the template.
 - Use existing project docs inventories if present (`docs/**`).
 - You may write exactly this implementation-plan artifact: `{{implementation_plan_path}}`.
 - Do NOT edit code/config files, perform Git operations, or change unrelated docs/plans artifacts.

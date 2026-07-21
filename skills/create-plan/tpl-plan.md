@@ -9,13 +9,25 @@ updated: "{{date}}"
 
 # Plan: {{plan_name}}
 
-## Objective
+## Problem / Context
 
-<!-- What should be achieved? Clear, measurable goal -->
+<!-- What problem or current state motivates this work? Keep this concise and link detailed architecture context. -->
 
-## Motivation
+## Target Outcome
 
-<!-- Why is this needed? Business value, technical debt, user demand -->
+<!-- What measurable outcome should replace the current state, and why does it matter? -->
+
+## Guiding Decisions & Constraints
+
+<!-- Binding decisions and constraints that govern scope or acceptable solutions. Do not invent unspecified policy. -->
+
+- {{decision_or_constraint}}
+
+### Scope-Bounding Assumptions (optional)
+
+<!-- Include only assumptions that materially bound scope, acceptance, or later decisions. Omit otherwise. -->
+
+- {{assumption}}
 
 ## Requirements
 
@@ -47,7 +59,7 @@ updated: "{{date}}"
 
 ## Testing Strategy
 
-<!-- What tests are needed, what coverage is expected -->
+<!-- Tests proportionate to the changed behavior and concrete risk. N/A is acceptable with a short reason; do not invent infrastructure. -->
 
 - [ ] {{test_description}}
 
@@ -55,9 +67,9 @@ updated: "{{date}}"
 
 <!-- Only if plan exceeds single-session capacity -->
 
-| Phase | Title | Scope | Status |
-|-------|-------|-------|--------|
-| 1 | {{title}} | [Detail](phases/phase-1.md) | pending |
+| Phase | Title | Contribution | Detail | Status |
+|-------|-------|--------------|--------|--------|
+| 1 | {{title}} | {{brief_contribution_to_target_outcome}} | [Phase](phases/phase-1.md) | pending |
 
 ## Risks & Open Questions
 

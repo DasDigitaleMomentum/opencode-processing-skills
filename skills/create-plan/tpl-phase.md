@@ -16,6 +16,10 @@ updated: "{{date}}"
 
 <!-- What should this phase achieve? Specific, bounded goal -->
 
+## Contribution to Plan Goal
+
+<!-- Why does this phase exist, and how does its bounded outcome advance the plan's target outcome? -->
+
 ## Scope
 
 <!-- What is in scope for THIS phase specifically -->

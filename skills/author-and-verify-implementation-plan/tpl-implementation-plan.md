@@ -33,14 +33,15 @@ updated: "{{date}}"
 ## Implementation Steps
 
 <!-- Ordered steps, each above code level. Not line-by-line but also not hand-wavy.
-     Each step should reference concrete targets (file paths and/or symbols/components). -->
+     Each step should reference concrete targets and its authorizing gated item or preserved invariant. -->
 
 ### Step 1: {{step_title}}
 
 - **What**: {{description}}
 - **Where**: {{module/file/area}}
+- **Authorized By**: {{requirement_scope_item_acceptance_criterion_or_existing_invariant}}
 - **Why**: {{rationale}}
-- **Considerations**: {{edge_cases_or_constraints}}
+- **Considerations**: {{relevant_edge_cases_or_constraints_or_N/A_with_reason}}
 
 ## Testing Plan
 
@@ -48,11 +49,13 @@ updated: "{{date}}"
      Prefer a single primary "verify" command when possible (e.g. `pytest ...`, `npm test`, `go test ./...`).
      The verify command must exercise the CHANGED BEHAVIOR, not just compile or lint.
      
-     IMPORTANT constraints:
-     - Existing tests MUST NOT be disabled, deleted, or weakened to make the implementation pass.
-     - All pre-existing tests must still pass after implementation.
-     - E2E / real-world testing is the default for user-facing changes.
-       If not feasible: state why and flag for user decision (do not silently downgrade to unit tests). -->
+     Keep testing proportional to changed behavior and concrete risk; N/A is acceptable with a short reason.
+     Do not create test or deployment infrastructure merely to fill this section.
+
+     Integrity constraints:
+      - Existing tests MUST NOT be disabled, deleted, or weakened to make the implementation pass.
+      - Update affected tests only where authorized behavior changes.
+      - Use integration/E2E/manual checks when warranted by the changed behavior and risk. -->
 
 | Test Type | What to Test | Expected Outcome |
 |-----------|-------------|-----------------|
@@ -69,7 +72,7 @@ updated: "{{date}}"
 
 ## Rollback Strategy
 
-<!-- How to undo changes if something goes wrong -->
+<!-- How to undo changes if relevant. Otherwise state N/A with a short reason. Do not invent infrastructure. -->
 
 ## Open Decisions
 
@@ -92,3 +95,11 @@ updated: "{{date}}"
 ### Mismatches / Notes
 
 - {{note}}
+
+### Blocking Decisions
+
+<!-- List necessary decisions not authorized by the gated plan/phase. Do not choose an answer or plan dependent work.
+     Unspecified product, policy, security, privacy, compliance, authorization, or operational behavior is not authorized.
+     If none, state "None." -->
+
+- {{blocking_decision_or_None}}

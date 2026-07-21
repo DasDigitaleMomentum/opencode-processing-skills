@@ -43,7 +43,7 @@ Evaluate against these criteria (the template comments contain detailed guidance
 2. **Technical Feasibility** — Is the approach sound and appropriate for this codebase?
 3. **Step Quality** — Are steps concrete (real paths/symbols) and actionable?
 4. **Required Context** — Are all necessary files listed? Any unnecessary ones?
-5. **Testing Plan** — Does the verify command actually test the changes? Real-world testing?
+5. **Testing Plan** — Does the verify command exercise changed behavior with checks proportional to explicit scope and concrete risk?
 6. **Reference Consistency** — Do all file/symbol references match current repo state?
 7. **Reality Check Validation** — Is the grounding section honest and complete?
 
@@ -56,6 +56,8 @@ Use the canonical template:
 - `skills/review-implementation-plan/tpl-impl-plan-review.md`
 
 **Be honest and thorough — with focus.** Prioritize findings that matter for the stated focus. Give each finding a stable ID (`F-1`, `F-2`, ...), and rate it by severity (Critical/Major/Minor/Note). Formal criteria that show no real problems may be omitted entirely.
+
+Require testing, rollback, edge-case, security, deployment, and documentation detail only where explicit scope or concrete risk warrants it; justified `N/A` is acceptable. Do not invent policy or infrastructure. Verify step authorization and ensure ungated blocking decisions stop dependent planning. Zero findings is valid.
 
 Return to the primary only:
 - The overall verdict (Ready / Needs Revision / Major Gaps)

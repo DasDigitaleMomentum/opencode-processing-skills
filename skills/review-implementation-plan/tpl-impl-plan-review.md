@@ -54,7 +54,8 @@ created: "{{date}}"
      - Are there simpler alternatives that were overlooked?
      - Does the approach align with existing codebase conventions?
      - Are performance implications considered where relevant?
-     - Are edge cases and error handling addressed? -->
+      - Are edge cases, error handling, and security concerns addressed where explicit behavior or concrete risk requires them?
+      Do not infer new policy or universal requirements. -->
 
 ### Findings
 
@@ -64,7 +65,8 @@ created: "{{date}}"
 
 <!-- CHECK: Are the implementation steps concrete and actionable?
      For each step evaluate:
-     - Does it reference REAL file paths and symbols (not placeholders)?
+      - Does it reference REAL file paths and symbols (not placeholders)?
+      - Does it cite an authorizing requirement, scope item, acceptance criterion, or preserved invariant?
      - Is the What/Where/Why filled in concretely (not hand-wavy)?
      - Are considerations meaningful (not generic boilerplate)?
      - Is the step order logically correct?
@@ -95,12 +97,11 @@ created: "{{date}}"
 <!-- CHECK: Is the testing plan adequate for this phase?
      - Does the verify command actually test the changes (exercises changed behavior, not just compile/lint)?
      - Is there exactly ONE primary verify command (as per convention)?
-     - Are the test types appropriate (unit vs integration vs e2e)?
+      - Are the test types proportional to changed behavior and concrete risk?
      - Do the tests verify BEHAVIOR and CORRECTNESS, not just "no errors"?
      - Are the "Expected Outcome" descriptions specific and verifiable?
-     - Is there a real-world testing step?
-       If not: flag as a limitation. Mock/unit tests alone often miss integration issues.
-       If the user explicitly waived: note the waiver. -->
+      - Is real-world testing warranted by explicit behavior or integration risk?
+        If not, N/A with a short reason is acceptable. Do not require new infrastructure. -->
 
 ### Test Integrity Check
 
@@ -109,7 +110,7 @@ created: "{{date}}"
      - Does it distinguish between tests that need updating (behavior changed) vs tests that must stay untouched?
      - Does it explicitly state that no existing tests will be disabled or weakened?
      - If the plan modifies existing tests: is the modification justified by a genuine requirement change?
-     If any of these are missing or unclear: flag as Major finding. -->
+      Flag missing integrity detail only when existing tests are relevant to the phase. -->
 
 ### Test Gaps
 
@@ -117,9 +118,7 @@ created: "{{date}}"
 
 ### Real-World Testing
 
-<!-- REQUIRED: State whether real-world / integration testing is planned.
-     If only mocks/unit tests: flag as limitation with risk explanation.
-     If user waived: note waiver. -->
+<!-- State whether real-world / integration testing is relevant and planned, or N/A with a short reason. -->
 
 {{status}}
 
@@ -143,6 +142,7 @@ created: "{{date}}"
       - Were enough code anchors examined?
       - Are noted mismatches genuine (or are real mismatches missing)?
       - Are open questions flagged appropriately?
+      - Are necessary ungated decisions listed as blocking, with dependent work left unplanned?
       - Has the plan been updated to reflect discovered reality? -->
 
 ### Findings
@@ -161,6 +161,8 @@ created: "{{date}}"
 | ID  | Severity | Area | Finding | Recommendation |
 | --- | -------- | ---- | ------- | -------------- |
 | F-1 | {{sev}}  | {{}} | {{}}    | {{}}           |
+
+<!-- If no evidence-backed findings exist, state "No findings" instead of inventing one. -->
 
 ## Recommendations
 

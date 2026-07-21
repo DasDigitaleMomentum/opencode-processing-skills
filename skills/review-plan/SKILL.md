@@ -33,7 +33,7 @@ Do **not** use this skill to:
 
 ## Review Focus
 
-The primary specifies the review focus when delegating. The default focus is **functional and technical findings** — correctness, feasibility, completeness of the solution.
+The primary specifies the review focus when delegating. The default focus is **functional and technical findings** — correctness, feasibility, and whether intent/scope/context are sufficient for the later implementation-plan pass.
 
 ### Review posture
 
@@ -121,7 +121,7 @@ The review artifact `plans/<name>/reviews/plan-review.md` MUST:
 - Include a clear **Overall Assessment** with verdict and reasoning.
 - Rate every finding with a **severity** (Critical / Major / Minor / Note).
 - Include a **Findings Summary** table consolidating all findings.
-- Address **Real-World Testing** explicitly (present, absent, or waived).
+- Assess testing only where required by explicit objectives, use cases, acceptance criteria, or concrete risk; justified `N/A` is acceptable.
 
 ---
 
@@ -132,7 +132,8 @@ The review artifact `plans/<name>/reviews/plan-review.md` MUST:
 - Do not rewrite or modify the plan during review — only produce the review artifact.
 - Retain the reviewer `task_id` until finding clarification is complete.
 - Ensure the `reviews/` directory exists before delegating (create if needed).
-- A review that finds zero issues is likely not thorough enough — flag this to the user.
+- A review may report zero findings when no evidence-backed gaps are found. Do not manufacture findings or search for missing extra scope.
+- Flag omissions only when required by an explicit objective, use case, requirement, or acceptance criterion. Do not add product, policy, security, privacy, compliance, authorization, operational, infrastructure, deployment, or documentation scope during review.
 
 ---
 
