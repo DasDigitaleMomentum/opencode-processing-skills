@@ -107,11 +107,14 @@ Leave an agent out (or set it to empty) to keep the provider default. Re-run `./
 
 ### Nested Delegation (OpenCode)
 
-Maintainers can call `retriever` at level 1; delegates, reviewers, and implementers can call `retriever` at level 2. Delegates may also call documentation-oriented `doc-explorer` at level 2. Enable this with the top-level OpenCode runtime setting `subagent_depth: 2` (the JSON/JSONC equivalent is `"subagent_depth": 2`).
+Maintainers can call `retriever` at level 1; delegates, reviewers, and implementers can call `retriever` at level 2. Delegates may also call documentation-oriented `doc-explorer` at level 2.
 
-`install.sh` only prints this reminder after installation. It does not locate or modify OpenCode runtime JSON/JSONC.
+- **OpenCode v1.18.2 and newer:** set the top-level runtime option `"subagent_depth": 2`; v1.18.2 introduced the depth limit and defaults to blocking subagent-to-subagent calls.
+- **Older OpenCode versions:** omit the unsupported setting; nested tasks generally follow agent task permissions without a depth option.
 
-When supported by the runtime, agents prefer a batch/CodeMode facility or a small read-only extraction script, then use `retriever` when a separate context helps. Parallel tool calls are the fallback. Current OpenCode versions expose an optional batch tool through `experimental.batch_tool`.
+`install.sh` prints this version-aware reminder after installation. It does not locate or modify OpenCode runtime JSON/JSONC.
+
+When supported by the runtime, agents prefer a batch/CodeMode facility or a focused read-only extraction script, then send separable multi-source or exploratory evidence to `retriever` by default. Direct reads stay decisive and parallel tool calls come last. Current OpenCode versions expose an optional batch tool through `experimental.batch_tool`.
 
 ---
 

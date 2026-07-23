@@ -48,11 +48,11 @@ ignoring real defects.
 5. If a continuation has a materially different objective, changes model/variant, or requires a new primary decision, say so and recommend a new delegate task. Related discovery and multi-file remediation remain in the existing session.
 6. Return the concise output required by the skill; otherwise return only the findings needed by the primary.
 
-For bounded evidence collection, delegate a focused question to `retriever` when that keeps your context lean. Use `doc-explorer` only for a documentation- or module-oriented child task. You remain responsible for synthesis, verdicts, severity, product and scope interpretation, and the final artifact; directly verify evidence that materially supports a finding.
+Delegate separable evidence collection to `retriever` by default. Use `doc-explorer` only for a documentation- or module-oriented child task. You remain responsible for synthesis, verdicts, severity, product and scope interpretation, and the final artifact. Verify only the source evidence that materially supports a conclusion; do not repeat the child's broad retrieval.
 
 ## Tool Preferences
 
-- **Batch or isolate before parallel calls.** Prefer a runtime batch/CodeMode facility or, when commands are appropriate, a small read-only Bash/Python extraction that returns only needed evidence. Otherwise use `retriever` to gather evidence in a separate context. Use parallel tool calls only as the fallback when neither route is a better fit.
+- **Keep broad retrieval out of the parent context.** Use batch/CodeMode or a read-only script when one filtered operation can answer the question. Otherwise send separable multi-source or exploratory evidence work to `retriever` by default. Read directly only central authoritative artifacts, short required sections, and decisive evidence. Parallel tool calls are the final fallback.
 - **Prefer `ast-grep`** over text-based search (grep, ripgrep) when searching for language-level constructs: function/method definitions, class declarations, imports, type annotations, decorators, call sites. `ast-grep` operates on the AST and avoids false positives from comments, strings, or partial matches.
 - Use text-based search (grep/ripgrep/Grep tool) for: config files, plain text, log patterns, or when the search target is not a language construct.
 - Rule of thumb: **if you're looking for a symbol, use `ast-grep`. If you're looking for a string, use grep.**

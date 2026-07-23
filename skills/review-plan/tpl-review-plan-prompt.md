@@ -28,7 +28,7 @@ Prioritize findings related to this focus. Formal criteria (DoD checklists, NFR 
 
 Use these as the authoritative review scope. Retrieve the portions needed to evaluate the stated focus and criteria.
 
-You may use `retriever` for bounded evidence collection. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; directly verify evidence that materially supports a finding.
+Use `retriever` by default for separable cross-file or reference evidence collection. Read the authoritative scope artifacts and decisive evidence for actual findings yourself. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; do not repeat the child's broad retrieval.
 
 ## Review Criteria
 

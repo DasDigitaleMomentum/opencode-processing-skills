@@ -57,8 +57,8 @@ Do **not** use this skill to:
   - Does execution only.
   - First returns a **step list**.
   - After approval, executes those steps and returns a **digest**.
-  - May use `retriever` for bounded evidence collection while retaining ownership of the Blueprint, edits, and verification.
-  - Prefers batch/CodeMode lookup, then bounded retriever evidence, with parallel calls as fallback. BLUEPRINT remains command-free; EXECUTE may also use a small read-only extraction within approved scope.
+  - Uses `retriever` by default for separable evidence collection while retaining ownership of the Blueprint, edits, and verification.
+  - Uses batch/CodeMode first, then retriever evidence, then direct short reads, with parallel calls last. BLUEPRINT remains command-free; EXECUTE may also use a focused read-only extraction within approved scope.
   - Does not do Git operations.
 
 ## Routing Matrix (Who does what)
@@ -67,7 +67,7 @@ Do **not** use this skill to:
 - **Does NOT write**: `plans/**` or `docs/**` artifacts.
 - **Primary**: owns gating/approval, Git operations, and any updates to `plans/**` (typically via `update-plan`).
 - **implementer**: execution only (blueprint → execute → digest), no Git.
-- **retriever**: optional leaf evidence collection for the implementer; no edits, decisions, or artifact ownership.
+- **retriever**: default leaf for separable evidence collection by the implementer; no edits, decisions, or artifact ownership.
 - **doc-explorer**: not used for this skill (unless you explicitly want docs/plan artifacts, in which case use the appropriate planning/doc skills).
 
 ### Why `docs/` and `plans/` matter here

@@ -48,8 +48,8 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Delegate` | persona | public | `agents/delegate.md:14` | Establishes the shared persona used for skill-driven analysis, reviews, verification, and explicit template-governed artifacts. |
 | `Delegate.What You Do` | section | internal | `agents/delegate.md:18` | Enumerates the supported analysis, review, remediation, command, and artifact-writing task categories. |
 | `Delegate.Informal Scope Reminder` | policy | public | `agents/delegate.md:31` | Prevents gold-plating and adversarial scope expansion while preserving evidence-backed defect discovery. |
-| `Delegate.How You Work` | workflow | public | `agents/delegate.md:42` | Defines skill loading, continuity, bounded evidence delegation, material-evidence verification, and parent-owned synthesis/artifacts. |
-| `Delegate.Tool Preferences` | policy | internal | `agents/delegate.md:53` | Prefers batch/CodeMode or read-only extraction, then retriever isolation, with parallel calls as fallback. |
+| `Delegate.How You Work` | workflow | public | `agents/delegate.md:42` | Makes retriever delegation the default for separable evidence while keeping synthesis and decisive verification with the parent. |
+| `Delegate.Tool Preferences` | policy | internal | `agents/delegate.md:53` | Prefers batch/script, then retriever isolation, then decisive direct reads, with parallel calls last. |
 | `Delegate.Constraints` | policy | public | `agents/delegate.md:60` | Sets the default read/analyze boundary, exceptions for explicit artifacts and `review-fix`, Blueprint expectations, and the Git prohibition. |
 | `Retriever frontmatter` | frontmatter | public | `agents/retriever.md:1` | Denies edits and further tasks while leaving read, search, Bash, crawl, and other evidence tools available. |
 | `Retriever` | persona | public | `agents/retriever.md:11` | Establishes focused evidence retrieval for maintainers, delegates, and implementers. |
@@ -66,7 +66,7 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Implementer frontmatter` | frontmatter | public | `agents/implementer.md:1` | Declares execution-only subagent mode, broad edit permission, leaf-retriever access, and exclusive skill access to `execute-work-package`. |
 | `Implementer` | persona | public | `agents/implementer.md:18` | Establishes the execution-only role used by the primary orchestrator. |
 | `Implementer.Ground Truth` | section | public | `agents/implementer.md:22` | Makes the execution skill and its templates authoritative for the gated protocol. |
-| `Implementer.Inputs` | section | public | `agents/implementer.md:31` | Uses batch/CodeMode first, retriever evidence next, and parallel calls as fallback while retaining execution ownership. |
+| `Implementer.Inputs` | section | public | `agents/implementer.md:31` | Uses batch/CodeMode first and retriever evidence by default for separable work, while retaining execution ownership. |
 | `Implementer.Modes` | workflow | public | `agents/implementer.md:38` | Separates Blueprint and Execute into distinct primary task calls. |
 | `Implementer.MODE: BLUEPRINT` | workflow | public | `agents/implementer.md:42` | Produces the execution step list without commands, edits, or premature execution. |
 | `Implementer.MODE: EXECUTE` | workflow | public | `agents/implementer.md:56` | Applies an approved Blueprint, requires an approval token, and emits the canonical digest. |
@@ -117,7 +117,7 @@ This module is the canonical source for the interactive and non-interactive prim
 1. The installer deploys `maintainer.md` and `maintainer-direct.md` as selectable primary agents and installs the five subagent personas. It may add configured model fields or generate `delegate-*` aliases without changing the canonical persona body.
 2. A primary agent begins from persistent `docs/**` and `plans/**` artifacts, loads the matching workflow skill, and selects a role according to the task's risk and context cost.
 3. Task permissions admit only declared personas. The primary sends paths and a focused objective; the receiving persona loads the skill that owns the task contract rather than relying on pasted history.
-4. An agent prefers CodeMode/batch tools or a small read-only extraction, then calls leaf `retriever` when a separate context helps. Parallel calls are the fallback. The parent verifies material evidence and retains judgment, artifact, and execution ownership.
+4. An agent prefers CodeMode/batch tools or focused read-only extraction, then sends separable multi-source or exploratory evidence to leaf `retriever` by default. It reads only authoritative scope and decisive evidence directly; parallel calls are last. The parent retains judgment, artifact, and execution ownership.
 5. `delegate` returns analysis or writes an explicitly templated artifact, `doc-explorer` maintains allowed documentation/planning files, `implementer` performs approved code execution, and `legacy-curator` writes only the legacy archive.
 6. Subagents return compact status or digests. Retriever output has no fixed numeric read/output limits: it stays concise by returning only useful evidence, or states that the approach was not useful and recommends another route.
 7. Selected subagent bodies are also consumed by the [Cursor Adapter](cursor-adapter.md), which strips OpenCode frontmatter and maps the canonical personas onto Cursor Task types.
@@ -126,7 +126,7 @@ This module is the canonical source for the interactive and non-interactive prim
 
 - Every persona uses YAML frontmatter for runtime metadata. `mode` selects `primary` or `subagent`, `hidden` controls discoverability, and `permission` constrains tools, nested tasks, edits, and skill loading.
 - Model choice is intentionally absent from the canonical files. `config.yaml` can set models and reasoning effort for named agents, and `install.sh` applies those settings to installed copies; see [Installation → Model Configuration](../installation.md#model-configuration).
-- Level-2 retriever/doc-explorer calls require OpenCode's top-level `subagent_depth: 2`; the installer reminds users but does not modify runtime JSON/JSONC. See [Installation → Nested Delegation](../installation.md#nested-delegation-opencode).
+- On OpenCode v1.18.2+, level-2 retriever/doc-explorer calls require top-level `subagent_depth: 2`; older versions do not support the setting. The installer prints a version-aware reminder without modifying runtime JSON/JSONC. See [Installation → Nested Delegation](../installation.md#nested-delegation-opencode).
 - `additional_delegates` creates model-specific aliases from `agents/delegate.md`; the repository keeps one behavioral source of truth. See [Installation → Additional Delegate Variants](../installation.md#additional-delegate-variants).
 - Persona behavior depends on the installed skill set. Changing a workflow contract or artifact schema belongs in its skill, not in these personas.
 

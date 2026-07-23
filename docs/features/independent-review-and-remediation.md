@@ -20,7 +20,7 @@ Each review workflow defines its own focus, references, immutable output artifac
 ### User Flow
 
 1. The user or maintainer requests an independent quality gate for a completed plan, phase implementation plan, or implementation.
-2. A fresh review delegate evaluates the authoritative scope and may use leaf `retriever` for bounded evidence, or `doc-explorer` for a genuinely documentation/module-oriented child task where the prompt permits it.
+2. A fresh review delegate evaluates the authoritative scope and sends separable evidence collection to leaf `retriever` by default, or to `doc-explorer` for a genuinely documentation/module-oriented child task where the prompt permits it.
 3. The delegate returns a compact verdict and stable finding IDs; the maintainer presents decisions that genuinely need user input.
 4. For accepted implementation-plan or implementation findings, the maintainer resumes the same reviewer session with `review-fix` and the explicit finding IDs.
 5. The reviewer changes only the approved scope, verifies it, returns a digest, and leaves the original review artifact unchanged.

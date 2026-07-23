@@ -123,7 +123,7 @@ This module owns the public repository entry points and the mechanics that turn 
 | `Create delegate variants` | workflow | internal | `install.sh:994` | Generates every configured delegate alias in each agent destination. |
 | `Create implementer variants` | workflow | internal | `install.sh:1010` | Generates every configured implementer variant in each agent destination. |
 | `Install Cursor orchestration layer` | workflow | internal | `install.sh:1026` | Adds Cursor-specific personas, bootstrap, orchestrator skills, and optional project rule after shared copies. |
-| `Nested delegation reminder` | output | public | `install.sh:1048` | Reminds users to set top-level OpenCode `subagent_depth: 2` without modifying runtime JSON/JSONC. |
+| `Nested delegation reminder` | output | public | `install.sh:1048` | Gives version-aware guidance: v1.18.2+ uses top-level `subagent_depth: 2`; older versions omit the unsupported setting. |
 
 ## Data Flow
 
