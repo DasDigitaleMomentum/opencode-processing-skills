@@ -38,7 +38,7 @@ Initial generation is codebase-anchored and owned by `doc-explorer`; larger repo
 | [Workflow Skills](../modules/workflow-skills.md) | `generate-docs` Workflow (`skills/generate-docs/SKILL.md:48`), `project-overview` (`skills/generate-docs/tpl-project-overview.md:3`), `module` (`skills/generate-docs/tpl-module-documentation.md:3`), `feature` (`skills/generate-docs/tpl-feature-documentation.md:3`) | Defines initial discovery, artifact contracts, required inventories, and verification. |
 | [Workflow Skills](../modules/workflow-skills.md) | `update-docs` Workflow (`skills/update-docs/SKILL.md:49`), `project-overview` (`skills/update-docs/tpl-project-overview.md:3`), `module` (`skills/update-docs/tpl-module-documentation.md:3`), `feature` (`skills/update-docs/tpl-feature-documentation.md:3`) | Maps code changes to the existing documentation and refreshes only affected content. |
 | [Agent Personas](../modules/agent-personas.md) | `doc-explorer` Core Responsibilities (`agents/doc-explorer.md:25`), Self-Delegation (`agents/doc-explorer.md:52`) | Owns docs-focused exploration, file writes, scaling, and compact reporting. |
-| [Agent Personas](../modules/agent-personas.md) | `maintainer` agent routing (`agents/maintainer.md:106`) | Selects the workflow and delegates the codebase-anchored writing task. |
+| [Agent Personas](../modules/agent-personas.md) | `maintainer` agent routing (`agents/maintainer.md:107`) | Selects the workflow and delegates the codebase-anchored writing task. |
 
 ## Configuration
 

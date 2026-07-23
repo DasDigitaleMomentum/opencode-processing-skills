@@ -1,7 +1,7 @@
 ---
 type: documentation
 entity: project-overview
-version: 1.0
+version: 1.1
 ---
 
 # OpenCode Processing Skills
@@ -12,7 +12,7 @@ OpenCode Processing Skills is a distributable collection of agent personas, work
 
 ## Architecture
 
-The repository has two cooperating planes. The workflow plane defines skills, artifact templates, and agent responsibilities; the distribution plane resolves local configuration and installs those definitions into supported AI-development harnesses. OpenCode and Claude receive native agent personas, Cursor receives an adapter layer, and skills-only targets receive the reusable workflow packages without unsupported persona semantics.
+The repository has two cooperating planes. The workflow plane defines skills, artifact templates, and agent responsibilities; the distribution plane resolves local configuration and installs those definitions into supported AI-development harnesses. Agents prefer in-session batch/CodeMode or read-only extraction, then offload bounded evidence to the leaf `retriever`; parallel tool calls are the fallback. The parent retains judgment and execution ownership. OpenCode and Claude receive native agent personas, Cursor receives an adapter layer, and skills-only targets receive the reusable workflow packages without unsupported persona semantics.
 
 The module inventories cover every tracked operational source under `agents/`, `skills/`, `cursor/`, and the root distribution boundary. Tracked `plans/**` files are project-management artifacts rather than an implementation module; `docs/agents.md`, `docs/installation.md`, and `docs/skills.md` are manually maintained source references and are intentionally not re-inventoried as implementation.
 
@@ -34,6 +34,7 @@ The module inventories cover every tracked operational source under `agents/`, `
 
 user request -> orchestrator -> matching skill -> scoped subagent
                                       |
+                                      +-> leaf evidence retrieval
                                       +-> docs/ or plans/ artifact
                                       +-> gated code change + digest
 ```
@@ -49,7 +50,7 @@ user request -> orchestrator -> matching skill -> scoped subagent
 
 | Module | Description | Documentation |
 |--------|-------------|---------------|
-| Agent Personas | Native maintainer, delegate, documentation, execution, and legacy-curation role contracts. | [Detail](modules/agent-personas.md) |
+| Agent Personas | Native maintainer, retrieval, delegate, documentation, execution, and legacy-curation role contracts. | [Detail](modules/agent-personas.md) |
 | Workflow Skills | Self-contained workflows and normative templates for documentation, planning, review, execution, and handover. | [Detail](modules/workflow-skills.md) |
 | Cursor Adapter | Cursor-specific orchestration skills, subagent mapping, bootstrap guidance, and project-rule template. | [Detail](modules/cursor-adapter.md) |
 | Installation and Configuration | Multi-target synchronization, target/model resolution, variant generation, and repository-level distribution metadata. | [Detail](modules/installation-and-configuration.md) |

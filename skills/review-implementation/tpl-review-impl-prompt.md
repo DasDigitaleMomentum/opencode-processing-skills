@@ -23,7 +23,7 @@ Prioritize findings related to this focus. Formal criteria (DoD checklists, NFR 
 
 ## What to Review
 
-Read ALL of these before starting your review:
+Use these as the authoritative review scope:
 
 - Plan: `{{plan_ref}}`
 - Phase scope + acceptance criteria: `{{phase_ref}}`
@@ -34,6 +34,8 @@ Then examine the **actual codebase changes**:
 - Use `git diff {{base_ref}}` or review the changed files directly
 - Verify each acceptance criterion against the actual code
 - Run or review test results
+
+You may use `retriever` for bounded evidence collection. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; directly verify evidence that materially supports a finding.
 
 ## Review Criteria
 

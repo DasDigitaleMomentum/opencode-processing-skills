@@ -89,6 +89,9 @@ By default, subagents use whatever model your OpenCode provider assigns. To run 
 delegate:
   model: openai/gpt-5.6-sol
   reasoningEffort: medium
+retriever:
+  model: openai/gpt-5.6-luna
+  reasoningEffort: high
 doc-explorer:
   model: openai/gpt-5.6-sol
   reasoningEffort: medium
@@ -101,6 +104,14 @@ legacy-curator: openai/gpt-5.6-luna
 Leave an agent out (or set it to empty) to keep the provider default. Re-run `./install.sh` after changing the config.
 
 `config.yaml` is gitignored – it's your local choice, not the repo's.
+
+### Nested Delegation (OpenCode)
+
+Maintainers can call `retriever` at level 1; delegates, reviewers, and implementers can call `retriever` at level 2. Delegates may also call documentation-oriented `doc-explorer` at level 2. Enable this with the top-level OpenCode runtime setting `subagent_depth: 2` (the JSON/JSONC equivalent is `"subagent_depth": 2`).
+
+`install.sh` only prints this reminder after installation. It does not locate or modify OpenCode runtime JSON/JSONC.
+
+When supported by the runtime, agents prefer a batch/CodeMode facility or a small read-only extraction script, then use `retriever` when a separate context helps. Parallel tool calls are the fallback. Current OpenCode versions expose an optional batch tool through `experimental.batch_tool`.
 
 ---
 
@@ -124,7 +135,7 @@ This creates `delegate-strong`, `delegate-fast`, `delegate-qwen`, and `delegate-
 
 ```
 > use delegate-strong for this review
-> delegate to delegate-fast for a quick lookup
+> use delegate-fast for this routine analysis
 ```
 
 ### Why multiple delegate variants?
@@ -132,7 +143,7 @@ This creates `delegate-strong`, `delegate-fast`, `delegate-qwen`, and `delegate-
 The default `delegate` agent handles most tasks at a predictable cost. But sometimes you want:
 
 - **A frontier model for reviews** — thorough analysis benefits from stronger reasoning
-- **A fast model for simple lookups** — no need for heavy reasoning when checking a file path
+- **A lighter model for focused evidence** — use `retriever` for scoped files, tool output, commands, or known-URL crawling; use a delegate variant when web research needs search and source judgment
 - **Different model perspectives** — cross-check results using models with different training
 
 The variant system lets you configure these once and switch on demand, without editing config files mid-session.
@@ -145,7 +156,7 @@ The framework grew out of working within GitHub Copilot's frontier-model restric
 
 **Recommendations:**
 
-- **Match the model to the role.** GPT-5.6 Sol at medium reasoning effort is a capable default for maintainers and core subagents. GPT-5.6 Luna remains a cost-efficient option for quick retrieval at medium or high reasoning effort.
+- **Match the model to the role.** GPT-5.6 Sol at medium reasoning effort is a capable default for maintainers and synthesis-heavy subagents. GPT-5.6 Luna remains a cost-efficient `retriever` option at medium or high reasoning effort.
 
 - **Reserve maximum reasoning effort for the hard gates.** Independent reviews and genuinely difficult decisions benefit more from the strongest configuration than routine exploration does.
 

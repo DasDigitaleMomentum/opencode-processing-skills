@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "installation-and-configuration"
-version: 1.0
+version: 1.1
 ---
 
 # Module: Installation and Configuration
@@ -74,11 +74,12 @@ This module owns the public repository entry points and the mechanics that turn 
 | `targets.cursor` | config | public | `config.yaml.example:61` | Tri-state Cursor workflow-skill and orchestration destination. |
 | `targets.hermes` | config | public | `config.yaml.example:65` | Tri-state Hermes skills-only destination rooted at its home directory. |
 | `delegate` | config | public | `config.yaml.example:76` | Base delegate model and provider-option configuration. |
-| `doc-explorer` | config | public | `config.yaml.example:79` | Base doc-explorer model and provider-option configuration. |
-| `implementer` | config | public | `config.yaml.example:82` | Base implementer model and provider-option configuration. |
-| `legacy-curator` | config | public | `config.yaml.example:85` | Base legacy-curator model configuration using scalar syntax. |
-| `additional_delegates` | config | public | `config.yaml.example:113` | Map of suffixes to scalar or object model definitions used to generate delegate aliases. |
-| `additional_implementers` | config | public | `config.yaml.example:142` | Map of suffixes to scalar or object model definitions used to generate implementer variants. |
+| `retriever` | config | public | `config.yaml.example:79` | Base leaf evidence-worker model and provider-option configuration. |
+| `doc-explorer` | config | public | `config.yaml.example:82` | Base doc-explorer model and provider-option configuration. |
+| `implementer` | config | public | `config.yaml.example:85` | Base implementer model and provider-option configuration. |
+| `legacy-curator` | config | public | `config.yaml.example:88` | Base legacy-curator model configuration using scalar syntax. |
+| `additional_delegates` | config | public | `config.yaml.example:116` | Map of suffixes to scalar or object model definitions used to generate delegate aliases. |
+| `additional_implementers` | config | public | `config.yaml.example:145` | Map of suffixes to scalar or object model definitions used to generate implementer variants. |
 | `PROJECT_MODE` | const | internal | `install.sh:50` | Tracks whether `--project` switches installation from global homes to repository-local OpenCode and optional Cursor paths. |
 | `SCRIPT_DIR` | const | internal | `install.sh:72` | Anchors all source and default config paths to the checked-out repository. |
 | `CONFIG_FILE` | const | internal | `install.sh:73` | Resolves the YAML source from `OPS_CONFIG_FILE` or the repository-local `config.yaml`. |
@@ -122,6 +123,7 @@ This module owns the public repository entry points and the mechanics that turn 
 | `Create delegate variants` | workflow | internal | `install.sh:994` | Generates every configured delegate alias in each agent destination. |
 | `Create implementer variants` | workflow | internal | `install.sh:1010` | Generates every configured implementer variant in each agent destination. |
 | `Install Cursor orchestration layer` | workflow | internal | `install.sh:1026` | Adds Cursor-specific personas, bootstrap, orchestrator skills, and optional project rule after shared copies. |
+| `Nested delegation reminder` | output | public | `install.sh:1048` | Reminds users to set top-level OpenCode `subagent_depth: 2` without modifying runtime JSON/JSONC. |
 
 ## Data Flow
 
@@ -129,7 +131,7 @@ This module owns the public repository entry points and the mechanics that turn 
 2. The installer validates arguments and any explicit `OPS_CONFIG_FILE`, then reads settings with precedence `OPS_*` environment variables, optional YAML, and built-in defaults. It expands homes and evaluates each tri-state target.
 3. Enabled targets populate shared skill and agent destination arrays. Project mode replaces global agent/skill paths with `./.opencode/` and may add `./.cursor/`; Hermes stays global-only and uses its `processing` category; Antigravity is detected but served through Claude.
 4. Every checked-in skill package is copied to each skill destination. Agent personas are copied only to agent-capable targets, then `get_agent_config` and `inject_agent_config` apply base model/provider options. Configured delegate aliases and implementer variants are generated from canonical personas.
-5. Cursor receives its additional adapted subagents, bootstrap, orchestrator skills, and optional project rule. Hermes receives category metadata. Existing destination symlinks are skipped throughout, and the installer prints the applied config and target-specific next steps.
+5. Cursor receives its additional adapted subagents, bootstrap, orchestrator skills, and optional project rule. Hermes receives category metadata. Existing destination symlinks are skipped throughout, and the installer prints the applied config, target-specific next steps, and an OpenCode nested-delegation reminder; it does not edit runtime JSON/JSONC.
 
 ## Configuration
 

@@ -39,8 +39,8 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 ## Architecture Principles
 
 - **File-based interface**: Subagents write skill-/workflow-defined artifacts to the defined file structure (templates). The file structure IS the interface, not return values. Every subagent that produces artifacts writes them to disk; the primary agent receives only a short status summary.
-- **Skill-driven delegate**: `agents/delegate.md` is the single canonical analysis/review persona. Generated `delegate-*` variants are model aliases; loaded skills own expertise, write boundaries, and output contracts.
-- **Workflow-owned writers**: `doc-explorer` is docs-focused, the canonical delegate handles skill-governed analysis/reviews and explicit artifacts, and `implementer` performs gated code execution.
+- **Skill-driven delegate**: `agents/delegate.md` is the single canonical analysis/review persona. Generated `delegate-*` variants are model aliases; loaded skills own expertise, write boundaries, and output contracts. Delegates may hand bounded evidence collection to the leaf `retriever` while retaining synthesis and artifact ownership.
+- **Workflow-owned writers**: `doc-explorer` is docs-focused, the canonical delegate handles skill-governed analysis/reviews and explicit artifacts, `retriever` returns evidence without writing, and `implementer` performs gated code execution while retaining ownership of any retriever-assisted changes.
 - **Self-delegation for scale**: When a subagent's workload would exceed comfortable context limits (e.g., documenting a project with many modules), it spawns additional instances of itself, each scoped to a smaller unit of work.
 - **Agent extension over commands**: Skills extend the primary agent's behavior. Subagents handle expensive exploration.
 - **Stack-agnostic**: No assumptions about language or framework

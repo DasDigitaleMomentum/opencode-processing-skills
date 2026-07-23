@@ -23,7 +23,7 @@ Prioritize findings related to this focus. Formal criteria (DoD checklists, NFR 
 
 ## What to Review
 
-Read ALL of these before starting your review:
+Use these as the authoritative review scope:
 
 - Plan: `{{plan_ref}}`
 - Phase scope: `{{phase_ref}}`
@@ -34,6 +34,8 @@ Then examine the **actual codebase** to verify:
 - Do the file paths and symbols referenced in the implementation plan exist?
 - Does the proposed approach align with existing code patterns?
 - Are the "Code Anchors" in the Reality Check section accurate?
+
+You may use `retriever` for bounded evidence collection, or `doc-explorer` for a genuinely documentation- or module-oriented child task. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; directly verify evidence that materially supports a finding.
 
 ## Review Criteria
 

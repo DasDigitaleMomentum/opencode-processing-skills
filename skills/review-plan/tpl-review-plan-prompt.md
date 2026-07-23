@@ -26,7 +26,9 @@ Prioritize findings related to this focus. Formal criteria (DoD checklists, NFR 
 - Plan: `{{plan_ref}}`
 - Phase documents: `{{phases_dir}}`
 
-Read ALL of these before starting your review.
+Use these as the authoritative review scope. Retrieve the portions needed to evaluate the stated focus and criteria.
+
+You may use `retriever` for bounded evidence collection. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; directly verify evidence that materially supports a finding.
 
 ## Review Criteria
 

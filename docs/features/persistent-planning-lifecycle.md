@@ -40,8 +40,8 @@ The primary maintainer owns intent and phase design because those decisions aris
 | [Workflow Skills](../modules/workflow-skills.md) | `create-plan` Workflow (`skills/create-plan/SKILL.md:50`), `plan` (`skills/create-plan/tpl-plan.md:3`), `phase` (`skills/create-plan/tpl-phase.md:3`), `todo` (`skills/create-plan/tpl-todo.md:3`) | Converts negotiated intent into the persistent plan hierarchy. |
 | [Workflow Skills](../modules/workflow-skills.md) | `author-and-verify-implementation-plan` Workflow (`skills/author-and-verify-implementation-plan/SKILL.md:66`) | Adds the per-phase technical approach and verifies code references. |
 | [Workflow Skills](../modules/workflow-skills.md) | `update-plan` Phase Transition (`skills/update-plan/SKILL.md:124`), `resume-plan` Workflow (`skills/resume-plan/SKILL.md:45`), `generate-handover` Workflow (`skills/generate-handover/SKILL.md:41`) | Maintains progress, reconstructs sessions, and transfers context. |
-| [Agent Personas](../modules/agent-personas.md) | `maintainer` Plan-to-Implementation Lifecycle (`agents/maintainer.md:120`) | Owns user-facing decisions, routing, phase sequence, and persistent work tracking. |
-| [Agent Personas](../modules/agent-personas.md) | `delegate` How You Work (`agents/delegate.md:40`), `doc-explorer` Core Responsibilities (`agents/doc-explorer.md:25`) | Grounds implementation plans in code and writes planning artifacts only when a governing skill assigns them. |
+| [Agent Personas](../modules/agent-personas.md) | `maintainer` Plan-to-Implementation Lifecycle (`agents/maintainer.md:122`) | Owns user-facing decisions, routing, phase sequence, and persistent work tracking. |
+| [Agent Personas](../modules/agent-personas.md) | `delegate` How You Work (`agents/delegate.md:42`), `doc-explorer` Core Responsibilities (`agents/doc-explorer.md:25`) | Grounds implementation plans in code and writes planning artifacts only when a governing skill assigns them. |
 
 ## Configuration
 
