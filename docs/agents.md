@@ -43,7 +43,7 @@ The one canonical, skill-driven delegate persona. Skills provide task expertise,
 
 After an implementation or implementation-plan review, `review-fix` is the preferred same-session remediation path for accepted related findings, including multi-file runtime changes. The review artifact remains unchanged. A new implementation or authoring session is reserved for changed scope/objective, missing context, new primary decisions, or an explicit fresh perspective.
 
-Delegates and reviewers may send bounded evidence questions to `retriever`, and may call `doc-explorer` only for genuinely documentation- or module-oriented child tasks. The parent still owns synthesis, verdicts, severity, scope interpretation, and final artifacts, and directly verifies evidence material to a finding.
+Delegates and reviewers send separable evidence collection to `retriever` by default, and may call `doc-explorer` only for genuinely documentation- or module-oriented child tasks. The parent owns synthesis, verdicts, severity, scope interpretation, and final artifacts; it reads authoritative scope and decisive finding evidence without repeating broad child retrieval.
 
 **Model:** Configured via `config.yaml`. Defaults to provider's choice if not set.
 
@@ -57,7 +57,7 @@ A non-editing leaf evidence worker for focused questions from maintainers, deleg
 
 Open-ended web search, source selection, and cross-source synthesis remain `delegate` work through `web-research`; a configured `delegate-fast` may handle the lighter cases.
 
-Maintainers and workers prefer CodeMode/batch tools or a small read-only script for independent lookups, then use `retriever` when a separate evidence context helps. Parallel tool calls are the fallback when neither route fits.
+Maintainers and workers prefer CodeMode/batch tools or a focused read-only script, then use `retriever` by default for separable multi-source or exploratory evidence collection. Direct reads stay limited to authoritative scope, short required sections, and decisive evidence; parallel calls are last.
 
 ### `doc-explorer`
 
@@ -75,8 +75,8 @@ Docs-focused subagent for project documentation and selected template-governed p
 
 Executes code changes following the gated protocol.
 
-The implementer may use `retriever` for bounded evidence while retaining ownership of its Blueprint, edits, and verification.
-It prefers batch/CodeMode lookup, then `retriever`, with parallel calls as fallback. BLUEPRINT mode remains command-free; Bash/Python extraction is therefore limited to EXECUTE mode.
+The implementer uses `retriever` by default for separable evidence while retaining ownership of its Blueprint, edits, and verification.
+It prefers batch/CodeMode lookup, then `retriever`, then direct short reads, with parallel calls last. BLUEPRINT mode remains command-free; Bash/Python extraction is therefore limited to EXECUTE mode.
 
 **Protocol:** BLUEPRINT → GATE → EXECUTE → DIGEST
 
@@ -165,6 +165,6 @@ Delegation targets:
   general (built-in) second opinion, user-requested
 ```
 
-Maintainers call `retriever` at delegation level 1. Delegates, reviewers, and implementers may call it at level 2; delegates may also call `doc-explorer` at level 2 for documentation/module child tasks. OpenCode therefore needs the top-level runtime setting `subagent_depth: 2`; see [Installation → Nested Delegation](installation.md#nested-delegation-opencode).
+Maintainers call `retriever` at delegation level 1. Delegates, reviewers, and implementers use it at level 2 for separable evidence; delegates may also call `doc-explorer` for documentation/module child tasks. OpenCode v1.18.2+ requires top-level `subagent_depth: 2`; older versions do not support that setting. See [Installation → Nested Delegation](installation.md#nested-delegation-opencode).
 
 The file structure IS the interface. Framework docs/plans persist in `docs/` and `plans/`, and the primary reads from them. No magic state, no hidden context — just files.

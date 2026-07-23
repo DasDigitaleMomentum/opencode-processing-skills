@@ -15,7 +15,7 @@ A significant implementation unit is executed through a visible blueprint, an ex
 
 ## How It Works
 
-`execute-work-package` binds a work package to one `implementer` session. The implementer prefers batch/CodeMode lookup, then leaf-retriever evidence, with parallel calls as fallback; it returns an auditable step list before the same approved session performs the work and verification.
+`execute-work-package` binds a work package to one `implementer` session. The implementer prefers batch/CodeMode lookup and sends separable evidence to the leaf retriever by default, then uses direct short reads with parallel calls last; it returns an auditable step list before the same approved session performs the work and verification.
 
 ### User Flow
 
@@ -28,7 +28,7 @@ A significant implementation unit is executed through a visible blueprint, an ex
 ### Technical Flow
 
 1. The primary assembles the mandatory work-package inputs and starts the stateful protocol (`skills/execute-work-package/SKILL.md:78`, `skills/execute-work-package/SKILL.md:110`).
-2. In BLUEPRINT mode, the implementer prefers command-free batch/CodeMode lookup, then `retriever`, with parallel read/search calls as fallback, and returns ordered steps without writing code (`skills/execute-work-package/SKILL.md:132`, `agents/implementer.md:42`).
+2. In BLUEPRINT mode, the implementer prefers command-free batch/CodeMode lookup, defaults separable evidence to `retriever`, then uses direct short reads with parallel calls last, and returns ordered steps without writing code (`skills/execute-work-package/SKILL.md:132`, `agents/implementer.md:42`).
 3. The primary checks the blueprint against scope and explicitly gates execution.
 4. The same `task_id` resumes in EXECUTE mode; the implementer applies the accepted work and runs the planned verification (`skills/execute-work-package/SKILL.md:150`, `agents/implementer.md:56`).
 5. The implementer returns the required digest, and the primary selects success, failure, or blocked post-processing without manufacturing a green result (`skills/execute-work-package/SKILL.md:162`, `skills/execute-work-package/SKILL.md:171`).

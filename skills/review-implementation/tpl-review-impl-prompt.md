@@ -35,7 +35,7 @@ Then examine the **actual codebase changes**:
 - Verify each acceptance criterion against the actual code
 - Run or review test results
 
-You may use `retriever` for bounded evidence collection. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; directly verify evidence that materially supports a finding.
+Use `retriever` by default for separable diff, codebase, test, log, or reference evidence collection. Read the authoritative scope artifacts and decisive evidence for actual findings yourself. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; do not repeat the child's broad retrieval.
 
 ## Review Criteria
 

@@ -47,9 +47,9 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `skills/create-plan/tpl-plan.md` | file | Canonical high-level plan artifact for objective, requirements, scope, DoD, phases, risks, and changelog. |
 | `skills/create-plan/tpl-todo.md` | file | Canonical persistent todo artifact with phase context, status buckets, and changelog. |
 | `skills/delegate-analysis/` | dir | Read/analyze/verify package for routine delegated investigation. |
-| `skills/delegate-analysis/SKILL.md` | file | Defines four analysis modes, the lookup order batch/script → retriever → parallel fallback, and keeps open-ended web research with the delegate. |
+| `skills/delegate-analysis/SKILL.md` | file | Defines four analysis modes, defaults separable evidence to retriever after batch/script, and keeps open-ended web research with the delegate. |
 | `skills/execute-work-package/` | dir | Stateful, gated implementation-execution package. |
-| `skills/execute-work-package/SKILL.md` | file | Defines the gated protocol, mode-aware batch/retriever/parallel lookup order, and verification invariants. |
+| `skills/execute-work-package/SKILL.md` | file | Defines the gated protocol, default retriever use for separable evidence, mode-aware lookup order, and verification invariants. |
 | `skills/execute-work-package/tpl-execution-blueprint.md` | file | Canonical concrete step-list contract returned before the execution gate. |
 | `skills/execute-work-package/tpl-execution-digest.md` | file | Canonical compact outcome, edit, verification, and next-step digest. |
 | `skills/execute-work-package/tpl-implementer-execute-prompt.md` | file | Resume prompt that locks the implementer into EXECUTE mode with an approved step list. |
@@ -143,7 +143,7 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 
 1. A user request matches a skill's `name` and `description` frontmatter, causing the harness or maintainer to load that package's `SKILL.md`.
 2. The skill identifies the owning role, required inputs, read/write boundary, ordered workflow, and output contract. Where a delegate is involved, the primary fills the package's prompt template with paths and decisions rather than copying source content into chat.
-3. The owning agent reads repository evidence and the relevant bundled artifact template. Delegates/reviewers and implementers may use `retriever` for bounded evidence; delegates may use `doc-explorer` only for documentation/module child tasks. The parent verifies material evidence and retains judgment, artifact, and execution ownership.
+3. The owning agent reads authoritative scope and decisive evidence directly, while delegates/reviewers and implementers send separable evidence collection to `retriever` by default. Delegates use `doc-explorer` only for documentation/module child tasks. The parent retains judgment, artifact, and execution ownership.
 4. Review workflows persist independent findings, and `review-fix` can feed accepted findings back into the same reviewer session without changing the immutable review artifact. Plan maintenance and handover skills then synchronize durable status and context.
 5. Later sessions use `resume-plan` and the persisted file graph to restore context. The installer distributes the same self-contained skill packages to each enabled harness, while harness-specific agent/tool semantics remain outside this module.
 

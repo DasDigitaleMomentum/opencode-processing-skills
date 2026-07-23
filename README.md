@@ -42,7 +42,7 @@ cp config.yaml.example config.yaml   # optional: set models
 ```
 
 Then restart OpenCode and select `@maintainer`.
-For worker-to-retriever handoffs, set `"subagent_depth": 2` in your OpenCode config; the installer reminds you but does not overwrite runtime configuration.
+On OpenCode v1.18.2+, set `"subagent_depth": 2` for worker-to-retriever handoffs. Older versions do not support this setting and generally allow nested tasks through permissions alone.
 If Codex, Claude Code, Cursor, or Hermes are installed locally, skills are synced to their config directories during install.
 Hermes support covers installation, parsing, and discovery only; it does not port OpenCode-specific delegate personas, `Task` calls, or `task_id` continuation contracts.
 
@@ -83,7 +83,7 @@ Everything persists to files. New session? Read the plan and continue.
 
 **Delegate deliberately.** Context is a budget, but delegation also has setup cost. Routine analysis uses the canonical delegate with an explicit skill; independent reviews may use a stronger model alias. Bounded low-risk edits can stay local.
 
-**Retrieve before you absorb.** Prefer CodeMode/batch tools or a small read-only script, then hand focused evidence gathering to the retriever when a separate context helps. Parallel tool calls are the fallback; the parent keeps judgment and execution ownership.
+**Retrieve before you absorb.** Prefer CodeMode/batch tools or a focused read-only script. Send separable multi-source or exploratory evidence work to the retriever by default; keep only authoritative scope and decisive evidence in the parent context. Parallel tool calls are the final fallback.
 
 **Gated execution.** Subagents propose a blueprint (step list) before writing any code. The primary reviews and approves. Then execution happens. The blueprint acts as Chain-of-Thought — it forces structured thinking before implementation.
 

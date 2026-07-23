@@ -35,7 +35,7 @@ Then examine the **actual codebase** to verify:
 - Does the proposed approach align with existing code patterns?
 - Are the "Code Anchors" in the Reality Check section accurate?
 
-You may use `retriever` for bounded evidence collection, or `doc-explorer` for a genuinely documentation- or module-oriented child task. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; directly verify evidence that materially supports a finding.
+Use `retriever` by default for separable codebase, reference, or test evidence collection, or `doc-explorer` for a genuinely documentation- or module-oriented child task. Read the authoritative scope artifacts and decisive evidence for actual findings yourself. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; do not repeat broad child retrieval.
 
 ## Review Criteria
 
