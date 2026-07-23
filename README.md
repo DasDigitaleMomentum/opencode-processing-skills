@@ -83,7 +83,7 @@ Everything persists to files. New session? Read the plan and continue.
 
 **Delegate deliberately.** Context is a budget, but delegation also has setup cost. Routine analysis uses the canonical delegate with an explicit skill; independent reviews may use a stronger model alias. Bounded low-risk edits can stay local.
 
-**Retrieve before you absorb.** Prefer CodeMode/batch tools or a focused read-only script. Send separable multi-source or exploratory evidence work to the retriever by default; keep only authoritative scope and decisive evidence in the parent context. Parallel tool calls are the final fallback.
+**Retrieve before you absorb.** Use a focused read-only script when results can be filtered in one operation, native parallel calls for compact independent results, and the retriever for broad, large, or exploratory evidence. Keep only authoritative scope and decisive evidence in the parent context.
 
 **Gated execution.** Subagents propose a blueprint (step list) before writing any code. The primary reviews and approves. Then execution happens. The blueprint acts as Chain-of-Thought — it forces structured thinking before implementation.
 

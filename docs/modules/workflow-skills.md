@@ -47,9 +47,9 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `skills/create-plan/tpl-plan.md` | file | Canonical high-level plan artifact for objective, requirements, scope, DoD, phases, risks, and changelog. |
 | `skills/create-plan/tpl-todo.md` | file | Canonical persistent todo artifact with phase context, status buckets, and changelog. |
 | `skills/delegate-analysis/` | dir | Read/analyze/verify package for routine delegated investigation. |
-| `skills/delegate-analysis/SKILL.md` | file | Defines four analysis modes, defaults separable evidence to retriever after batch/script, and keeps open-ended web research with the delegate. |
+| `skills/delegate-analysis/SKILL.md` | file | Defines four analysis modes, chooses retrieval by expected output size/relevance, and keeps open-ended web research with the delegate. |
 | `skills/execute-work-package/` | dir | Stateful, gated implementation-execution package. |
-| `skills/execute-work-package/SKILL.md` | file | Defines the gated protocol, default retriever use for separable evidence, mode-aware lookup order, and verification invariants. |
+| `skills/execute-work-package/SKILL.md` | file | Defines the gated protocol, compact native parallel reads, retriever isolation for broad evidence, and verification invariants. |
 | `skills/execute-work-package/tpl-execution-blueprint.md` | file | Canonical concrete step-list contract returned before the execution gate. |
 | `skills/execute-work-package/tpl-execution-digest.md` | file | Canonical compact outcome, edit, verification, and next-step digest. |
 | `skills/execute-work-package/tpl-implementer-execute-prompt.md` | file | Resume prompt that locks the implementer into EXECUTE mode with an approved step list. |

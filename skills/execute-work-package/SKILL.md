@@ -58,7 +58,7 @@ Do **not** use this skill to:
   - First returns a **step list**.
   - After approval, executes those steps and returns a **digest**.
   - Uses `retriever` by default for separable evidence collection while retaining ownership of the Blueprint, edits, and verification.
-  - Uses batch/CodeMode first, then retriever evidence, then direct short reads, with parallel calls last. BLUEPRINT remains command-free; EXECUTE may also use a focused read-only extraction within approved scope.
+  - Uses native parallel reads for compact independent results and retriever evidence for broad, large, or exploratory work. BLUEPRINT remains command-free; EXECUTE may also use a focused read-only extraction within approved scope.
   - Does not do Git operations.
 
 ## Routing Matrix (Who does what)

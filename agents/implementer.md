@@ -33,7 +33,7 @@ Skill-first: when the primary invokes `execute-work-package`, consult that skill
 - Read any referenced `plans/` and `docs/` artifacts yourself — the primary passes paths, not pasted contents.
 - `plans/` defines intent/scope/DoD; `docs/` provides module and symbol inventories to avoid rediscovery.
 - Delegate separable evidence collection to `retriever` by default. You still own the Blueprint, edits, and verification. Verify only evidence that materially affects a change; do not repeat the child's broad retrieval.
-- In BLUEPRINT mode use batch/CodeMode, then `retriever`, then direct short reads; parallel read/search calls are the final fallback and Bash/Python remain disallowed commands. In EXECUTE mode use batch/CodeMode or a focused read-only script, then `retriever`, then direct short reads, with parallel calls last.
+- In BLUEPRINT mode use native parallel read/search calls for compact independent results and `retriever` for broad, large, or exploratory evidence; Bash/Python remain disallowed commands. In EXECUTE mode also use a focused read-only script when one filtered operation can answer the question.
 
 ## Modes
 

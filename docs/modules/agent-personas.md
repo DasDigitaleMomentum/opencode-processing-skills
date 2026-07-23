@@ -49,11 +49,11 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Delegate.What You Do` | section | internal | `agents/delegate.md:18` | Enumerates the supported analysis, review, remediation, command, and artifact-writing task categories. |
 | `Delegate.Informal Scope Reminder` | policy | public | `agents/delegate.md:31` | Prevents gold-plating and adversarial scope expansion while preserving evidence-backed defect discovery. |
 | `Delegate.How You Work` | workflow | public | `agents/delegate.md:42` | Makes retriever delegation the default for separable evidence while keeping synthesis and decisive verification with the parent. |
-| `Delegate.Tool Preferences` | policy | internal | `agents/delegate.md:53` | Prefers batch/script, then retriever isolation, then decisive direct reads, with parallel calls last. |
+| `Delegate.Tool Preferences` | policy | internal | `agents/delegate.md:53` | Chooses scripts for filterable results, native parallel calls for compact results, and retriever isolation for broad or exploratory evidence. |
 | `Delegate.Constraints` | policy | public | `agents/delegate.md:60` | Sets the default read/analyze boundary, exceptions for explicit artifacts and `review-fix`, Blueprint expectations, and the Git prohibition. |
 | `Retriever frontmatter` | frontmatter | public | `agents/retriever.md:1` | Denies edits and further tasks while leaving read, search, Bash, crawl, and other evidence tools available. |
 | `Retriever` | persona | public | `agents/retriever.md:11` | Establishes focused evidence retrieval for maintainers, delegates, and implementers. |
-| `Retriever.How You Work` | workflow | public | `agents/retriever.md:15` | Gives freedom across file, command, tool-output, and known-URL retrieval while routing open-ended web research back to delegates. |
+| `Retriever.How You Work` | workflow | public | `agents/retriever.md:15` | Chooses scripts or native parallel calls as useful across file, command, tool-output, and known-URL retrieval while routing open-ended web research back to delegates. |
 | `Retriever.Constraints` | policy | public | `agents/retriever.md:27` | Leaves judgment, Blueprints, changes, verification, and final artifacts with the parent. |
 | `Doc Explorer frontmatter` | frontmatter | public | `agents/doc-explorer.md:1` | Declares subagent mode, permits only doc-explorer self-delegation, and allowlists documentation/planning skills. |
 | `Doc Explorer` | persona | public | `agents/doc-explorer.md:19` | Establishes the codebase-anchored writer for documentation and selected skill-governed planning artifacts. |
@@ -66,7 +66,7 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Implementer frontmatter` | frontmatter | public | `agents/implementer.md:1` | Declares execution-only subagent mode, broad edit permission, leaf-retriever access, and exclusive skill access to `execute-work-package`. |
 | `Implementer` | persona | public | `agents/implementer.md:18` | Establishes the execution-only role used by the primary orchestrator. |
 | `Implementer.Ground Truth` | section | public | `agents/implementer.md:22` | Makes the execution skill and its templates authoritative for the gated protocol. |
-| `Implementer.Inputs` | section | public | `agents/implementer.md:31` | Uses batch/CodeMode first and retriever evidence by default for separable work, while retaining execution ownership. |
+| `Implementer.Inputs` | section | public | `agents/implementer.md:31` | Uses native parallel reads for compact results and retriever evidence for broad or exploratory work while retaining execution ownership. |
 | `Implementer.Modes` | workflow | public | `agents/implementer.md:38` | Separates Blueprint and Execute into distinct primary task calls. |
 | `Implementer.MODE: BLUEPRINT` | workflow | public | `agents/implementer.md:42` | Produces the execution step list without commands, edits, or premature execution. |
 | `Implementer.MODE: EXECUTE` | workflow | public | `agents/implementer.md:56` | Applies an approved Blueprint, requires an approval token, and emits the canonical digest. |
@@ -117,7 +117,7 @@ This module is the canonical source for the interactive and non-interactive prim
 1. The installer deploys `maintainer.md` and `maintainer-direct.md` as selectable primary agents and installs the five subagent personas. It may add configured model fields or generate `delegate-*` aliases without changing the canonical persona body.
 2. A primary agent begins from persistent `docs/**` and `plans/**` artifacts, loads the matching workflow skill, and selects a role according to the task's risk and context cost.
 3. Task permissions admit only declared personas. The primary sends paths and a focused objective; the receiving persona loads the skill that owns the task contract rather than relying on pasted history.
-4. An agent prefers CodeMode/batch tools or focused read-only extraction, then sends separable multi-source or exploratory evidence to leaf `retriever` by default. It reads only authoritative scope and decisive evidence directly; parallel calls are last. The parent retains judgment, artifact, and execution ownership.
+4. An agent uses read-only extraction for filterable results, native parallel calls for compact independent results, and leaf `retriever` for broad, large, exploratory, or mostly irrelevant raw evidence. It reads only authoritative scope and decisive evidence directly. The parent retains judgment, artifact, and execution ownership.
 5. `delegate` returns analysis or writes an explicitly templated artifact, `doc-explorer` maintains allowed documentation/planning files, `implementer` performs approved code execution, and `legacy-curator` writes only the legacy archive.
 6. Subagents return compact status or digests. Retriever output has no fixed numeric read/output limits: it stays concise by returning only useful evidence, or states that the approach was not useful and recommends another route.
 7. Selected subagent bodies are also consumed by the [Cursor Adapter](cursor-adapter.md), which strips OpenCode frontmatter and maps the canonical personas onto Cursor Task types.

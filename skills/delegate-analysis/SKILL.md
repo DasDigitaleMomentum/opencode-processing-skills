@@ -43,7 +43,7 @@ Use one of the following modes. The primary should name the mode, scope, and que
 
 - Default to read/analyze/verify. Do not edit files.
 - Stay within the delegated scope.
-- Use batch/CodeMode or a focused read-only script when one filtered operation can answer the question. Delegate separable multi-source or exploratory evidence collection to `retriever` by default. Read directly only central authoritative artifacts, short required sections, and decisive evidence; parallel tool calls are the final fallback.
+- Use a focused read-only script when one filtered operation can answer the question, and native parallel calls for a small set of independent, compact results. Delegate broad, large, exploratory, or mostly irrelevant raw evidence to `retriever` by default. Read directly only central authoritative artifacts, short required sections, and decisive evidence.
 - The parent owns synthesis and verifies only evidence that materially supports its conclusions rather than repeating broad retrieval.
 - If the task becomes a review, artifact authoring task, or implementation task, stop and ask the primary to route through the matching skill.
 - Return a compact digest, not raw file contents or long logs.
