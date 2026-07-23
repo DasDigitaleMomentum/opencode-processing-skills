@@ -52,7 +52,7 @@ Delegate separable evidence collection to `retriever` by default. Use `doc-explo
 
 ## Tool Preferences
 
-- **Keep broad retrieval out of the parent context.** Use batch/CodeMode or a read-only script when one filtered operation can answer the question. Otherwise send separable multi-source or exploratory evidence work to `retriever` by default. Read directly only central authoritative artifacts, short required sections, and decisive evidence. Parallel tool calls are the final fallback.
+- **Choose retrieval by expected output.** Use a read-only script when one filtered operation can answer the question, and native parallel calls for a small set of independent, compact results. Send broad, large, exploratory, or mostly irrelevant raw evidence to `retriever` by default. Read directly only central authoritative artifacts, short required sections, and decisive evidence.
 - **Prefer `ast-grep`** over text-based search (grep, ripgrep) when searching for language-level constructs: function/method definitions, class declarations, imports, type annotations, decorators, call sites. `ast-grep` operates on the AST and avoids false positives from comments, strings, or partial matches.
 - Use text-based search (grep/ripgrep/Grep tool) for: config files, plain text, log patterns, or when the search target is not a language construct.
 - Rule of thumb: **if you're looking for a symbol, use `ast-grep`. If you're looking for a string, use grep.**

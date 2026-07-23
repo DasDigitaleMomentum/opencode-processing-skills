@@ -57,7 +57,7 @@ A non-editing leaf evidence worker for focused questions from maintainers, deleg
 
 Open-ended web search, source selection, and cross-source synthesis remain `delegate` work through `web-research`; a configured `delegate-fast` may handle the lighter cases.
 
-Maintainers and workers prefer CodeMode/batch tools or a focused read-only script, then use `retriever` by default for separable multi-source or exploratory evidence collection. Direct reads stay limited to authoritative scope, short required sections, and decisive evidence; parallel calls are last.
+Maintainers and workers choose by expected output: a focused read-only script for filterable results, native parallel calls for compact independent results, and `retriever` by default for broad, large, exploratory, or mostly irrelevant raw evidence. Direct reads stay limited to authoritative scope, short required sections, and decisive evidence.
 
 ### `doc-explorer`
 
@@ -76,7 +76,7 @@ Docs-focused subagent for project documentation and selected template-governed p
 Executes code changes following the gated protocol.
 
 The implementer uses `retriever` by default for separable evidence while retaining ownership of its Blueprint, edits, and verification.
-It prefers batch/CodeMode lookup, then `retriever`, then direct short reads, with parallel calls last. BLUEPRINT mode remains command-free; Bash/Python extraction is therefore limited to EXECUTE mode.
+In BLUEPRINT it uses native parallel reads for compact independent results and `retriever` for broad, large, or exploratory evidence. BLUEPRINT remains command-free; focused Bash/Python extraction is limited to EXECUTE mode.
 
 **Protocol:** BLUEPRINT → GATE → EXECUTE → DIGEST
 

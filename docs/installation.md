@@ -114,7 +114,7 @@ Maintainers can call `retriever` at level 1; delegates, reviewers, and implement
 
 `install.sh` prints this version-aware reminder after installation. It does not locate or modify OpenCode runtime JSON/JSONC.
 
-When supported by the runtime, agents prefer a batch/CodeMode facility or a focused read-only extraction script, then send separable multi-source or exploratory evidence to `retriever` by default. Direct reads stay decisive and parallel tool calls come last. Current OpenCode versions expose an optional batch tool through `experimental.batch_tool`.
+Agents use a focused read-only extraction script when results can be filtered in one operation, native parallel calls for compact independent results, and `retriever` by default for broad, large, exploratory, or mostly irrelevant raw evidence. Direct reads stay limited to authoritative scope and decisive evidence.
 
 ---
 
