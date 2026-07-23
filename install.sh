@@ -1045,6 +1045,7 @@ echo "Next steps:"
 echo "  1. In OpenCode, select the new primary agent (e.g. '@maintainer')"
 echo "  2. Generate project documentation: load the 'generate-docs' skill"
 echo "  3. Create an implementation plan: load the 'create-plan' skill"
+echo "  4. For nested delegation, configure the top-level OpenCode runtime setting: subagent_depth: 2"
 if [ -n "$CURSOR_TARGET_HOME" ]; then
     echo ""
     echo "Cursor:"

@@ -19,7 +19,7 @@ The orchestrator. Handles planning decisions, user interaction, and Git operatio
 
 **When it works itself vs. delegates:**
 - Works itself: planning decisions, user negotiation, and bounded low-risk changes in known files
-- Delegates: codebase exploration, doc generation, implementation, reviews
+- Delegates: focused evidence retrieval, codebase exploration, doc generation, implementation, reviews
 
 ### `maintainer-direct`
 
@@ -37,15 +37,27 @@ The one canonical, skill-driven delegate persona. Skills provide task expertise,
 - Codebase exploration
 - Running commands (tests, builds, verification)
 - Analyzing data or logs
-- Quick lookups and research
+- Research and synthesis
 
 **Write boundary:** `delegate` is read/analyze/verify by default. It may write skill-defined artifacts with explicit output paths/templates, such as reviews and implementation plans. Larger ad-hoc writes with undefined shape/targets should start with an informal Blueprint for primary approval. Code changes normally route to `implementer`; delegates do not perform Git operations.
 
 After an implementation or implementation-plan review, `review-fix` is the preferred same-session remediation path for accepted related findings, including multi-file runtime changes. The review artifact remains unchanged. A new implementation or authoring session is reserved for changed scope/objective, missing context, new primary decisions, or an explicit fresh perspective.
 
+Delegates and reviewers may send bounded evidence questions to `retriever`, and may call `doc-explorer` only for genuinely documentation- or module-oriented child tasks. The parent still owns synthesis, verdicts, severity, scope interpretation, and final artifacts, and directly verifies evidence material to a finding.
+
 **Model:** Configured via `config.yaml`. Defaults to provider's choice if not set.
 
 **Why it exists:** The built-in `general` uses the provider's default model. `delegate` uses your configured model — cheaper, faster, and predictable for routine tasks.
+
+### `retriever`
+
+A non-editing leaf evidence worker for focused questions from maintainers, delegates, or implementers. It may use Read, Grep, Glob, Bash, available web crawlers for known URLs, and logs or other tool output. It returns concise paths, symbols, line references, or command evidence; if an approach was not useful, it recommends a better route instead of padding the result.
+
+`retriever` does not synthesize verdicts, assign severity, write artifacts, or delegate further. Concision is usefulness-driven; there are no fixed numeric read or output limits.
+
+Open-ended web search, source selection, and cross-source synthesis remain `delegate` work through `web-research`; a configured `delegate-fast` may handle the lighter cases.
+
+Maintainers and workers prefer CodeMode/batch tools or a small read-only script for independent lookups, then use `retriever` when a separate evidence context helps. Parallel tool calls are the fallback when neither route fits.
 
 ### `doc-explorer`
 
@@ -62,6 +74,9 @@ Docs-focused subagent for project documentation and selected template-governed p
 ### `implementer`
 
 Executes code changes following the gated protocol.
+
+The implementer may use `retriever` for bounded evidence while retaining ownership of its Blueprint, edits, and verification.
+It prefers batch/CodeMode lookup, then `retriever`, with parallel calls as fallback. BLUEPRINT mode remains command-free; Bash/Python extraction is therefore limited to EXECUTE mode.
 
 **Protocol:** BLUEPRINT → GATE → EXECUTE → DIGEST
 
@@ -104,11 +119,12 @@ accepted work. Real defects must still be reported and fixed.
 
 **Separation of concerns.** Subagents write according to workflow ownership: docs-focused artifacts, skill-defined review/implementation-plan artifacts, or gated code execution. The primary orchestrates and owns the conversation.
 
-### When to use `delegate` vs `general`
+### When to use `retriever`, `delegate`, or `general`
 
 | Agent | Model | Use when |
 |-------|-------|----------|
-| `delegate` | Your config | Default for routine tasks |
+| `retriever` | Your config | Scoped files, tool output, commands, or known-URL crawling |
+| `delegate` | Your config | Analysis, open-ended research, synthesis, and artifacts |
 | `general` (built-in) | Provider default | User explicitly asks, or you want a different perspective |
 
 ### Stateful delegate reuse
@@ -121,7 +137,7 @@ Additional delegates (`delegate-strong`, `delegate-fast`, etc.) are generated mo
 
 ```
 > use delegate-strong for this review
-> delegate to delegate-fast for a quick lookup
+> use delegate-fast for this routine analysis
 ```
 
 See [Installation → Additional Delegate Variants](installation.md#additional-delegate-variants) for setup.
@@ -141,11 +157,14 @@ You ──prompt──▸ @maintainer ──delegates──▸ subagents
                                          when you ask)
 
 Delegation targets:
+  retriever ........ focused read-only evidence collection
   delegate ......... exploration, research, reviews, implementation plans
   doc-explorer ..... docs/ and selected skill-governed plans/ artifacts
   implementer ...... code changes (gated execution)
   legacy-curator ... docs-legacy/ archive
   general (built-in) second opinion, user-requested
 ```
+
+Maintainers call `retriever` at delegation level 1. Delegates, reviewers, and implementers may call it at level 2; delegates may also call `doc-explorer` at level 2 for documentation/module child tasks. OpenCode therefore needs the top-level runtime setting `subagent_depth: 2`; see [Installation → Nested Delegation](installation.md#nested-delegation-opencode).
 
 The file structure IS the interface. Framework docs/plans persist in `docs/` and `plans/`, and the primary reads from them. No magic state, no hidden context — just files.

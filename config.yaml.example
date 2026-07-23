@@ -76,6 +76,9 @@ targets:
 delegate:
   model: openai/gpt-5.6-sol
   reasoningEffort: medium
+retriever:
+  model: openai/gpt-5.6-luna
+  reasoningEffort: high
 doc-explorer:
   model: openai/gpt-5.6-sol
   reasoningEffort: medium
@@ -93,12 +96,12 @@ legacy-curator: openai/gpt-5.6-luna
 # variants change model capacity only:
 #
 #   - delegate-strong:  frontier model for independent reviews / hardest problems
-#   - delegate-fast:    lightweight model for quick lookups
+#   - delegate-fast:    lightweight model for routine delegate work
 #   - delegate-codex:   code-specialized model for implementation analysis
 #
 # The primary agent can then target a specific variant:
 #   "use delegate-strong for this review"
-#   "delegate to delegate-fast for a quick lookup"
+#   "use delegate-fast for this routine analysis"
 #
 # Two syntaxes are supported:
 #

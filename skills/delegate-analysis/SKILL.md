@@ -22,7 +22,7 @@ Use one of the following modes. The primary should name the mode, scope, and que
 
 ### `targeted-reading`
 
-- Read all named files, in parallel where possible.
+- Use the named files as scoped starting points and retrieve only what answers the question.
 - Extract only the facts needed to answer the question.
 - Organize the result by topic or file, with line references where useful.
 
@@ -31,6 +31,7 @@ Use one of the following modes. The primary should name the mode, scope, and que
 - Prefer authoritative primary sources.
 - Cross-check important claims when practical.
 - Return a concise synthesis with source URLs and explicit uncertainty.
+- This is delegate work: use `retriever` only to crawl or fetch already-selected sources, not for open-ended search, source selection, or cross-source judgment.
 
 ### `deep-dive`
 
@@ -42,6 +43,7 @@ Use one of the following modes. The primary should name the mode, scope, and que
 
 - Default to read/analyze/verify. Do not edit files.
 - Stay within the delegated scope.
-- Use parallel tool calls for independent reads or searches.
+- Prefer a runtime batch/CodeMode facility or a small read-only Bash/Python extraction for independent reads or searches. Otherwise use `retriever` for bounded evidence collection. Use parallel tool calls only as the fallback.
+- The parent owns synthesis and directly verifies evidence that matters to its conclusions.
 - If the task becomes a review, artifact authoring task, or implementation task, stop and ask the primary to route through the matching skill.
 - Return a compact digest, not raw file contents or long logs.

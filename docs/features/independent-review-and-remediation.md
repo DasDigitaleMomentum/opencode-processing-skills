@@ -2,7 +2,7 @@
 type: documentation
 entity: feature
 feature: "independent-review-and-remediation"
-version: 1.0
+version: 1.1
 ---
 
 # Feature: Independent Review and Remediation
@@ -20,7 +20,7 @@ Each review workflow defines its own focus, references, immutable output artifac
 ### User Flow
 
 1. The user or maintainer requests an independent quality gate for a completed plan, phase implementation plan, or implementation.
-2. A fresh review delegate reads the governing artifact, requirements, code or tests as applicable, and writes the template-governed review in the selected plan's `reviews/` directory.
+2. A fresh review delegate evaluates the authoritative scope and may use leaf `retriever` for bounded evidence, or `doc-explorer` for a genuinely documentation/module-oriented child task where the prompt permits it.
 3. The delegate returns a compact verdict and stable finding IDs; the maintainer presents decisions that genuinely need user input.
 4. For accepted implementation-plan or implementation findings, the maintainer resumes the same reviewer session with `review-fix` and the explicit finding IDs.
 5. The reviewer changes only the approved scope, verifies it, returns a digest, and leaves the original review artifact unchanged.
@@ -28,7 +28,7 @@ Each review workflow defines its own focus, references, immutable output artifac
 ### Technical Flow
 
 1. `review-plan`, `review-implementation-plan`, or `review-implementation` prepares authoritative references and starts a fresh delegate (`skills/review-plan/SKILL.md:79`, `skills/review-implementation-plan/SKILL.md:80`, `skills/review-implementation/SKILL.md:82`).
-2. The delegate checks only the review type's defined concerns and writes findings through its normative review template and output contract (`skills/review-plan/SKILL.md:116`, `skills/review-implementation-plan/SKILL.md:118`, `skills/review-implementation/SKILL.md:123`).
+2. The delegate checks only the review type's defined concerns, directly verifies evidence material to a finding, and owns synthesis, severity, verdict, and the final review artifact.
 3. The maintainer triages the stable finding IDs; review does not imply automatic remediation.
 4. `review-fix` resumes the same implementation or implementation-plan reviewer, applies only accepted related findings under its write boundary, and verifies the result (`skills/review-fix/SKILL.md:44`, `skills/review-fix/SKILL.md:61`).
 5. Further independent re-review occurs only when explicitly requested or justified by changed scope, missing context, or a genuine risk decision (`skills/review-fix/SKILL.md:79`).
@@ -39,8 +39,8 @@ Each review workflow defines its own focus, references, immutable output artifac
 |--------|---------|------|
 | [Workflow Skills](../modules/workflow-skills.md) | `review-plan` Workflow (`skills/review-plan/SKILL.md:79`), `review-implementation-plan` Workflow (`skills/review-implementation-plan/SKILL.md:80`), `review-implementation` Workflow (`skills/review-implementation/SKILL.md:82`) | Defines independent evidence collection, artifact schemas, severity findings, and verdicts for each gate. |
 | [Workflow Skills](../modules/workflow-skills.md) | `review-fix` Protocol (`skills/review-fix/SKILL.md:44`), Write Boundary (`skills/review-fix/SKILL.md:61`) | Reuses reviewer context to remediate explicitly accepted related findings. |
-| [Agent Personas](../modules/agent-personas.md) | `delegate` What You Do (`agents/delegate.md:16`), Constraints (`agents/delegate.md:56`) | Supplies the canonical skill-driven review persona and honors skill-defined artifact/write contracts. |
-| [Agent Personas](../modules/agent-personas.md) | `maintainer` Additional skill loops (`agents/maintainer.md:151`), Delegate Session Reuse (`agents/maintainer.md:81`) | Chooses optional gates, tracks task identity, and prevents unrequested review loops. |
+| [Agent Personas](../modules/agent-personas.md) | `delegate` What You Do (`agents/delegate.md:18`), How You Work (`agents/delegate.md:42`), `retriever` Constraints (`agents/retriever.md:27`) | Keeps review ownership with the delegate while permitting bounded leaf evidence collection. |
+| [Agent Personas](../modules/agent-personas.md) | `maintainer` Additional skill loops (`agents/maintainer.md:153`), Delegate Session Reuse (`agents/maintainer.md:82`) | Chooses optional gates, tracks task identity, and prevents unrequested review loops. |
 
 ## Configuration
 
@@ -50,6 +50,7 @@ Review workflow selection is request-driven, not controlled by an environment fl
 
 - Reviews are optional quality gates and never start automatically after every authoring or execution step.
 - Findings must be evidence-backed and relevant to correctness, security, acceptance, or the reviewed objective; speculative gold-plating is out of scope.
+- Retriever output is supporting evidence, not a verdict; the reviewer verifies material claims and reports when a retrieval route was not useful.
 - `review-fix` applies to implementation and implementation-plan reviews, not plan-review edits, and requires explicit accepted finding IDs.
 - The original review artifact is immutable during remediation so its evidence and verdict remain auditable.
 - Changed objectives, unavailable reviewer context, or a requested fresh perspective require a new appropriately scoped session rather than forced reuse.

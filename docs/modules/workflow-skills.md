@@ -47,9 +47,9 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `skills/create-plan/tpl-plan.md` | file | Canonical high-level plan artifact for objective, requirements, scope, DoD, phases, risks, and changelog. |
 | `skills/create-plan/tpl-todo.md` | file | Canonical persistent todo artifact with phase context, status buckets, and changelog. |
 | `skills/delegate-analysis/` | dir | Read/analyze/verify package for routine delegated investigation. |
-| `skills/delegate-analysis/SKILL.md` | file | Defines code-exploration, targeted-reading, web-research, and deep-dive modes with compact evidence-based returns. |
+| `skills/delegate-analysis/SKILL.md` | file | Defines four analysis modes, the lookup order batch/script → retriever → parallel fallback, and keeps open-ended web research with the delegate. |
 | `skills/execute-work-package/` | dir | Stateful, gated implementation-execution package. |
-| `skills/execute-work-package/SKILL.md` | file | Defines the two-call BLUEPRINT, GATE, EXECUTE, and DIGEST protocol and its verification and coding invariants. |
+| `skills/execute-work-package/SKILL.md` | file | Defines the gated protocol, mode-aware batch/retriever/parallel lookup order, and verification invariants. |
 | `skills/execute-work-package/tpl-execution-blueprint.md` | file | Canonical concrete step-list contract returned before the execution gate. |
 | `skills/execute-work-package/tpl-execution-digest.md` | file | Canonical compact outcome, edit, verification, and next-step digest. |
 | `skills/execute-work-package/tpl-implementer-execute-prompt.md` | file | Resume prompt that locks the implementer into EXECUTE mode with an approved step list. |
@@ -70,15 +70,15 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `skills/review-implementation-plan/` | dir | Independent implementation-plan review package. |
 | `skills/review-implementation-plan/SKILL.md` | file | Defines a fresh code-grounded review of scope alignment, feasibility, actionability, testing, and reality-check accuracy. |
 | `skills/review-implementation-plan/tpl-impl-plan-review.md` | file | Canonical severity-rated implementation-plan review artifact. |
-| `skills/review-implementation-plan/tpl-review-impl-plan-prompt.md` | file | Delegation prompt that supplies review focus, plan references, actual-code checks, and the review output path. |
+| `skills/review-implementation-plan/tpl-review-impl-plan-prompt.md` | file | Delegation prompt that supplies review scope and permits bounded retriever or documentation-oriented child tasks under reviewer ownership. |
 | `skills/review-implementation/` | dir | Independent completed-implementation review package. |
 | `skills/review-implementation/SKILL.md` | file | Defines implementation review against acceptance criteria, code changes, verification, real-world testing, integrity, and regression risk. |
 | `skills/review-implementation/tpl-impl-review.md` | file | Canonical severity-rated implementation review artifact with evidence and test-integrity sections. |
-| `skills/review-implementation/tpl-review-impl-prompt.md` | file | Delegation prompt for inspecting the completed implementation, diff, tests, and execution evidence. |
+| `skills/review-implementation/tpl-review-impl-prompt.md` | file | Delegation prompt for inspecting changes and optionally collecting bounded evidence while the reviewer owns findings and verdict. |
 | `skills/review-plan/` | dir | Independent high-level plan review package. |
 | `skills/review-plan/SKILL.md` | file | Defines fresh review of requirement coverage, scope, DoD, phases, testing, and plan completeness. |
 | `skills/review-plan/tpl-plan-review.md` | file | Canonical severity-rated plan review artifact. |
-| `skills/review-plan/tpl-review-plan-prompt.md` | file | Delegation prompt that fixes plan references, focus, criteria, output path, and compact return contract. |
+| `skills/review-plan/tpl-review-plan-prompt.md` | file | Delegation prompt that defines authoritative plan scope and optional bounded retrieval under reviewer ownership. |
 | `skills/update-docs/` | dir | Incremental project-documentation maintenance package. |
 | `skills/update-docs/SKILL.md` | file | Defines mapping code changes to affected module, feature, and overview documents while preserving manual additions. |
 | `skills/update-docs/tpl-feature-documentation.md` | file | Expected feature-document shape that incremental updates must preserve. |
@@ -143,7 +143,7 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 
 1. A user request matches a skill's `name` and `description` frontmatter, causing the harness or maintainer to load that package's `SKILL.md`.
 2. The skill identifies the owning role, required inputs, read/write boundary, ordered workflow, and output contract. Where a delegate is involved, the primary fills the package's prompt template with paths and decisions rather than copying source content into chat.
-3. The owning agent reads repository evidence and the relevant bundled artifact template. Documentation and planning workflows write canonical files beneath a target repository's `docs/` or `plans/`; execution workflows alter code only after their gate; read-only workflows return a compact briefing or analysis.
+3. The owning agent reads repository evidence and the relevant bundled artifact template. Delegates/reviewers and implementers may use `retriever` for bounded evidence; delegates may use `doc-explorer` only for documentation/module child tasks. The parent verifies material evidence and retains judgment, artifact, and execution ownership.
 4. Review workflows persist independent findings, and `review-fix` can feed accepted findings back into the same reviewer session without changing the immutable review artifact. Plan maintenance and handover skills then synchronize durable status and context.
 5. Later sessions use `resume-plan` and the persisted file graph to restore context. The installer distributes the same self-contained skill packages to each enabled harness, while harness-specific agent/tool semantics remain outside this module.
 

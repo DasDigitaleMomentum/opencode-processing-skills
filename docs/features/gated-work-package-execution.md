@@ -15,7 +15,7 @@ A significant implementation unit is executed through a visible blueprint, an ex
 
 ## How It Works
 
-`execute-work-package` binds a specific phase or major slice to one `implementer` session. The implementer first returns an auditable step list without editing; after approval, the same session performs the work and verification, then reports changed paths, tests, and remaining issues in a bounded digest.
+`execute-work-package` binds a work package to one `implementer` session. The implementer prefers batch/CodeMode lookup, then leaf-retriever evidence, with parallel calls as fallback; it returns an auditable step list before the same approved session performs the work and verification.
 
 ### User Flow
 
@@ -27,19 +27,19 @@ A significant implementation unit is executed through a visible blueprint, an ex
 
 ### Technical Flow
 
-1. The primary assembles the mandatory work-package inputs and starts the stateful protocol (`skills/execute-work-package/SKILL.md:75`, `skills/execute-work-package/SKILL.md:109`).
-2. In BLUEPRINT mode, the implementer inspects context and returns ordered steps, files, verification commands, and risk notes without writing code (`skills/execute-work-package/SKILL.md:129`, `agents/implementer.md:39`).
+1. The primary assembles the mandatory work-package inputs and starts the stateful protocol (`skills/execute-work-package/SKILL.md:78`, `skills/execute-work-package/SKILL.md:110`).
+2. In BLUEPRINT mode, the implementer prefers command-free batch/CodeMode lookup, then `retriever`, with parallel read/search calls as fallback, and returns ordered steps without writing code (`skills/execute-work-package/SKILL.md:132`, `agents/implementer.md:42`).
 3. The primary checks the blueprint against scope and explicitly gates execution.
-4. The same `task_id` resumes in EXECUTE mode; the implementer applies the accepted work and runs the planned verification (`skills/execute-work-package/SKILL.md:147`, `agents/implementer.md:53`).
-5. The implementer returns the required digest, and the primary selects success, failure, or blocked post-processing without manufacturing a green result (`skills/execute-work-package/SKILL.md:159`, `skills/execute-work-package/SKILL.md:168`).
+4. The same `task_id` resumes in EXECUTE mode; the implementer applies the accepted work and runs the planned verification (`skills/execute-work-package/SKILL.md:150`, `agents/implementer.md:56`).
+5. The implementer returns the required digest, and the primary selects success, failure, or blocked post-processing without manufacturing a green result (`skills/execute-work-package/SKILL.md:162`, `skills/execute-work-package/SKILL.md:171`).
 
 ## Implementation
 
 | Module | Symbols | Role |
 |--------|---------|------|
-| [Workflow Skills](../modules/workflow-skills.md) | `execute-work-package` Protocol (`skills/execute-work-package/SKILL.md:107`), Step List Contract (`skills/execute-work-package/SKILL.md:190`), Digest Contract (`skills/execute-work-package/SKILL.md:204`) | Defines routing, statefulness, gate semantics, and bounded return contracts. |
-| [Agent Personas](../modules/agent-personas.md) | `implementer` MODE: BLUEPRINT (`agents/implementer.md:39`), MODE: EXECUTE (`agents/implementer.md:53`), Hard Constraints (`agents/implementer.md:67`) | Performs the two execution turns, verifies changes, and avoids Git/docs/plan ownership. |
-| [Agent Personas](../modules/agent-personas.md) | `maintainer` Execution Summary (`agents/maintainer.md:157`), Work Tracking (`agents/maintainer.md:173`) | Owns the gate, user communication, and persistent post-processing. |
+| [Workflow Skills](../modules/workflow-skills.md) | `execute-work-package` Protocol (`skills/execute-work-package/SKILL.md:110`), Step List Contract (`skills/execute-work-package/SKILL.md:193`), Digest Contract (`skills/execute-work-package/SKILL.md:207`) | Defines routing, statefulness, gate semantics, and bounded return contracts. |
+| [Agent Personas](../modules/agent-personas.md) | `implementer` Inputs (`agents/implementer.md:31`), MODE: BLUEPRINT (`agents/implementer.md:42`), MODE: EXECUTE (`agents/implementer.md:56`) | Performs the two execution turns, may gather bounded leaf evidence, verifies changes, and avoids Git/docs/plan ownership. |
+| [Agent Personas](../modules/agent-personas.md) | `maintainer` Execution Summary (`agents/maintainer.md:159`), Work Tracking (`agents/maintainer.md:175`) | Owns the gate, user communication, and persistent post-processing. |
 | [Cursor Adapter](../modules/cursor-adapter.md) | Gated implementation mapping (`cursor/task-delegation.md:53`) | Maps the two-turn protocol to Cursor `Task` plus `resume`. |
 
 ## Configuration
