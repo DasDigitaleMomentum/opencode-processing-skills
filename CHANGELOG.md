@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.5.2 — 2026-07-24
+
+### Changed
+- **Bulk evidence handling**: Large uncurated logs, verbose command output, generated dumps, and mass-grep results are spooled or routed to the retriever instead of being ingested into the owning agent's working context.
+- **Retriever evidence assembly**: The retriever may consume complete raw artifacts and assemble coherent multi-file evidence with referenced synthesis.
+
 ## 0.5.1 — 2026-07-21
 
 ### Fixed

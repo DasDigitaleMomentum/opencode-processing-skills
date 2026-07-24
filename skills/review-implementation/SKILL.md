@@ -77,6 +77,8 @@ The reviewer must be independent from both the planner and the implementer. `del
 - **Primary**: owns the decision of whether to accept, request rework, or reject.
 - **delegate-strong/general**: performs the review, including code examination and test verification.
 
+The reviewer directly reads scoped source, authoritative plans/docs, symbols, and compact targeted evidence. It keeps uncurated bulk evidence out of its working context: use a reliable focused filter when sufficient, otherwise route the raw artifact, command, or path plus a focused question to `retriever`. This includes verbose diffs, command/test output, logs, generated dumps, broad searches, and coherent multi-file evidence. Numeric tool truncation is a safety net, not the routing rule.
+
 ---
 
 ## Workflow
@@ -143,6 +145,7 @@ The review artifact `plans/<name>/reviews/impl-review-phase-N.md` MUST:
 - Do not discard the reviewer `task_id` until the primary has decided whether remediation is needed.
 - Ensure the `reviews/` directory exists before delegating (create if needed).
 - **Test quality is a first-class concern.** A review that only checks "tests pass" without evaluating test meaningfulness is incomplete.
+- Owning review and test verification does not imply consuming raw verbose output directly. Potentially verbose output should be spooled under `/tmp/opencode/`, with only path, command, exit status, and compact metadata/evidence retained; use focused filtering or `retriever` for analysis.
 - Flag mock-only testing as a limitation unless the user explicitly waived real-world testing.
 
 ---

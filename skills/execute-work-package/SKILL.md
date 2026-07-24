@@ -58,7 +58,8 @@ Do **not** use this skill to:
   - First returns a **step list**.
   - After approval, executes those steps and returns a **digest**.
   - Uses `retriever` by default for separable evidence collection while retaining ownership of the Blueprint, edits, and verification.
-  - Uses native parallel reads for compact independent results and retriever evidence for broad, large, or exploratory work. BLUEPRINT remains command-free; EXECUTE may also use a focused read-only extraction within approved scope.
+  - Directly reads scoped source and compact targeted evidence, but keeps uncurated bulk evidence out of its context. It uses reliable focused filtering when sufficient and `retriever` for complete raw or coherent multi-file evidence.
+  - BLUEPRINT remains command-free. In EXECUTE, potentially verbose output is spooled to a predictable path under `/tmp/opencode/`; the immediate context receives only path, command, exit status, and compact metadata/evidence.
   - Does not do Git operations.
 
 ## Routing Matrix (Who does what)
@@ -167,6 +168,8 @@ Subagent responds with a compact digest:
 - Files changed (paths)
 - Verification result (command + exit)
 - If failure: only a small, relevant excerpt (no full logs)
+
+Owning verification does not imply consuming raw verbose output directly. The implementer spools complete potentially verbose output under `/tmp/opencode/`, then uses a reliable focused filter or asks `retriever` to analyze the raw path with a focused question. Spools support same-machine continuation after an agent or process interruption, not reboot durability. Numeric tool truncation is a safety net, not the routing rule.
 
 ### 4) Primary post-processing
 

@@ -35,7 +35,9 @@ Then examine the **actual codebase changes**:
 - Verify each acceptance criterion against the actual code
 - Run or review test results
 
-Use `retriever` by default for separable diff, codebase, test, log, or reference evidence collection. Read the authoritative scope artifacts and decisive evidence for actual findings yourself. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; do not repeat the child's broad retrieval.
+Directly read scoped source, authoritative scope artifacts, symbols, and compact targeted evidence. Keep uncurated bulk evidence out of your context. For verbose diffs, command/test output, logs, generated dumps, broad searches, or coherent multi-file evidence, use a reliable focused filter when sufficient; otherwise give `retriever` the raw artifact, command, or path plus a focused question. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; do not repeat the child's broad retrieval. Numeric tool truncation is a safety net, not the routing rule.
+
+Spool potentially verbose commands to a predictable path under `/tmp/opencode/`. Keep only path, command, exit status, and compact metadata/evidence in your context; owning review does not imply consuming raw verbose output directly.
 
 ## Review Criteria
 

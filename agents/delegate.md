@@ -52,7 +52,8 @@ Delegate separable evidence collection to `retriever` by default. Use `doc-explo
 
 ## Tool Preferences
 
-- **Choose retrieval by expected output.** Use a read-only script when one filtered operation can answer the question, and native parallel calls for a small set of independent, compact results. Send broad, large, exploratory, or mostly irrelevant raw evidence to `retriever` by default. Read directly only central authoritative artifacts, short required sections, and decisive evidence.
+- **Keep uncurated bulk evidence out of your context.** Directly read scoped source, docs/plans, symbols, and compact targeted evidence. Use a reliable focused filter when sufficient; otherwise send the raw artifact, command, or path plus a focused question to `retriever`, including for verbose logs, command/test output, generated dumps, broad searches, or coherent multi-file evidence. Numeric tool truncation is only a safety net, not the routing rule.
+- For potentially verbose commands, spool complete output to a predictable path under `/tmp/opencode/` and retain only the path, command, exit status, and compact metadata/evidence. The spool supports same-machine continuation after an agent or process interruption, not reboot durability.
 - **Prefer `ast-grep`** over text-based search (grep, ripgrep) when searching for language-level constructs: function/method definitions, class declarations, imports, type annotations, decorators, call sites. `ast-grep` operates on the AST and avoids false positives from comments, strings, or partial matches.
 - Use text-based search (grep/ripgrep/Grep tool) for: config files, plain text, log patterns, or when the search target is not a language construct.
 - Rule of thumb: **if you're looking for a symbol, use `ast-grep`. If you're looking for a string, use grep.**
