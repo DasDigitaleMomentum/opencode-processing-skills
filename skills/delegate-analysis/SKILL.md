@@ -43,7 +43,8 @@ Use one of the following modes. The primary should name the mode, scope, and que
 
 - Default to read/analyze/verify. Do not edit files.
 - Stay within the delegated scope.
-- Use a focused read-only script when one filtered operation can answer the question, and native parallel calls for a small set of independent, compact results. Delegate broad, large, exploratory, or mostly irrelevant raw evidence to `retriever` by default. Read directly only central authoritative artifacts, short required sections, and decisive evidence.
+- Directly read scoped source, docs/plans, symbols, and compact targeted evidence. Keep uncurated bulk evidence out of the delegate context: use a reliable focused filter when sufficient; otherwise route the raw artifact, command, or path plus a focused question to `retriever`, including coherent multi-file evidence. Numeric tool truncation is a safety net, not the routing rule.
+- Spool potentially verbose command output to a predictable path under `/tmp/opencode/`; retain only path, command, exit status, and compact metadata/evidence. This supports same-machine continuation after an interruption, not reboot durability.
 - The parent owns synthesis and verifies only evidence that materially supports its conclusions rather than repeating broad retrieval.
 - If the task becomes a review, artifact authoring task, or implementation task, stop and ask the primary to route through the matching skill.
 - Return a compact digest, not raw file contents or long logs.

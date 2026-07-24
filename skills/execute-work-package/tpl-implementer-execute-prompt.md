@@ -18,6 +18,8 @@ Constraints:
 - Do NOT run Git operations.
 - Run the single verify command at the end.
 - Return an **Execution Digest** (no raw diffs/logs).
+- Keep uncurated bulk evidence out of your context while directly reading scoped source and compact targeted evidence.
+- Spool potentially verbose command and verification output to a predictable path under `/tmp/opencode/`. Retain only path, command, exit status, and compact metadata/evidence; use a reliable focused filter or ask `retriever` to analyze the complete raw artifact.
 
 Execution invariants (must):
 - You MUST perform at least one concrete action: apply a patch and/or run a command.

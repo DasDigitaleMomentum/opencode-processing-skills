@@ -21,6 +21,8 @@ The orchestrator. Handles planning decisions, user interaction, and Git operatio
 - Works itself: planning decisions, user negotiation, and bounded low-risk changes in known files
 - Delegates: focused evidence retrieval, codebase exploration, doc generation, implementation, reviews
 
+Maintainers may directly read scoped source, `docs/`/`plans/`, symbols, and compact targeted results. They keep uncurated bulk evidence out of the owning context: reliable focused filters are used when sufficient, while large logs, verbose command/test output, generated dumps, mass-search output, and evidence requiring broad assembly route to `retriever`.
+
 ### `maintainer-direct`
 
 Non-interactive variant of `maintainer`. It uses the same routing, safety, testing, and planning rules, but asks questions only for genuine decisions and otherwise reports progress directly.
@@ -43,7 +45,7 @@ The one canonical, skill-driven delegate persona. Skills provide task expertise,
 
 After an implementation or implementation-plan review, `review-fix` is the preferred same-session remediation path for accepted related findings, including multi-file runtime changes. The review artifact remains unchanged. A new implementation or authoring session is reserved for changed scope/objective, missing context, new primary decisions, or an explicit fresh perspective.
 
-Delegates and reviewers send separable evidence collection to `retriever` by default, and may call `doc-explorer` only for genuinely documentation- or module-oriented child tasks. The parent owns synthesis, verdicts, severity, scope interpretation, and final artifacts; it reads authoritative scope and decisive finding evidence without repeating broad child retrieval.
+Delegates and reviewers send separable evidence collection to `retriever` by default, and may call `doc-explorer` only for genuinely documentation- or module-oriented child tasks. They may directly read scoped source, authoritative docs/plans, symbols, and compact targeted evidence, but route uncurated bulk evidence or coherent multi-file collection to `retriever`. The parent owns synthesis, verdicts, severity, scope interpretation, and final artifacts without repeating broad child retrieval.
 
 **Model:** Configured via `config.yaml`. Defaults to provider's choice if not set.
 
@@ -51,13 +53,13 @@ Delegates and reviewers send separable evidence collection to `retriever` by def
 
 ### `retriever`
 
-A non-editing leaf evidence worker for focused questions from maintainers, delegates, or implementers. It may use Read, Grep, Glob, Bash, available web crawlers for known URLs, and logs or other tool output. It returns concise paths, symbols, line references, or command evidence; if an approach was not useful, it recommends a better route instead of padding the result.
+A non-editing leaf evidence worker for focused questions from maintainers, delegates, or implementers. It may use Read, Grep, Glob, Bash, available web crawlers for known URLs, and logs or other tool output. Unlike the owning agent, it is explicitly allowed to consume complete large raw artifacts when needed. It can assemble coherent evidence across definitions, call sites, configuration, tests, and observed behavior, then returns synthesis with concrete paths, symbols, line references, and command evidence rather than concatenated contents. If an approach was not useful, it recommends a better route instead of padding the result.
 
-`retriever` does not synthesize verdicts, assign severity, write artifacts, or delegate further. Concision is usefulness-driven; there are no fixed numeric read or output limits.
+`retriever` does not synthesize verdicts, assign severity, write artifacts, or delegate further. Concision is usefulness-driven; there is no universal hard numeric read or output cap. Numeric tool truncation remains a safety net, not the routing rule.
 
 Open-ended web search, source selection, and cross-source synthesis remain `delegate` work through `web-research`; a configured `delegate-fast` may handle the lighter cases.
 
-Maintainers and workers choose by expected output: a focused read-only script for filterable results, native parallel calls for compact independent results, and `retriever` by default for broad, large, exploratory, or mostly irrelevant raw evidence. Direct reads stay limited to authoritative scope, short required sections, and decisive evidence.
+Maintainers and workers directly read scoped source, docs/plans, symbols, and compact targeted results. A reliable focused filter may reduce raw evidence when it preserves the needed facts; otherwise broad searches, large or verbose output, generated dumps, and coherent multi-file evidence go to `retriever` with a focused question.
 
 ### `doc-explorer`
 
@@ -75,8 +77,8 @@ Docs-focused subagent for project documentation and selected template-governed p
 
 Executes code changes following the gated protocol.
 
-The implementer uses `retriever` by default for separable evidence while retaining ownership of its Blueprint, edits, and verification.
-In BLUEPRINT it uses native parallel reads for compact independent results and `retriever` for broad, large, or exploratory evidence. BLUEPRINT remains command-free; focused Bash/Python extraction is limited to EXECUTE mode.
+The implementer directly reads scoped source, docs/plans, symbols, and compact targeted results, and uses `retriever` for separable bulk or coherent multi-file evidence while retaining ownership of its Blueprint, edits, and verification.
+In BLUEPRINT it uses native parallel reads for compact independent results and `retriever` for broad, large, or exploratory evidence. BLUEPRINT remains command-free; focused Bash/Python extraction is limited to EXECUTE mode. In EXECUTE, potentially verbose command and verification output is spooled under `/tmp/opencode/` rather than ingested directly.
 
 **Protocol:** BLUEPRINT → GATE → EXECUTE → DIGEST
 
@@ -118,6 +120,10 @@ accepted work. Real defects must still be reported and fixed.
 **Cost predictability.** Subagents run on your configured model. The primary can use a frontier model for planning; subagents can use cheaper models for routine work.
 
 **Separation of concerns.** Subagents write according to workflow ownership: docs-focused artifacts, skill-defined review/implementation-plan artifacts, or gated code execution. The primary orchestrates and owns the conversation.
+
+### Raw command-output spooling
+
+Potentially verbose commands spool their complete output to a predictable path under `/tmp/opencode/`. The owning maintainer, delegate/reviewer, or implementer retains the path, command, exit status, and compact metadata or decisive evidence. It can use a reliable focused filter or ask `retriever` to inspect the complete artifact. The spool aids continuation after an agent or process interruption on the same machine, but it is temporary and is not reboot-durable.
 
 ### When to use `retriever`, `delegate`, or `general`
 

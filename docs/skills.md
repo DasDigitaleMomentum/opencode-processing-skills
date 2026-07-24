@@ -60,6 +60,8 @@ relevant to correctness, security, acceptance, or the reviewed objective — not
 gotchas or a pretext for extra work. This focus rule does not suppress real
 defects or required related fixes.
 
+Across analysis, review, and execution workflows, the owning maintainer, delegate/reviewer, or implementer may directly read scoped source, authoritative docs/plans, symbols, and compact targeted results. Large uncurated logs, verbose command/test output, generated dumps, mass-search output, and evidence requiring coherent multi-file assembly are reliably filtered or routed to `retriever` instead. There is no universal hard numeric read cap; tool truncation is only a safety net.
+
 **Key insight:** Phases define *what* and *why*. Implementation plans define *how*. This separation lets you change the technical approach without changing the scope.
 
 **Batch authoring:** You can author all implementation plans at once (e.g., "write all implementation plans for this plan"). The skill processes them sequentially (phase 1, then 2, etc.) and runs a consistency check at the end — shared interfaces, naming, data flow assumptions — fixing any issues before returning.
@@ -175,6 +177,8 @@ Reviews an implementation plan for actionability, codebase grounding, feasibilit
 
 Reviews completed code against acceptance criteria, test quality, coding standards.
 
+The reviewer owns findings and verdicts but does not need to ingest raw verbose evidence. Potentially verbose test or command output is spooled under `/tmp/opencode/`; focused filtering or `retriever` analysis supplies compact referenced evidence.
+
 ```
 > Review the implementation before I commit
 ```
@@ -193,7 +197,7 @@ Resumes the same reviewer session to apply accepted related findings from an imp
 
 ### `delegate-analysis`
 
-Provides the canonical delegate with explicit modes for code exploration, targeted reading, web research, and deep-dive investigation. Model variants use this same skill and persona.
+Provides the canonical delegate with explicit modes for code exploration, targeted reading, web research, and deep-dive investigation. Model variants use this same skill and persona. Delegates read scoped and compact evidence directly, but route uncurated bulk artifacts and coherent multi-file evidence to `retriever`.
 
 ### `execute-work-package`
 
@@ -208,3 +212,5 @@ Gated execution protocol:
 ```
 
 The primary verifies understanding before any code gets written. Git operations stay with you.
+
+During Execute, complete potentially verbose command and verification output is spooled to a predictable path under `/tmp/opencode/`. The owning context retains the path, command, exit status, and compact metadata/evidence; `retriever` may inspect the complete spool when needed. These temporary files aid same-machine continuation after an interruption, but are not reboot-durable.
