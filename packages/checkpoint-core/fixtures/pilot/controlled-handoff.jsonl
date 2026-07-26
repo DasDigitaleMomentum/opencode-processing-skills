@@ -1,0 +1,2 @@
+{"timestamp":"2026-07-26T14:30:00.000Z","session_id":"pilot-handoff","done":"Review pilot scope","next":"Check context pressure","step_failed":false,"context_used":0.72}
+{"timestamp":"2026-07-26T14:31:00.000Z","session_id":"pilot-handoff","done":"Check context pressure","next":"Prepare compact handoff","step_failed":false,"context_used":0.92}

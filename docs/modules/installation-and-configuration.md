@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "installation-and-configuration"
-version: 1.1
+version: 1.3
 ---
 
 # Module: Installation and Configuration
@@ -11,7 +11,7 @@ version: 1.1
 
 ## Overview
 
-The root distribution surface explains the project, establishes repository-wide conventions, exposes the optional installer schema, and installs skills and agent definitions into supported harness locations. `install.sh` is a dependency-light Bash entry point with environment-over-YAML-over-default precedence, global and project-local modes, model/frontmatter injection, generated agent variants, symlink preservation, and target-specific behavior. The operational walkthrough and compatibility caveats remain in the [Installation Guide](../installation.md).
+The root distribution surface explains the project, establishes repository-wide conventions, exposes the optional installer schema, and installs skills, agent definitions, and OpenCode checkpoint assets into supported locations. `install.sh` is a dependency-light Bash entry point with environment-over-YAML-over-default precedence, global and project-local modes, model/frontmatter injection, generated agent variants, symlink preservation, and target-specific behavior. The operational walkthrough and compatibility caveats remain in the [Installation Guide](../installation.md).
 
 ### Responsibility
 
@@ -28,18 +28,19 @@ This module owns the public repository entry points and the mechanics that turn 
 | Git | external | Supports cloning/updating the repository and supplies the tracked release and source context; installation itself performs no Git mutation. |
 | Harness home directories | external | OpenCode, Codex, Claude Code, Cursor, Hermes, and Antigravity presence determine auto-enabled destinations and compatibility behavior. |
 | Manual reference documentation | module | [Installation](../installation.md), [Skills](../skills.md), and [Agents](../agents.md) provide user-facing procedures and architecture detail without being part of this module's inventory. |
+| Checkpoint Core and OpenCode Adapter | modules | Supply the core/runtime/plugin sources copied into the effective OpenCode target and the instruction appended to installed personas. |
 
 ## Structure
 
 | Path | Type | Purpose |
 |------|------|---------|
-| `.gitignore` | file | Excludes local scratch data, private installer configuration, generated browser/test images, editor state, and local OpenCode state from version control. |
+| `.gitignore` | file | Excludes local scratch data, private installer configuration, generated artifacts, local OpenCode state, and root runtime `.agent-checkpoints/` logs. |
 | `AGENTS.md` | file | Repository-wide architecture, entity model, workflow ownership, artifact layout, design rationale, and development conventions for agents. |
 | `CHANGELOG.md` | file | Versioned record of added, changed, and fixed distribution, skill, agent, and workflow behavior. |
 | `LICENSE` | file | MIT license grant, attribution, conditions, and warranty/liability disclaimer. |
 | `README.md` | file | Public project landing page with purpose, quick start, orchestration model, principles, reference links, and project framing. |
-| `config.yaml.example` | file | Optional installer schema and example target, base-agent model, delegate-variant, and implementer-variant values. |
-| `install.sh` | file | Main distribution program for target detection, configuration parsing, skill/agent copying, model injection, variant generation, Cursor extras, and Hermes category metadata. |
+| `config.yaml.example` | file | Optional installer schema; the existing OpenCode home also receives checkpoint plugin/support assets and no new checkpoint key is required. |
+| `install.sh` | file | Main distribution program for target detection, skill/agent copying, variants, Cursor extras, and OpenCode checkpoint plugin/instruction installation. |
 
 ## Key Symbols
 
@@ -99,6 +100,7 @@ This module owns the public repository entry points and the mechanics that turn 
 | `AGENTS_DESTS` | const | internal | `install.sh:270` | Accumulates enabled harness agent destinations for the shared copy and model-injection loop. |
 | `HERMES_SKILLS_DEST` | const | internal | `install.sh:301` | Fixes Hermes installation beneath the namespaced `skills/processing` category. |
 | `CURSOR_TARGET_HOME` | const | internal | `install.sh:323` | Selects the global or project-local Cursor root that receives orchestration extras. |
+| `OPENCODE_TARGET_HOME` | const | internal | `install.sh:324` | Selects configured global OpenCode home or project-local `./.opencode` for checkpoint assets and personas. |
 | `get_model_for_agent` | function | internal | `install.sh:346` | Returns only the model token from a parsed root-level agent configuration. |
 | `get_agent_config` | function | internal | `install.sh:359` | Parses scalar or object agent syntax and emits a model followed by provider options. |
 | `inject_agent_config` | function | internal | `install.sh:483` | Rewrites copied agent frontmatter to replace model/options while preserving the rest of the persona. |
@@ -114,16 +116,21 @@ This module owns the public repository entry points and the mechanics that turn 
 | `cursor_install_orchestrator_skills` | function | internal | `install.sh:843` | Refreshes Cursor orchestrator-skill directories and embeds task-delegation guidance. |
 | `cursor_install_project_rule` | function | internal | `install.sh:877` | Copies the optional project-local Cursor orchestrator rule. |
 | `cursor_install_extras` | function | internal | `install.sh:895` | Coordinates Cursor subagents, bootstrap, orchestrator skills, and project rule installation. |
+| `install_opencode_checkpoint_file` | function | internal | `install.sh:910` | Copies one checkpoint asset while preserving an existing symlink. |
+| `install_opencode_checkpoint` | function | internal | `install.sh:923` | Installs plugin shim, runtime/core support, and the self-contained watcher tree. |
+| `install_opencode_checkpoint_instruction` | function | internal | `install.sh:959` | Appends the marked instruction once to ordinary installed OpenCode persona files and aliases. |
 | `Argument parsing` | workflow | public | `install.sh:49` | Accepts global mode, `--project`, and help; rejects unknown options before filesystem changes. |
 | `Target resolution` | workflow | internal | `install.sh:219` | Applies YAML/default/env precedence and decides which harness destinations are enabled. |
 | `Project mode override` | workflow | internal | `install.sh:322` | Replaces global OpenCode destinations with `./.opencode/` and optionally adds `./.cursor/`. |
-| `Install Skills` | workflow | internal | `install.sh:908` | Copies every skill package to each enabled destination, replacing ordinary directories but skipping symlinks. |
-| `Hermes category description` | workflow | internal | `install.sh:937` | Writes global-mode `DESCRIPTION.md` metadata for the Hermes `processing` category unless the path is a symlink. |
-| `Install Agents` | workflow | internal | `install.sh:956` | Copies canonical personas to agent destinations and injects configured models/options. |
-| `Create delegate variants` | workflow | internal | `install.sh:994` | Generates every configured delegate alias in each agent destination. |
-| `Create implementer variants` | workflow | internal | `install.sh:1010` | Generates every configured implementer variant in each agent destination. |
-| `Install Cursor orchestration layer` | workflow | internal | `install.sh:1026` | Adds Cursor-specific personas, bootstrap, orchestrator skills, and optional project rule after shared copies. |
-| `Nested delegation reminder` | output | public | `install.sh:1048` | Gives version-aware guidance: v1.18.2+ uses top-level `subagent_depth: 2`; older versions omit the unsupported setting. |
+| `Install Skills` | workflow | internal | `install.sh:984` | Copies every skill package to each enabled destination, replacing ordinary directories but skipping symlinks. |
+| `Hermes category description` | workflow | internal | `install.sh:1013` | Writes global-mode `DESCRIPTION.md` metadata for the Hermes `processing` category unless the path is a symlink. |
+| `Install Agents` | workflow | internal | `install.sh:1032` | Copies canonical personas to agent destinations and injects configured models/options. |
+| `Create delegate variants` | workflow | internal | `install.sh:1070` | Generates every configured delegate alias in each agent destination. |
+| `Create implementer variants` | workflow | internal | `install.sh:1086` | Generates every configured implementer variant in each agent destination. |
+| `Install OpenCode checkpoint` | workflow | internal | `install.sh:1102` | Deploys plugin/runtime/dashboard assets and applies the OpenCode-only instruction after aliases exist. |
+| `Install Cursor orchestration layer` | workflow | internal | `install.sh:1106` | Adds Cursor-specific personas, bootstrap, orchestrator skills, and optional project rule after shared copies. |
+| `Checkpoint watcher launch` | output | public | `install.sh:1127` | Prints the installed watcher path and exact quoted Node launch command. |
+| `Nested delegation reminder` | output | public | `install.sh:1133` | Gives version-aware guidance: v1.18.2+ uses top-level `subagent_depth: 2`; older versions omit the unsupported setting. |
 
 ## Data Flow
 
@@ -131,11 +138,11 @@ This module owns the public repository entry points and the mechanics that turn 
 2. The installer validates arguments and any explicit `OPS_CONFIG_FILE`, then reads settings with precedence `OPS_*` environment variables, optional YAML, and built-in defaults. It expands homes and evaluates each tri-state target.
 3. Enabled targets populate shared skill and agent destination arrays. Project mode replaces global agent/skill paths with `./.opencode/` and may add `./.cursor/`; Hermes stays global-only and uses its `processing` category; Antigravity is detected but served through Claude.
 4. Every checked-in skill package is copied to each skill destination. Agent personas are copied only to agent-capable targets, then `get_agent_config` and `inject_agent_config` apply base model/provider options. Configured delegate aliases and implementer variants are generated from canonical personas.
-5. Cursor receives its additional adapted subagents, bootstrap, orchestrator skills, and optional project rule. Hermes receives category metadata. Existing destination symlinks are skipped throughout, and the installer prints the applied config, target-specific next steps, and an OpenCode nested-delegation reminder; it does not edit runtime JSON/JSONC.
+5. The effective OpenCode target receives `plugins/checkpoint.ts`, runtime/core support, the self-contained `checkpoint-watch/{bin,src}` tree, and one marked checkpoint instruction in every ordinary installed persona/alias. Cursor receives its adapted extras and Hermes receives category metadata. Existing destination symlinks are skipped. The summary prints the exact absolute watcher launch command and restart guidance for plugin tools; it does not edit runtime JSON/JSONC.
 
 ## Configuration
 
-`config.yaml.example` is optional and becomes active only after it is copied to the ignored `config.yaml` or selected through `OPS_CONFIG_FILE`. `targets` entries accept `enabled: true | false | auto` and `home`; OpenCode is always included, while auto enables another target only when its home exists. The parser expects the documented two-space target indentation and four-space field indentation.
+`config.yaml.example` is optional and becomes active only after it is copied to the ignored `config.yaml` or selected through `OPS_CONFIG_FILE`. `targets` entries accept `enabled: true | false | auto` and `home`; OpenCode is always included, and its existing `home` also controls global checkpoint installation. Project mode uses `./.opencode`. No checkpoint-specific setting was added.
 
 Root agent keys accept either `agent: provider/model` or an object with `model` plus arbitrary provider option scalars. `additional_delegates` and `additional_implementers` use the same scalar/object forms, keyed by the suffix added to the generated persona name. The example exposes `reasoningEffort`, `temperature`, `top_p`, and `maxTokens`, while the installer forwards any non-empty option key/value it parses.
 

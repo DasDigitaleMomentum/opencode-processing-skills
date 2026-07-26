@@ -1,0 +1,35 @@
+{
+  "pathCases": [
+    { "sessionId": "ses_123", "path": ".agent-checkpoints/ses_123.jsonl" },
+    { "sessionId": "../outside", "path": ".agent-checkpoints/..%2Foutside.jsonl" },
+    { "sessionId": "back\\slash", "path": ".agent-checkpoints/back%5Cslash.jsonl" },
+    { "sessionId": "50% used", "path": ".agent-checkpoints/50%25%20used.jsonl" },
+    { "sessionId": "line\nbreak", "path": ".agent-checkpoints/line%0Abreak.jsonl" },
+    { "sessionId": "München", "path": ".agent-checkpoints/M%C3%BCnchen.jsonl" }
+  ],
+  "analysisCases": [
+    {
+      "name": "first record with missing context",
+      "records": [
+        { "timestamp": "2026-07-26T14:30:00.000Z", "session_id": "ses_123", "done": "API calls checked", "next": "Logging schema build", "step_failed": false, "context_used": null }
+      ],
+      "expected": { "chainPercent": null, "threeWordPercent": 100 }
+    },
+    {
+      "name": "matching chain with failed step",
+      "records": [
+        { "timestamp": "2026-07-26T14:30:00.000Z", "session_id": "ses_123", "done": "API calls checked", "next": "Logging schema build", "step_failed": false, "context_used": 0.4 },
+        { "timestamp": "2026-07-26T14:31:00.000Z", "session_id": "ses_123", "done": "Logging schema build", "next": "Fix targeted failure", "step_failed": true, "context_used": 0.5 }
+      ],
+      "expected": { "chainPercent": 100, "threeWordPercent": 100 }
+    },
+    {
+      "name": "broken chain and noncompliant labels",
+      "records": [
+        { "timestamp": "2026-07-26T14:30:00.000Z", "session_id": "ses_123", "done": "Start", "next": "Expected next step", "step_failed": false, "context_used": 0 },
+        { "timestamp": "2026-07-26T14:31:00.000Z", "session_id": "ses_123", "done": "Different next step", "next": "Finish", "step_failed": false, "context_used": 1 }
+      ],
+      "expected": { "chainPercent": 0, "threeWordPercent": 50 }
+    }
+  ]
+}
