@@ -14,18 +14,25 @@ export function formatPercent(percent) {
   return percent === null ? "n/a" : `${Number(percent.toFixed(2))}%`;
 }
 
+export function formatMetric({ success, count, percent }) {
+  return `${success}/${count} (${formatPercent(percent)})`;
+}
+
 export function formatCheckpointSummary(selectedPath, records, analysis) {
   const latest = records.at(-1);
   return [
     `File: ${selectedPath}`,
     `Session: ${latest.session_id}`,
+    `Agent: ${latest.agent ?? "-"}`,
+    `Name/title: ${latest.session_title ?? "-"}`,
     `Latest timestamp: ${latest.timestamp}`,
     `Last attempted: ${latest.done}`,
     `Next announced: ${latest.next}`,
     `Work status: ${latest.step_failed ? "FAILED" : "COMPLETED"}`,
     `Context used: ${formatContext(latest.context_used)}`,
-    `Chain: ${formatPercent(analysis.chainPercent)}`,
-    `Three-word compliance: ${formatPercent(analysis.threeWordPercent)}`,
+    `Chain: ${formatMetric(analysis.chain)}`,
+    `Work: ${formatMetric(analysis.work)}`,
+    `Three-word compliance: ${formatMetric(analysis.threeWord)}`,
   ].join("\n");
 }
 

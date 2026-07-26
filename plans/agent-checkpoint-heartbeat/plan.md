@@ -22,13 +22,13 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 - OpenCode is the first executable pilot and the gate for later harness implementation.
 - The repository root contains `.agent-checkpoints/` alongside `docs/` and `plans/`; the runtime directory is local state and must not be versioned.
 - One append-only JSONL file is created per harness session.
-- A raw record contains only `timestamp`, `session_id`, `done`, `next`, `step_failed`, and `context_used`.
+- Current raw records contain `timestamp`, `session_id`, `done`, `next`, `step_failed`, `context_used`, nullable `agent`, and nullable `session_title`; historical six-field records remain readable without migration.
 - `checkpoint(done, next, step_failed=false)` appends the record and returns approximate context utilization plus remaining K-tokens.
 - `checkpoint_path(session_id)` returns the workspace-relative JSONL path; it does not create a recovery representation.
 - `done` and `next` are instructed to contain exactly three words, without hard input rejection.
 - The next checkpoint reuses the previous `next` value verbatim as `done`.
 - `step_failed=true` records a failed work attempt followed by a correction step; it is not a Canary-quality failure.
-- Chain percentage, three-word compliance, file selection, and displays are computed externally from raw logs.
+- Chain, work-success, and three-word counts/percentages, file selection, and displays are computed externally from raw logs.
 - Parent agents follow the same checkpoint instruction as subagents.
 - Codex and Claude Code implementation is planned and grounded now for later macOS execution by a colleague; their phases are not part of the OpenCode pilot rollout.
 - Keep the implementation small: no daemon, external watchdog, recovery schema, or autonomous restart mechanism.
@@ -45,11 +45,11 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 
 - [ ] All supported agents can call `checkpoint(done, next, step_failed=false)` after each completed or failed self-segmented subtask.
 - [x] The tool appends one valid JSON object per line to `.agent-checkpoints/<session-id>.jsonl` without storing derived percentages or the filename.
-- [x] Every record carries timestamp, session ID, done/next labels, step outcome, and measured context utilization.
+- [x] Every current record carries timestamp, session ID, done/next labels, step outcome, measured context utilization, and nullable agent/session-title metadata.
 - [x] The tool returns approximate context utilization and remaining K-tokens to support controlled handoff.
 - [x] `checkpoint_path` returns the relative path for a supplied native or adapter session identifier.
 - [x] Parent, retriever, Bash, and Python workflows can read and filter a selected session log.
-- [x] External analysis can calculate exact-link chain percentage and exact-three-word compliance independently of `step_failed`.
+- [x] External analysis can calculate Chain, Work, and Three-word success/count/percent values while keeping `step_failed` independent from Canary metrics.
 - [x] OpenCode integrates both tools and the instruction for parent and subagent personas.
 - [ ] Codex, Claude Code, and PydanticAI adapters preserve the same observable contract within documented harness limits.
 
@@ -83,12 +83,12 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 
 ## Definition of Done
 
-- [ ] The common contract and raw JSONL schema are documented, tested, and used consistently by every adapter.
+- [ ] The common current eight-field contract, strict legacy six-field read compatibility, and raw JSONL semantics are documented, tested, and used consistently by every adapter.
 - [x] `.agent-checkpoints/` is a workspace-root sibling of `docs/` and `plans/`, is ignored by Git, and safely isolates per-session files.
 - [x] OpenCode parents and subagents can call `checkpoint` and `checkpoint_path` in an installed pilot.
 - [x] OpenCode records and returns context telemetry according to the documented confidence limits.
 - [x] A failed step is visible through `step_failed=true` without reducing Canary compliance calculations.
-- [x] External analysis can answer “How far did session X get?” from a selected file and calculate chain and three-word percentages.
+- [x] External analysis can answer “How far did session X get?”, identify its latest agent/title when available, and calculate count-based Chain, Work, and Three-word metrics.
 - [x] The OpenCode pilot passes focused integration tests plus an isolated installer smoke test.
 - [x] Codex/macOS and Claude Code/macOS implementation plans are grounded in current primary APIs and executable later by the assigned colleague.
 - [ ] PydanticAI has a grounded adapter implementation and verification path.
@@ -135,3 +135,4 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 - Independent Phase 1–3 review findings were remediated; a fresh isolated OpenCode host exposed and executed both tools, and the full pilot gate passed again.
 - OpenCode telemetry corrected to use the SDK client's TUI-equivalent previous-completed-step estimate with an honest null fallback; Phase 2–3 plans, tests, and docs were updated.
 - Phase 3 extended with the dependency-free `checkpoint-watch` live terminal dashboard, age-based session state, installed launch path, and one-shot test mode.
+- Checkpoint records and displays refined with nullable agent/session-title metadata, count-based metrics, legacy-log compatibility, and adaptive wide-terminal layout.

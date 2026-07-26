@@ -18,7 +18,7 @@ Implement the shared checkpoint contract for Claude Code on macOS using verified
 
 ## Contribution to Plan Goal
 
-This phase transfers the OpenCode-proven behavior to Claude Code while using its native session and context signals without adding fields or recovery machinery.
+This phase transfers the OpenCode-proven behavior to Claude Code while using its native session, nullable metadata, and context signals without adding recovery machinery.
 
 ## Scope
 

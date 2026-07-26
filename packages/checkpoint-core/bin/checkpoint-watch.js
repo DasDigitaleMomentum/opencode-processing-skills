@@ -78,6 +78,10 @@ function percent(value) {
   return value === null ? "n/a" : `${Number(value.toFixed(1))}%`;
 }
 
+function metric({ success, count, percent: value }) {
+  return `${success}/${count} (${percent(value)})`;
+}
+
 function contextPercent(value) {
   return value === null ? "unknown" : `${Number((value * 100).toFixed(1))}%`;
 }
@@ -99,10 +103,12 @@ export async function loadSessionRows(workspaceRoot, options = {}, io = {}) {
         activityMs,
         ageMs,
         state: ageMs >= staleMs ? "STALE" : "ACTIVE",
-        chain: percent(analysis.chainPercent),
-        words: percent(analysis.threeWordPercent),
-        work: latest.step_failed ? "FAILED" : "COMPLETED",
+        chain: metric(analysis.chain),
+        work: metric(analysis.work),
+        words: metric(analysis.threeWord),
         context: contextPercent(latest.context_used),
+        agent: latest.agent ?? "-",
+        title: latest.session_title ?? "-",
         done: latest.done,
         next: latest.next,
         error: null,
@@ -117,6 +123,8 @@ export async function loadSessionRows(workspaceRoot, options = {}, io = {}) {
         words: "-",
         work: "ERROR",
         context: "-",
+        agent: "-",
+        title: "-",
         done: "read failed",
         next: String(error?.message ?? error).replace(/\s+/g, " "),
         error,
@@ -148,28 +156,47 @@ function truncate(value, width) {
   return `${text.slice(0, width - 1)}…`;
 }
 
-function columnWidths(columns) {
-  const fixed = 5 + 6 + 6 + 7 + 9 + 7 + 8;
-  const available = Math.max(3, columns - fixed);
-  const widths = [20, 24, 24];
-  const minimums = [8, 8, 8];
-  while (widths.reduce((sum, width) => sum + width, 0) > available) {
-    const index = widths.reduce((largest, width, candidate) =>
-      width - minimums[candidate] > widths[largest] - minimums[largest] ? candidate : largest, 0);
-    if (widths[index] <= minimums[index]) break;
-    widths[index] -= 1;
-  }
-  return widths;
+function distributedWidths(available) {
+  const usable = Math.max(3, available);
+  const base = Math.floor(usable / 3);
+  const remainder = usable % 3;
+  return [
+    base + Number(remainder > 0),
+    base + Number(remainder > 1),
+    base,
+  ];
 }
 
 export function formatDashboard(rows, options = {}) {
   const columns = Number.isSafeInteger(options.columns) && options.columns > 0 ? options.columns : 120;
-  const [sessionWidth, doneWidth, nextWidth] = columnWidths(columns);
-  const specs = [
-    ["SESSION", sessionWidth], ["AGE", 5], ["STATE", 6], ["CHAIN", 6],
-    ["3-WORD", 7], ["WORK", 9], ["CONTEXT", 7], ["DONE", doneWidth], ["NEXT", nextWidth],
+  const contentWidth = (header, key) => Math.max(
+    header.length,
+    ...rows.map((row) => String(row[key] ?? "").length),
+  );
+  const fixed = [
+    ["SESSION", 8, "session"],
+    ["AGENT", 8, "agent"],
+    ["AGE", 5, "age"],
+    ["STATE", 6, "state"],
+    ["CHAIN", contentWidth("CHAIN", "chain"), "chain"],
+    ["WORK", contentWidth("WORK", "work"), "work"],
+    ["3-WORD", contentWidth("3-WORD", "words"), "words"],
+    ["CONTEXT", 7, "context"],
   ];
-  const line = (values) => truncate(values.map((value, index) => truncate(value, specs[index][1]).padEnd(specs[index][1])).join(" ").trimEnd(), columns);
+  const separatorWidth = 10;
+  const fixedWidth = fixed.reduce((sum, [, width]) => sum + width, 0);
+  const [titleWidth, doneWidth, nextWidth] = distributedWidths(
+    columns - fixedWidth - separatorWidth,
+  );
+  const specs = [
+    fixed[0], fixed[1], ["NAME/TITLE", titleWidth, "title"], fixed[2], fixed[3],
+    fixed[4], fixed[5], fixed[6], fixed[7], ["DONE", doneWidth, "done"],
+    ["NEXT", nextWidth, "next"],
+  ];
+  const line = (values) => truncate(
+    values.map((value, index) => truncate(value, specs[index][1]).padEnd(specs[index][1])).join(" "),
+    columns,
+  );
   const output = [
     truncate(`Checkpoint sessions — stale after ${options.staleMs ?? DEFAULT_STALE_MS}ms (checkpoint age only)`, columns),
     line(specs.map(([name]) => name)),
@@ -178,8 +205,8 @@ export function formatDashboard(rows, options = {}) {
   if (rows.length === 0) output.push(truncate("No direct .agent-checkpoints/*.jsonl sessions found.", columns));
   for (const row of rows) {
     output.push(line([
-      row.session, formatAge(row.ageMs), row.state, row.chain, row.words,
-      row.work, row.context, row.done, row.next,
+      row.session, row.agent, row.title, formatAge(row.ageMs), row.state, row.chain,
+      row.work, row.words, row.context, row.done, row.next,
     ]));
   }
   return output.join("\n");

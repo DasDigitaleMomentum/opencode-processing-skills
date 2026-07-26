@@ -50,6 +50,7 @@ None.
 - [x] Remediate the accepted Phase 1–3 implementation review findings and repeat the real-host pilot gate. <!-- completed: 2026-07-26 -->
 - [x] Replace unconditional-null OpenCode telemetry with the SDK-backed TUI-equivalent estimate and update plans/docs. <!-- completed: 2026-07-26 -->
 - [x] Add and document the live `checkpoint-watch` terminal dashboard with global/project installation. <!-- completed: 2026-07-26 -->
+- [x] Add agent/session-title identity, count-based metrics, and adaptive wide-terminal layout. <!-- completed: 2026-07-26 -->
 
 ### Blocked
 
@@ -66,3 +67,4 @@ None.
 - Accepted review findings fixed; isolated real-host OpenCode verification and the full Phase 1–3 gate passed.
 - Corrected OpenCode telemetry after source-level SDK review; 18/18 tests and installer syntax verification passed.
 - Added the live checkpoint dashboard; 24/24 tests passed and Phase 4 remains pending.
+- Refined checkpoint identity and dashboard presentation with legacy compatibility; 29/29 tests passed.

@@ -105,8 +105,9 @@ Das Tool:
 1. ermittelt Session-ID und Zeitstempel,
 2. übernimmt die vom Adapter bereitgestellte Context-Telemetrie oder `null`,
 3. protokolliert den gemeldeten Erfolg oder Fehlschlag des Schritts,
-4. hängt einen JSONL-Eintrag an das Session-Log an,
-5. gibt Context-Auslastung und verbleibende K-Tokens zurück, sofern vorhanden, sonst `unknown`.
+4. übernimmt den vom Adapter bereitgestellten Agentennamen und den aktuellen Session-Titel oder jeweils `null`,
+5. hängt einen JSONL-Eintrag an das Session-Log an,
+6. gibt Context-Auslastung und verbleibende K-Tokens zurück, sofern vorhanden, sonst `unknown`.
 
 Antwort des OpenCode-Adapters bei verfügbaren Daten:
 
@@ -163,13 +164,16 @@ Beispielausgabe des Inspectors:
 ```text
 File: .agent-checkpoints/ses_123.jsonl
 Session: ses_123
+Agent: implementer
+Name/title: Checkpoint TUI refinement
 Latest timestamp: 2026-07-26T14:30:00.000Z
 Last attempted: Logging Schema bauen
 Next announced: Lesezugriff gezielt ergänzen
 Work status: COMPLETED
 Context used: unknown
-Chain: 100%
-Three-word compliance: 100%
+Chain: 2/2 (100%)
+Work: 2/3 (66.67%)
+Three-word compliance: 6/6 (100%)
 ```
 
 ## JSONL-Format
@@ -177,10 +181,10 @@ Three-word compliance: 100%
 Jeder Aufruf erzeugt genau eine Zeile:
 
 ```json
-{"timestamp":"2026-07-26T14:30:00Z","session_id":"ses_123","done":"Tests gezielt ausführen","next":"Testfehler gezielt beheben","step_failed":true,"context_used":0.72}
+{"timestamp":"2026-07-26T14:30:00Z","session_id":"ses_123","done":"Tests gezielt ausführen","next":"Testfehler gezielt beheben","step_failed":true,"context_used":0.72,"agent":"implementer","session_title":"Checkpoint TUI refinement"}
 ```
 
-Minimale Felder:
+Aktuelle Datensätze enthalten genau acht Felder:
 
 | Feld | Bedeutung |
 |------|-----------|
@@ -190,10 +194,14 @@ Minimale Felder:
 | `next` | Als Nächstes angekündigter Subtask |
 | `step_failed` | `true`, wenn der versuchte Schritt fehlgeschlagen ist und `next` seine Korrektur beschreibt; sonst `false` |
 | `context_used` | Vom Harness gemeldete ungefähre Context-Auslastung von `0.0` bis `1.0` oder `null` |
+| `agent` | Vom Adapter zum Schreibzeitpunkt übernommener Agenten-/Persona-Name oder `null` |
+| `session_title` | Zum Schreibzeitpunkt gelesener, menschenlesbarer Session-Titel oder `null` |
 
 Pro Session wird eine append-only Datei unter `.agent-checkpoints/<session_id>.jsonl` angelegt. Der Pfad ist relativ zum Workspace, damit Parent, Retriever und Nutzer ihn gezielt lesen und filtern können. Die Session-ID wird für den Dateinamen bereinigt. Das Verzeichnis soll nicht versioniert werden.
 
-Chain-Prozent, Drei-Worte-Prozent, Token-Restmenge und Dateiname gehören nicht in die JSONL-Einträge. Sie sind Laufzeitinformationen oder aus den Rohdaten ableitbare Werte und werden bei Bedarf extern berechnet. OpenCode schreibt bei gültigen SDK-Daten die geschätzte TUI-äquivalente Context-Auslastung des vorherigen abgeschlossenen Schritts in `context_used`; andernfalls bleibt das Feld `null`. Der sechs-feldrige Vertrag bleibt unverändert.
+Ältere Logs mit ausschließlich den ursprünglichen sechs Feldern bleiben lesbar. Parser und Auswertung normalisieren dort fehlendes `agent` und `session_title` im Speicher zu `null`, ohne die append-only Quelldatei umzuschreiben. Ein Mischlog aus sechs- und achtfeldrigen Zeilen ist damit ebenfalls zulässig; unvollständige Zwischenformen mit nur einem Metadatenfeld sind es nicht (`packages/checkpoint-core/src/index.js:59-123`, `packages/checkpoint-core/test/checkpoint-core.test.js:162-172`).
+
+`session_title` ist eine Momentaufnahme und kann sich durch Umbenennung zwischen zwei Checkpoints derselben Session ändern. Für Identität, Pfadwahl und Zusammenführung bleibt deshalb `session_id` maßgeblich; Titel und Agent dienen der Anzeige. Chain-/Work-/Drei-Worte-Prozent, Token-Restmenge und Dateiname gehören nicht in die JSONL-Einträge. Sie sind Laufzeitinformationen oder aus den Rohdaten ableitbare Werte und werden bei Bedarf extern berechnet. OpenCode schreibt bei gültigen SDK-Daten die geschätzte TUI-äquivalente Context-Auslastung des vorherigen abgeschlossenen Schritts in `context_used`; andernfalls bleibt das Feld `null`.
 
 ## Agenten-Instruktion
 
@@ -211,9 +219,11 @@ Diese Anweisung gilt auch für den Parent. Er protokolliert damit seine eigenen 
 
 `checkpoint-watch` liest dieselben Roh-Logs und zeigt den letzten Stand aller direkt auffindbaren Sessions. Vom Workspace-Root startet die Quellversion mit `node packages/checkpoint-core/bin/checkpoint-watch.js` im Live-Modus; `--once` erzeugt genau eine deterministische Ausgabe ohne ANSI-Steuerzeichen. Die installierte Version wird mit dem exakten `Launch command:` gestartet, den `./install.sh` beziehungsweise `./install.sh --project` ausgibt. Globale und projektlokale Pfade sowie der Neustart-Hinweis stehen in der [Installationsanleitung](installation.md#checkpoint-dashboard-quickstart). Der OpenCode-Neustart lädt die Plugin-Tools; das eigenständige Dashboard kann sofort starten.
 
-Die Spalten sind `SESSION`, `AGE`, `STATE`, `CHAIN`, `3-WORD`, `WORK`, `CONTEXT`, `DONE` und `NEXT`. `ACTIVE` bedeutet ausschließlich, dass das Alter des letzten Checkpoints unter dem Stale-Grenzwert liegt; ab dem Grenzwert erscheint `STALE`. **Beide Zustände bewerten nur das Checkpoint-Alter und beweisen keine Prozess-Liveness.** `WORK` zeigt getrennt `COMPLETED` oder `FAILED` aus `step_failed`.
+Die Spalten sind `SESSION`, `AGENT`, `NAME/TITLE`, `AGE`, `STATE`, `CHAIN`, `WORK`, `3-WORD`, `CONTEXT`, `DONE` und `NEXT`. `CHAIN`, `WORK` und `3-WORD` erscheinen jeweils als `Erfolge/Anzahl (Prozent)`, beispielsweise `1/1 (100%)`, `2/3 (66.7%)` und `6/6 (100%)`; ein noch nicht prüfbarer erster Übergang ist `0/0 (n/a)`. `ACTIVE` bedeutet ausschließlich, dass das Alter des letzten Checkpoints unter dem Stale-Grenzwert liegt; ab dem Grenzwert erscheint `STALE`. **Beide Zustände bewerten nur das Checkpoint-Alter und beweisen keine Prozess-Liveness.** `WORK` zählt Checkpoints mit `step_failed=false`; es ist kein Nachweis fachlicher Korrektheit.
 
-Live-Modus aktualisiert standardmäßig jede 1.000 ms; nach 120.000 ms gilt ein Checkpoint als stale. Positive Millisekundenwerte können über `--refresh-ms`/`--stale-ms` gesetzt werden. `CHECKPOINT_WATCH_REFRESH_MS` und `CHECKPOINT_WATCH_STALE_MS` liefern Umgebungsdefaults, die CLI-Optionen überschreiben. Änderungen im Checkpoint-Verzeichnis lösen ebenfalls eine Aktualisierung aus. Ctrl-C beziehungsweise SIGTERM schließt Watcher und Timer und stellt den Terminal-Cursor wieder her (`packages/checkpoint-core/bin/checkpoint-watch.js:194-240`).
+Der Watcher hält Identitäts-, Alters-, Status- und Context-Spalten auf festen Breiten und dimensioniert die Metrikspalten anhand ihrer formatierten Zähler. Den verbleibenden Platz teilt er möglichst gleichmäßig auf `NAME/TITLE`, `DONE` und `NEXT` auf; Restspalten gehen deterministisch in genau dieser Reihenfolge an Titel, Done und Next. Zu lange Werte werden rechts mit `…` gekürzt (bei nur einem verfügbaren Zeichen hart abgeschnitten), anschließend wird auch jede Gesamtzeile auf die Terminalbreite begrenzt. Gleiche Daten und gleiche Breite erzeugen deshalb immer dieselbe Ausgabe (`packages/checkpoint-core/bin/checkpoint-watch.js:152-213`).
+
+Live-Modus aktualisiert standardmäßig jede 1.000 ms; nach 120.000 ms gilt ein Checkpoint als stale. Positive Millisekundenwerte können über `--refresh-ms`/`--stale-ms` gesetzt werden. `CHECKPOINT_WATCH_REFRESH_MS` und `CHECKPOINT_WATCH_STALE_MS` liefern Umgebungsdefaults, die CLI-Optionen überschreiben. Änderungen im Checkpoint-Verzeichnis lösen ebenfalls eine Aktualisierung aus. Ctrl-C beziehungsweise SIGTERM schließt Watcher und Timer und stellt den Terminal-Cursor wieder her (`packages/checkpoint-core/bin/checkpoint-watch.js:221-267`).
 
 Der Scope ist absichtlich nur das direkte Verzeichnis `.agent-checkpoints/*.jsonl` des aktuellen Workspace: reguläre JSONL-Dateien werden gelesen, Unterverzeichnisse und andere Erweiterungen ignoriert (`packages/checkpoint-core/bin/checkpoint-watch.js:62-75`). Eine fehlende Directory ergibt eine leere Anzeige. Eine malformed oder während des Lesens inkonsistente Datei erscheint als kompakte `ERROR`-Zeile, ohne gültige Sessions zu blockieren (`packages/checkpoint-core/bin/checkpoint-watch.js:85-133`). Die Logs werden nicht verändert.
 
@@ -221,11 +231,11 @@ Das Dashboard und der Inspector haben verschiedene Aufgaben: `checkpoint-watch` 
 
 ## Harness-Unterstützung
 
-Der Tool-Vertrag und das JSONL-Format bleiben gleich. Nur die Anbindung an Session-ID und Context-Information unterscheidet sich.
+Der aufrufbare Tool-Vertrag bleibt harnessübergreifend gleich. Adapter unterscheiden sich bei Session-ID, Context-Telemetrie und optionalen Metadaten; der aktuelle gemeinsame Datensatz reserviert dafür die nullable Felder `agent` und `session_title`.
 
 | Harness | Tool-Anbindung | Session-ID | Context-Rückmeldung |
 |---------|----------------|------------|---------------------|
-| OpenCode | Native Custom Tools `checkpoint` und `checkpoint_path` im Plugin; Telemetrie über `PluginInput.client` | `ToolContext.sessionID` | Geschätzter Context-Anteil des vorherigen abgeschlossenen Assistant-Schritts und verbleibende Context-Window-K-Tokens; bei fehlenden/ungültigen Daten oder SDK-Fehlern `null`/`unknown` |
+| OpenCode | Native Custom Tools `checkpoint` und `checkpoint_path`; `agent` aus `ToolContext.agent`, Titel und Telemetrie über `PluginInput.client` | `ToolContext.sessionID` | Geschätzter Context-Anteil des vorherigen abgeschlossenen Assistant-Schritts und verbleibende Context-Window-K-Tokens; bei fehlenden/ungültigen Daten oder SDK-Fehlern `null`/`unknown` |
 | Codex | MCP-Tool, bei Bedarf ergänzt durch Hook oder App-Server-Anbindung | Über Codex-Session beziehungsweise Thread | Ungefährer verfügbarer Usage-Wert, sonst `null` |
 | PydanticAI | Native Python Function Tool | `run_id` beziehungsweise `conversation_id` | Aus verfügbarer Run Usage und Modellgrenze ableitbar, sonst `null` |
 | Claude Code | MCP-Tool in einem Plugin | Über Claude-Code-Session beziehungsweise Hook | Über verfügbare Statusline-Contextdaten, sonst `null` |
@@ -253,13 +263,13 @@ Der Parent liest bei Bedarf das Session-Log und kombiniert es mit Blueprint, Pro
 
 ## OpenCode-Implementierung und Installation
 
-OpenCode ist der erste implementierte Harness. Der Adapter verwendet `ToolContext.sessionID` als Session-Kennung und `ToolContext.worktree` als Workspace-Root; `PluginInput.client` wird beim Aufbau der Telemetrie übergeben (`opencode/checkpoint-plugin.ts:52-59`, `opencode/checkpoint-runtime.mjs:122-152`). Die globale Installation legt `plugins/checkpoint.ts` und die Supportmodule unter `lib/opencode-processing-skills/` im konfigurierten OpenCode-Home ab; `./install.sh --project` verwendet stattdessen `./.opencode/` (`install.sh:923-943`, `install.sh:1088-1090`). Ein Neustart von OpenCode lädt die Tools. Falls ein lokaler Development-Build keine gleich versionierte veröffentlichte `@opencode-ai/plugin`-Abhängigkeit auflösen kann, registriert der Shim dieselben Tool-Definitionen über OpenCodes eingebaute JSON-Schema-Kompatibilität; es entsteht keine zusätzliche Runtime-Abhängigkeit.
+OpenCode ist der erste implementierte Harness. Der Adapter verwendet `ToolContext.sessionID` als Session-Kennung, `ToolContext.worktree` als Workspace-Root und `ToolContext.agent` als nullable Persona-Momentaufnahme. Über `PluginInput.client.session.get` liest er bei jedem Checkpoint den dann aktuellen Titel (`opencode/checkpoint-plugin.ts:53-60`, `opencode/checkpoint-runtime.mjs:16-41`, `opencode/checkpoint-runtime.mjs:157-193`). Titel- und Telemetrieabfragen werden unabhängig abgewartet; Fehler von `session.get`, leere Titel oder fehlende Agentennamen ergeben `null` und verhindern den Schreibvorgang nicht. Die globale Installation legt `plugins/checkpoint.ts` und die Supportmodule unter `lib/opencode-processing-skills/` im konfigurierten OpenCode-Home ab; `./install.sh --project` verwendet stattdessen `./.opencode/` (`install.sh:923-943`, `install.sh:1088-1090`). Ein Neustart von OpenCode lädt die Tools. Falls ein lokaler Development-Build keine gleich versionierte veröffentlichte `@opencode-ai/plugin`-Abhängigkeit auflösen kann, registriert der Shim dieselben Tool-Definitionen über OpenCodes eingebaute JSON-Schema-Kompatibilität; es entsteht keine zusätzliche Runtime-Abhängigkeit.
 
 Die Checkpoint-Instruktion wird nur in installierte OpenCode-Personas eingefügt, einschließlich generierter Delegate-/Implementer-Varianten. Kanonische, auch für andere Harnesses verwendete `agents/*.md` bleiben unverändert (`install.sh:945-968`). Symlink-Ziele werden nicht überschrieben.
 
 ## OpenCode Pilot Evaluation
 
-**Stand:** 2026-07-26, Phasen 1–3 implementiert und mit `node --test packages/checkpoint-core/test/*.test.js opencode/test/*.test.mjs` verifiziert: 18/18 Tests bestanden; zusätzlich bestand `bash -n install.sh`.
+**Stand:** 2026-07-26, Phasen 1–3 plus Metadaten-/Zähler-/Breitenverfeinerung implementiert und mit `node --test packages/checkpoint-core/test/*.test.js opencode/test/*.test.mjs` verifiziert: 29/29 Tests bestanden; zusätzlich bestand `bash -n install.sh`.
 
 | Szenario | Beobachtetes Ergebnis |
 |---|---|
@@ -269,6 +279,6 @@ Die Checkpoint-Instruktion wird nur in installierte OpenCode-Personas eingefügt
 | Wortzahl-Drift | Chain 100 %, Drei-Worte-Regel 83,33 % |
 | Kontrollierter Handoff-Fixture | 92 % Context und `Prepare compact handoff` werden korrekt angezeigt |
 
-Der Handoff-Wert von 92 % ist ein **synthetischer Contract-Fixture**, keine gemessene OpenCode-Auslastung. Automatisierte Adaptertests bestätigen getrennte Parent-/Subagent-Dateien, den kodierten Rückgabepfad, append-only Korrekturketten und read-only Inspection (`opencode/test/checkpoint-plugin.test.mjs:195-284`). Sie prüfen außerdem die Auswahl des letzten positiven-Output-Assistant-Schritts vor einem aktiven Output-null-Schritt, alle fünf TUI-Tokenfelder, Provider-/Modellgrenze, Clamping sowie Null-Fallback bei ungültigen Daten und SDK-Fehlern (`opencode/test/checkpoint-plugin.test.mjs:286-362`). Globale und projektlokale Installer-Szenarien einschließlich Client-Verdrahtung, Instruktionsinjektion und Symlink-Schutz sind ebenfalls abgedeckt (`opencode/test/checkpoint-plugin.test.mjs:364-414`). Der frühere Lauf mit einem isolierten lokalen OpenCode-Build schrieb einen sechs-feldrigen Datensatz mit `context_used: null`; diese Beobachtung belegt den Fallback, nicht eine allgemeine Always-null-Eigenschaft.
+Der Handoff-Wert von 92 % ist ein **synthetischer Contract-Fixture**, keine gemessene OpenCode-Auslastung. Automatisierte Adaptertests bestätigen getrennte Parent-/Subagent-Dateien, den kodierten Rückgabepfad, append-only Korrekturketten und read-only Inspection (`opencode/test/checkpoint-plugin.test.mjs:226-322`). Sie prüfen außerdem die Auswahl des letzten positiven-Output-Assistant-Schritts vor einem aktiven Output-null-Schritt, alle fünf TUI-Tokenfelder, Provider-/Modellgrenze, Clamping sowie Null-Fallback bei ungültigen Daten und SDK-Fehlern (`opencode/test/checkpoint-plugin.test.mjs:324-346`, `opencode/test/checkpoint-plugin.test.mjs:456-512`). Agent-/Titel-Momentaufnahmen, umbenannte Sessions und nicht blockierende `session.get`-Fehler sind separat abgedeckt (`opencode/test/checkpoint-plugin.test.mjs:348-454`). Globale und projektlokale Installer-Szenarien einschließlich Client-Verdrahtung, Instruktionsinjektion und Symlink-Schutz sind ebenfalls getestet (`opencode/test/checkpoint-plugin.test.mjs:514-579`). Der frühere Lauf mit einem isolierten lokalen OpenCode-Build schrieb einen heute als Legacy-Schema lesbaren sechs-feldrigen Datensatz mit `context_used: null`; diese Beobachtung belegt den Fallback, nicht eine allgemeine Always-null-Eigenschaft.
 
 **Pilot-Gate: GO für spätere Adapter.** Tool-Verfügbarkeit, ausgewählte Pfad-Inspection, Append-Integrität, Signaltrennung, deterministische Schätzwerte und der ehrliche Null-Fallback entsprechen dem gemeinsamen Vertrag. Nicht belegt sind Live-Belegung des aktiven Tool-Schritts, aktive oder Compaction-Headroom und ein real beobachteter telemetriebasierter Handoff.

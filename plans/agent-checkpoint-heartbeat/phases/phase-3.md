@@ -25,8 +25,9 @@ The pilot is useful only if a parent, user, or retriever can answer how far a se
 ### Includes
 
 - Read-only script or CLI over a path returned by `checkpoint_path`.
-- Latest done/next/failed/context display per selected session.
-- Derived chain and three-word percentages computed outside JSONL.
+- Latest agent/title/done/next/failed/context display per selected session.
+- Derived Chain, Work, and Three-word success/count/percent metrics computed outside JSONL.
+- Live workspace dashboard with age-based state and adaptive terminal-width use.
 - Pilot scenarios for successful work, failed-and-fixing work, broken chain, word-count drift, and controlled context handoff.
 - Evidence-backed go/no-go notes for later adapters.
 
@@ -49,7 +50,8 @@ The pilot is useful only if a parent, user, or retriever can answer how far a se
 
 ## Acceptance Criteria
 
-- [ ] Given a checkpoint path, the inspection can report the last attempted step, next announced step, failed status, latest context use, chain percentage, and three-word percentage.
+- [ ] Given a checkpoint path, inspection reports latest agent/title, attempted and announced steps, failed status, context, and count-based Chain/Work/Three-word metrics.
+- [ ] The live dashboard identifies current sessions by ID, persona, and title when available and expands title/done/next columns on wider terminals.
 - [ ] `step_failed=true` does not lower Canary metrics.
 - [ ] A deliberately broken link lowers chain percentage.
 - [ ] A label with other than three words lowers only the word-compliance percentage.

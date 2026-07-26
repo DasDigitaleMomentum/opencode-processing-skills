@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "checkpoint-core"
-version: 1.1
+version: 1.2
 ---
 
 # Module: Checkpoint Core
@@ -11,11 +11,11 @@ version: 1.1
 
 ## Overview
 
-`packages/checkpoint-core/` is a private, dependency-free ESM package for the shared checkpoint contract. It validates exactly six raw fields, maps session IDs to safe workspace-relative paths, appends JSONL without rewriting history, calculates chain and exact-three-word compliance, inspects one explicitly selected log, and provides a live/one-shot terminal dashboard for direct workspace logs. It has no daemon, recovery schema, recursive discovery, or build step.
+`packages/checkpoint-core/` is a private, dependency-free ESM package for the shared checkpoint contract. It writes and validates the current eight-field schema, accepts legacy six-field records, maps session IDs to safe workspace-relative paths, appends JSONL without rewriting history, calculates count-based chain/work/exact-three-word metrics, inspects one explicitly selected log, and provides an adaptive live/one-shot terminal dashboard for direct workspace logs. It has no daemon, recovery schema, recursive discovery, or build step.
 
 ### Responsibility
 
-The module owns harness-neutral persistence and analysis. Harness adapters supply native session identity, workspace root, and honest telemetry. `remainingKTokens` may be returned by `checkpoint` but is never persisted (`packages/checkpoint-core/src/index.js:132-158`).
+The module owns harness-neutral persistence and analysis. Harness adapters supply native session identity, workspace root, nullable agent/title snapshots, and honest telemetry. New records contain `agent` and `session_title` in addition to the original six fields; each is either a non-empty string or `null`. Parsing a legacy record adds both as `null` in memory without rewriting its source bytes (`packages/checkpoint-core/src/index.js:4-13`, `packages/checkpoint-core/src/index.js:59-123`). `remainingKTokens` may be returned by `checkpoint` but is never persisted (`packages/checkpoint-core/src/index.js:176-207`).
 
 ### Dependencies
 
@@ -40,33 +40,38 @@ The module owns harness-neutral persistence and analysis. Harness adapters suppl
 
 | Symbol | Kind | Visibility | Location | Purpose |
 |---|---|---|---|---|
-| `validateCheckpointRecord` | function | public | `packages/checkpoint-core/src/index.js:43` | Requires exactly the six authorized fields and validates their types/ranges. |
-| `createCheckpointRecord` | function | public | `packages/checkpoint-core/src/index.js:86` | Creates a timestamped record with false/null defaults. |
-| `checkpointPath` | function | public | `packages/checkpoint-core/src/index.js:106` | Percent-encodes a non-empty session ID into `.agent-checkpoints/<id>.jsonl`. |
-| `checkpoint` | async function | public | `packages/checkpoint-core/src/index.js:132` | Creates the directory and appends one compact JSON line. |
-| `parseCheckpointJsonl` | function | public | `packages/checkpoint-core/src/index.js:161` | Strictly parses non-empty JSONL and validates every record. |
-| `analyzeCheckpoints` | function | public | `packages/checkpoint-core/src/index.js:194` | Computes exact-link and three-word percentages independently of `step_failed`. |
-| `formatCheckpointSummary` | function | public | `packages/checkpoint-core/bin/checkpoint-inspect.js:17` | Formats latest work state, telemetry, and derived metrics. |
-| `main` | async function | public/CLI | `packages/checkpoint-core/bin/checkpoint-inspect.js:32` | Reads exactly one supplied path and exits nonzero on invalid input. |
+| `validateCheckpointRecord` | function | public | `packages/checkpoint-core/src/index.js:59` | Accepts exactly the legacy six or current eight fields and validates metadata types/ranges. |
+| `normalizeCheckpointRecord` | function | private | `packages/checkpoint-core/src/index.js:117` | Normalizes absent legacy `agent`/`session_title` metadata to `null`. |
+| `createCheckpointRecord` | function | public | `packages/checkpoint-core/src/index.js:126` | Creates a timestamped current record with false/null defaults. |
+| `checkpointPath` | function | public | `packages/checkpoint-core/src/index.js:150` | Percent-encodes a non-empty session ID into `.agent-checkpoints/<id>.jsonl`. |
+| `checkpoint` | async function | public | `packages/checkpoint-core/src/index.js:176` | Creates the directory and appends one compact eight-field JSON line. |
+| `parseCheckpointJsonl` | function | public | `packages/checkpoint-core/src/index.js:209` | Strictly parses non-empty current, legacy, or mixed JSONL and returns normalized records. |
+| `analyzeCheckpoints` | function | public | `packages/checkpoint-core/src/index.js:241` | Computes `success`, `count`, and percent for chain, work, and exact-three-word checks. |
+| `formatMetric` | function | public | `packages/checkpoint-core/bin/checkpoint-inspect.js:17` | Formats a metric as `success/count (percent)`. |
+| `formatCheckpointSummary` | function | public | `packages/checkpoint-core/bin/checkpoint-inspect.js:21` | Formats latest agent/title, work state, telemetry, and count-based metrics. |
+| `main` | async function | public/CLI | `packages/checkpoint-core/bin/checkpoint-inspect.js:39` | Reads exactly one supplied path and exits nonzero on invalid input. |
 | `parseArgs` | function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:36` | Resolves modes and positive refresh/stale values from environment and CLI. |
 | `listSessionFiles` | async function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:62` | Lists only direct regular `.agent-checkpoints/*.jsonl` files. |
 | `loadSessionRows` | async function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:85` | Builds newest-first rows and isolates malformed files as `ERROR` rows. |
-| `formatDashboard` | function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:165` | Formats width-aware columns and checkpoint-age state. |
-| `runLiveDashboard` | async function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:194` | Redraws by timer/event and cleans resources/cursor on exit. |
-| `main` (dashboard) | async function | public/CLI | `packages/checkpoint-core/bin/checkpoint-watch.js:243` | Runs help, one-shot, or live mode from the current workspace. |
+| `formatDashboard` | function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:170` | Formats metadata/count columns and deterministically allocates remaining terminal width to title/done/next. |
+| `runLiveDashboard` | async function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:221` | Redraws by timer/event and cleans resources/cursor on exit. |
+| `main` (dashboard) | async function | public/CLI | `packages/checkpoint-core/bin/checkpoint-watch.js:270` | Runs help, one-shot, or live mode from the current workspace. |
 
 ## Data Flow
 
-1. An adapter calls `checkpoint` with session ID, worktree, labels, outcome, and telemetry.
-2. The core validates the six-field record and appends it below the worktree's `.agent-checkpoints/` directory.
+1. An adapter calls `checkpoint` with session ID, worktree, labels, outcome, telemetry, and nullable agent/title metadata.
+2. The core validates the current eight-field record and appends it below the worktree's `.agent-checkpoints/` directory.
 3. A caller obtains the same relative path through `checkpoint_path`/`checkpointPath`.
-4. `checkpoint-inspect` reads one selected file and prints its detailed summary; independently, `checkpoint-watch` discovers direct session logs and renders one row per file without modifying bytes.
+4. Readers accept current, legacy, and mixed logs; missing legacy metadata normalizes to `null` in memory.
+5. `checkpoint-inspect` reads one selected file and prints latest `Agent`/`Name/title` plus `Chain`, `Work`, and `Three-word compliance` as `success/count (percent)`. Independently, `checkpoint-watch` discovers direct session logs and renders `AGENT`, `NAME/TITLE`, `CHAIN`, `WORK`, and `3-WORD` in one row per file without modifying bytes.
 
 ## Configuration
 
 Direct inspection is `node packages/checkpoint-core/bin/checkpoint-inspect.js .agent-checkpoints/<encoded-session>.jsonl`. The dashboard is `node packages/checkpoint-core/bin/checkpoint-watch.js` (live) or the same command with `--once`. Defaults are 1,000 ms refresh and 120,000 ms stale; CLI flags override `CHECKPOINT_WATCH_REFRESH_MS`/`CHECKPOINT_WATCH_STALE_MS`. ACTIVE/STALE represents checkpoint age only, not process liveness.
 
+The dashboard reserves fixed widths for identity/status fields, lets rendered metric counts determine metric widths, and divides remaining terminal columns across `NAME/TITLE`, `DONE`, and `NEXT`. Remainder columns go to those fields in that order. Each value and final line is deterministically truncated to its assigned width, using a trailing ellipsis where at least two characters fit (`packages/checkpoint-core/bin/checkpoint-watch.js:152-213`).
+
 ## Inventory Notes
 
 - **Coverage**: full
-- **Notes**: Inventory includes the package manifest, implementation/bin files, shared fixture, five pilot fixtures, and all three test files, including dashboard coverage.
+- **Notes**: Inventory includes the package manifest, implementation/bin files, shared fixture, five pilot fixtures, and all three test files. Tests cover legacy/current mixed parsing, null normalization, metadata/count displays, and deterministic adaptive widths (`packages/checkpoint-core/test/checkpoint-core.test.js:40-63`, `packages/checkpoint-core/test/checkpoint-core.test.js:162-172`, `packages/checkpoint-core/test/checkpoint-watch.test.js:32-116`).

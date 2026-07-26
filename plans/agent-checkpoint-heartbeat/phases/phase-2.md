@@ -26,6 +26,7 @@ OpenCode provides the first real harness evidence for whether agent-driven segme
 
 - OpenCode custom tools/plugin for `checkpoint` and `checkpoint_path`.
 - Native session identity and best available context telemetry.
+- Active persona identity and a non-blocking point-in-time session-title snapshot.
 - Agent instruction applied to maintainers and applicable subagent personas.
 - Installer support for global and project-local OpenCode targets.
 - Temporary-workspace integration and installer smoke tests.
@@ -46,6 +47,7 @@ OpenCode provides the first real harness evidence for whether agent-driven segme
 - [ ] Installable OpenCode checkpoint plugin/tools.
 - [ ] Updated parent and subagent checkpoint instruction.
 - [ ] OpenCode context telemetry behavior with documented fallback.
+- [ ] OpenCode agent/session-title metadata behavior with documented null fallback.
 - [ ] Focused integration tests and isolated installer smoke test.
 
 ## Acceptance Criteria
@@ -54,6 +56,7 @@ OpenCode provides the first real harness evidence for whether agent-driven segme
 - [ ] `checkpoint` writes the authorized fields and returns context utilization plus remaining K-tokens or honest unknown values.
 - [ ] `checkpoint_path` returns the correct relative path for an OpenCode session.
 - [ ] `step_failed=true` is recorded when instructed without being treated as Canary failure.
+- [ ] Parent and subagent records expose their active persona and current session title when OpenCode provides them.
 - [ ] Existing global and `--project` installation behavior remains backward compatible.
 - [ ] OpenCode restart/configuration requirements are documented.
 

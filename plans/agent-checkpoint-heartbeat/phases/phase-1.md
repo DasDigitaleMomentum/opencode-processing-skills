@@ -28,7 +28,7 @@ Every harness depends on identical raw semantics. Fixing the contract and fixtur
 - Raw JSONL record validation and append semantics.
 - Safe `.agent-checkpoints/<session-id>.jsonl` resolution from workspace root.
 - Shared definitions for `checkpoint` and `checkpoint_path`.
-- Read-only calculations for chain percentage and three-word compliance.
+- Read-only count and percentage calculations for Chain, Work, and Three-word compliance.
 - Git ignore and test-fixture handling for the root runtime directory.
 
 ### Excludes (deferred to later phases)
@@ -46,17 +46,17 @@ Every harness depends on identical raw semantics. Fixing the contract and fixtur
 
 - [ ] Shared contract implementation and fixtures.
 - [ ] Safe per-session append and path lookup behavior.
-- [ ] External chain/three-word calculation behavior that ignores `step_failed` for Canary quality.
+- [ ] External Chain/Work/Three-word calculation behavior that uses `step_failed` only for Work quality.
 - [ ] Focused automated tests.
 
 ## Acceptance Criteria
 
-- [ ] A valid record contains only the six authorized fields.
+- [ ] New writes contain exactly the eight current fields with nullable agent/title metadata, while strict legacy six-field records remain readable without rewriting.
 - [ ] Repeated appends produce independently parseable JSONL lines without rewriting history.
 - [ ] Unsafe session IDs cannot escape the root checkpoint directory.
 - [ ] `checkpoint_path` resolves a workspace-relative path for a stable session ID.
 - [ ] A failed step remains visible while chain and three-word calculations remain independent.
-- [ ] Tests cover first record, matching chain, broken chain, compliant/non-compliant labels, failed steps, missing context, and unsafe IDs.
+- [ ] Tests cover legacy/current/mixed records, nullable metadata, first/matching/broken chains, count metrics, compliant/non-compliant labels, failed steps, missing context, and unsafe IDs.
 
 ## Dependencies on Other Phases
 

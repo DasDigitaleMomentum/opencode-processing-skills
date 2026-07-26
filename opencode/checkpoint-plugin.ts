@@ -2,6 +2,7 @@ import * as checkpointCore from "../lib/opencode-processing-skills/checkpoint-co
 import {
   createOpenCodeCheckpointPlugin,
   createOpenCodeContextTelemetry,
+  createOpenCodeSessionTitle,
 } from "../lib/opencode-processing-skills/checkpoint-runtime.mjs"
 
 function fallbackSchema(definition) {
@@ -55,6 +56,7 @@ export const CheckpointPlugin = async (pluginContext) => {
     tool,
     checkpointCore,
     getContextTelemetry: createOpenCodeContextTelemetry(pluginContext?.client),
+    getSessionTitle: createOpenCodeSessionTitle(pluginContext?.client),
   })
   return plugin(pluginContext)
 }
