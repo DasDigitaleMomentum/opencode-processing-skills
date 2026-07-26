@@ -143,6 +143,10 @@ Reuse a delegate `task_id` when retained reasoning materially reduces reconstruc
 
 Batch implementation-plan review is another deliberate reuse case: the reviewer starts independently from the author, then keeps its session across the ordered phases because shared evidence and cross-phase reasoning are review inputs. Separate reviewers are exceptions for explicit independent perspectives, unrelated domains, specialist requirements, or impractical combined context—not an automatic phase fan-out.
 
+### Aborted delegate recovery
+
+Work likely to exhaust one session should be split before delegation by focused question, dependency group, or bounded work package. If a subagent aborts or returns no usable digest, its scope is treated as too large: the maintainer neither resumes the bloated session nor absorbs the remaining task. It uses the current working tree and any user-provided facts to create smaller focused tasks for fresh sessions. Primary takeover is reserved for a remainder that independently meets the normal self-execution threshold; fresh recovery inspects current state instead of replaying the original package.
+
 ### When to use delegate variants
 
 Additional delegates (`delegate-strong`, `delegate-fast`, etc.) are generated model aliases of `agents/delegate.md`, not separate personas. They let you change capacity without duplicating task expertise:

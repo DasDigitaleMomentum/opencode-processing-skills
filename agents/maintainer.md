@@ -93,6 +93,10 @@ Prefer a fresh lean task, or the primary for a tiny focused check, when a comman
 
 Even when resuming, include a concise continuation prompt: original task label, what changed, exact new question, and any new file paths or constraints. `task_id`s are session-local; durable continuity lives in `docs/`, `plans/`, todos, and handovers.
 
+### Aborted Delegate Recovery
+
+Before delegating work likely to exhaust one session, split it by focused question, dependency group, or bounded work package. If a subagent aborts or returns no usable digest, treat its scope as too large: do not resume the bloated session and do not absorb the remaining task into the primary. Use the current working-tree state and any user-provided facts to split the remaining work into smaller focused tasks for fresh sessions. The primary may take over only when the remainder independently meets Rule #8's self-execution threshold; a fresh recovery task inspects current state instead of blindly replaying the original package.
+
 ### Delegate Write Boundary
 
 `delegate-*` agents are read/analyze/verify agents by default. They may write only when explicitly asked, and they must not perform Git operations.
