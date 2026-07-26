@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "agent-personas"
-version: 1.4
+version: 1.5
 ---
 
 # Module: Agent Personas
@@ -85,15 +85,16 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Maintainer Direct.Delegation Anti-Patterns` | table | internal | `agents/maintainer-direct.md:57` | Maps common context-expensive behaviors to the intended self-execution or delegation route. |
 | `Maintainer Direct.Delegation Quick-Reference` | table | public | `agents/maintainer-direct.md:70` | Provides standard labels and prompt patterns for exploration, targeted reading, web research, and deep dives. |
 | `Maintainer Direct.Delegate Session Reuse` | policy | public | `agents/maintainer-direct.md:83` | Chooses continuation from retained reasoning value versus context cost and favors fresh lean work for self-contained checks or fixes. |
-| `Maintainer Direct.Delegate Write Boundary` | policy | public | `agents/maintainer-direct.md:97` | Routes code, review remediation, explicit artifacts, documentation, and ad-hoc writes to their owning workflows. |
-| `Maintainer Direct.When to Use Which Agent` | section | public | `agents/maintainer-direct.md:107` | Provides the authoritative semantic role-to-persona routing guidance. |
-| `Maintainer Direct.Persistent Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer-direct.md:122` | Applies proportional durable planning and routes multiple implementation plans through one dependency-ordered reviewer session by default, with contiguous partitioning only when combined review context is impractical. |
-| `Maintainer Direct.Policy Guardrails` | policy | public | `agents/maintainer-direct.md:147` | Keeps routing defaults proportional and stops automatic review/remediation loops. |
-| `Maintainer Direct.Additional skill loops` | section | internal | `agents/maintainer-direct.md:155` | Routes legacy preparation, documentation maintenance, and session resumption. |
-| `Maintainer Direct.Execution (Implementation) Summary` | workflow | public | `agents/maintainer-direct.md:161` | Accepts plan references or inline briefs and mandates same-session BLUEPRINT → EXECUTE reuse for approval context. |
-| `Maintainer Direct.Work Tracking` | policy | public | `agents/maintainer-direct.md:177` | Requires a single in-progress todo for work with three or more steps. |
-| `Maintainer Direct.Testing & Verification Policy` | policy | public | `agents/maintainer-direct.md:183` | Requires targeted iterative tests followed by the unchanged approved broad/full final gate and separates ownership from raw-output ingestion. |
-| `Maintainer Direct.Safety and Change Discipline` | policy | public | `agents/maintainer-direct.md:193` | Requires explicit authority for destructive operations, minimal deltas, and synchronized state when a persistent plan exists. |
+| `Maintainer Direct.Aborted Delegate Recovery` | policy | public | `agents/maintainer-direct.md:97` | Splits aborted oversized delegations into smaller fresh tasks instead of resuming the bloated session or transferring the remainder to the primary. |
+| `Maintainer Direct.Delegate Write Boundary` | policy | public | `agents/maintainer-direct.md:101` | Routes code, review remediation, explicit artifacts, documentation, and ad-hoc writes to their owning workflows. |
+| `Maintainer Direct.When to Use Which Agent` | section | public | `agents/maintainer-direct.md:111` | Provides the authoritative semantic role-to-persona routing guidance. |
+| `Maintainer Direct.Persistent Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer-direct.md:126` | Applies proportional durable planning and routes multiple implementation plans through one dependency-ordered reviewer session by default, with contiguous partitioning only when combined review context is impractical. |
+| `Maintainer Direct.Policy Guardrails` | policy | public | `agents/maintainer-direct.md:153` | Keeps routing defaults proportional and stops automatic review/remediation loops. |
+| `Maintainer Direct.Additional skill loops` | section | internal | `agents/maintainer-direct.md:161` | Routes legacy preparation, documentation maintenance, and session resumption. |
+| `Maintainer Direct.Execution (Implementation) Summary` | workflow | public | `agents/maintainer-direct.md:167` | Accepts plan references or inline briefs and mandates same-session BLUEPRINT → EXECUTE reuse for approval context. |
+| `Maintainer Direct.Work Tracking` | policy | public | `agents/maintainer-direct.md:183` | Requires a single in-progress todo for work with three or more steps. |
+| `Maintainer Direct.Testing & Verification Policy` | policy | public | `agents/maintainer-direct.md:189` | Requires targeted iterative tests followed by the unchanged approved broad/full final gate and separates ownership from raw-output ingestion. |
+| `Maintainer Direct.Safety and Change Discipline` | policy | public | `agents/maintainer-direct.md:199` | Requires explicit authority for destructive operations, minimal deltas, and synchronized state when a persistent plan exists. |
 | `Maintainer frontmatter` | frontmatter | public | `agents/maintainer.md:1` | Declares primary mode and the task allowlist for all supported execution and analysis roles. |
 | `Maintainer` | persona | public | `agents/maintainer.md:20` | Establishes the interactive primary orchestrator for planning and implementation. |
 | `Maintainer.Ground Truth` | section | public | `agents/maintainer.md:26` | Assigns scope/DoD authority to persistent plans when present or an approved inline brief for self-contained work, with curated navigation in `docs/**`. |
@@ -102,15 +103,16 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Maintainer.Delegation Anti-Patterns` | table | internal | `agents/maintainer.md:55` | Maps common context-expensive behaviors to the intended self-execution or delegation route. |
 | `Maintainer.Delegation Quick-Reference` | table | public | `agents/maintainer.md:69` | Provides standard labels and prompt patterns for exploration, targeted reading, web research, and deep dives. |
 | `Maintainer.Delegate Session Reuse` | policy | public | `agents/maintainer.md:82` | Chooses continuation from retained reasoning value versus context cost and favors fresh lean work for self-contained checks or fixes. |
-| `Maintainer.Delegate Write Boundary` | policy | public | `agents/maintainer.md:96` | Routes code, review remediation, explicit artifacts, documentation, and ad-hoc writes to their owning workflows. |
-| `Maintainer.When to Use Which Agent` | section | public | `agents/maintainer.md:106` | Provides the authoritative semantic role-to-persona routing guidance. |
-| `Maintainer.Persistent Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer.md:121` | Applies proportional durable planning and routes multiple implementation plans through one dependency-ordered reviewer session by default, with contiguous partitioning only when combined review context is impractical. |
-| `Maintainer.Policy Guardrails` | policy | public | `agents/maintainer.md:146` | Keeps routing defaults proportional and stops automatic review/remediation loops. |
-| `Maintainer.Additional skill loops` | section | internal | `agents/maintainer.md:154` | Routes legacy preparation, documentation maintenance, and session resumption. |
-| `Maintainer.Execution (Implementation) Summary` | workflow | public | `agents/maintainer.md:160` | Accepts plan references or inline briefs and mandates same-session BLUEPRINT → EXECUTE reuse for approval context. |
-| `Maintainer.Work Tracking` | policy | public | `agents/maintainer.md:177` | Requires a single in-progress todo for work with three or more steps. |
-| `Maintainer.Testing & Verification Policy` | policy | public | `agents/maintainer.md:183` | Requires targeted iterative tests followed by the unchanged approved broad/full final gate and separates ownership from raw-output ingestion. |
-| `Maintainer.Safety and Change Discipline` | policy | public | `agents/maintainer.md:193` | Requires explicit authority for destructive operations, minimal deltas, and synchronized state when a persistent plan exists. |
+| `Maintainer.Aborted Delegate Recovery` | policy | public | `agents/maintainer.md:96` | Splits aborted oversized delegations into smaller fresh tasks instead of resuming the bloated session or transferring the remainder to the primary. |
+| `Maintainer.Delegate Write Boundary` | policy | public | `agents/maintainer.md:100` | Routes code, review remediation, explicit artifacts, documentation, and ad-hoc writes to their owning workflows. |
+| `Maintainer.When to Use Which Agent` | section | public | `agents/maintainer.md:110` | Provides the authoritative semantic role-to-persona routing guidance. |
+| `Maintainer.Persistent Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer.md:125` | Applies proportional durable planning and routes multiple implementation plans through one dependency-ordered reviewer session by default, with contiguous partitioning only when combined review context is impractical. |
+| `Maintainer.Policy Guardrails` | policy | public | `agents/maintainer.md:152` | Keeps routing defaults proportional and stops automatic review/remediation loops. |
+| `Maintainer.Additional skill loops` | section | internal | `agents/maintainer.md:160` | Routes legacy preparation, documentation maintenance, and session resumption. |
+| `Maintainer.Execution (Implementation) Summary` | workflow | public | `agents/maintainer.md:166` | Accepts plan references or inline briefs and mandates same-session BLUEPRINT → EXECUTE reuse for approval context. |
+| `Maintainer.Work Tracking` | policy | public | `agents/maintainer.md:183` | Requires a single in-progress todo for work with three or more steps. |
+| `Maintainer.Testing & Verification Policy` | policy | public | `agents/maintainer.md:189` | Requires targeted iterative tests followed by the unchanged approved broad/full final gate and separates ownership from raw-output ingestion. |
+| `Maintainer.Safety and Change Discipline` | policy | public | `agents/maintainer.md:199` | Requires explicit authority for destructive operations, minimal deltas, and synchronized state when a persistent plan exists. |
 
 ## Data Flow
 

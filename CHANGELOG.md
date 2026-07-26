@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.5.4 — 2026-07-26
+
+### Fixed
+- **Aborted delegate recovery**: A subagent abort without a usable digest now triggers smaller fresh delegations instead of resuming a bloated session or moving the remaining task into the primary context.
+
 ## 0.5.3 — 2026-07-26
 
 ### Changed
