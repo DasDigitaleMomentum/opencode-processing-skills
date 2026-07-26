@@ -1,7 +1,7 @@
 ---
 type: documentation
 entity: project-overview
-version: 1.1
+version: 1.4
 ---
 
 # OpenCode Processing Skills
@@ -12,9 +12,9 @@ OpenCode Processing Skills is a distributable collection of agent personas, work
 
 ## Architecture
 
-The repository has two cooperating planes. The workflow plane defines skills, artifact templates, and agent responsibilities; the distribution plane resolves local configuration and installs those definitions into supported AI-development harnesses. Agents use read-only scripts for filterable results, native parallel calls for compact independent results, and the leaf `retriever` for broad or exploratory evidence. The parent retains judgment and execution ownership. OpenCode and Claude receive native agent personas, Cursor receives an adapter layer, and skills-only targets receive the reusable workflow packages without unsupported persona semantics.
+The repository has three cooperating planes. The workflow plane defines skills, artifact templates, and agent responsibilities; the distribution plane resolves local configuration and installs those definitions into supported AI-development harnesses; the checkpoint plane provides a dependency-free six-field JSONL contract, selected-log inspection, and an OpenCode-native pilot plugin. OpenCode receives checkpoint tools and OpenCode-only persona instructions in addition to skills and agents. Through `PluginInput.client`, the plugin estimates context-window use from the latest previous completed assistant step using the TUI's token accounting and the matching provider/model context limit. It stores that estimate as `context_used` and returns the estimated percentage and remaining context-window K-tokens; the active tool-calling step is unfinished, the remainder is not compaction headroom, and unavailable or invalid SDK data remains `null`/`unknown`.
 
-The module inventories cover every tracked operational source under `agents/`, `skills/`, `cursor/`, and the root distribution boundary. Tracked `plans/**` files are project-management artifacts rather than an implementation module; `docs/agents.md`, `docs/installation.md`, and `docs/skills.md` are manually maintained source references and are intentionally not re-inventoried as implementation.
+The module inventories cover operational source under `agents/`, `skills/`, `cursor/`, `packages/checkpoint-core/`, `opencode/`, and the root distribution boundary. Tracked `plans/**` files are project-management artifacts rather than an implementation module; `docs/agents.md`, `docs/installation.md`, and `docs/skills.md` are manually maintained source references and are intentionally not re-inventoried as implementation.
 
 ### System Diagram
 
@@ -45,6 +45,8 @@ user request -> orchestrator -> matching skill -> scoped subagent
 - **Markdown with YAML frontmatter** defines agent personas, skills, templates, and durable artifacts.
 - **YAML** in `config.yaml` selects targets, homes, models, and optional agent variants; the tracked `config.yaml.example` documents the supported subset.
 - **Core Unix tools** (`grep`, `awk`, `sed`, and coreutils) are the installer's only runtime dependencies.
+- **Node.js ESM and built-ins** implement the dependency-free checkpoint core, inspection command, and `node:test` coverage; no repository-wide build or package installation is required.
+- **TypeScript/JavaScript OpenCode plugin APIs** expose `checkpoint` and `checkpoint_path` through the installed shim.
 
 ## Modules
 
@@ -54,6 +56,8 @@ user request -> orchestrator -> matching skill -> scoped subagent
 | Workflow Skills | Self-contained workflows and normative templates for documentation, planning, review, execution, and handover. | [Detail](modules/workflow-skills.md) |
 | Cursor Adapter | Cursor-specific orchestration skills, subagent mapping, bootstrap guidance, and project-rule template. | [Detail](modules/cursor-adapter.md) |
 | Installation and Configuration | Multi-target synchronization, target/model resolution, variant generation, and repository-level distribution metadata. | [Detail](modules/installation-and-configuration.md) |
+| Checkpoint Core | Six-field JSONL contract, safe paths, append-only persistence, analysis, selected-log inspection, live/one-shot dashboard, fixtures, and tests. | [Detail](modules/checkpoint-core.md) |
+| OpenCode Checkpoint Adapter | Native tools, previous-completed-step context estimates with null fallback, and OpenCode-only persona instruction. | [Detail](modules/opencode-checkpoint-adapter.md) |
 
 ## Key Features
 
@@ -64,6 +68,7 @@ user request -> orchestrator -> matching skill -> scoped subagent
 | Persistent planning lifecycle | Persists objectives, phases, implementation plans, todos, and handovers across sessions. | [Detail](features/persistent-planning-lifecycle.md) |
 | Gated work-package execution | Separates an implementation blueprint, explicit gate, stateful execution, and compact result digest. | [Detail](features/gated-work-package-execution.md) |
 | Independent review and remediation | Produces optional evidence-backed quality gates and reuses reviewer context for accepted fixes. | [Detail](features/independent-review-and-remediation.md) |
+| Agent checkpoint heartbeat | Records chained progress and failed attempts, inspects one selected log, and watches direct workspace logs in a checkpoint-age dashboard. | [Detail](agent-checkpoint-heartbeat.md) |
 
 ## Development
 
@@ -73,11 +78,11 @@ Clone the repository. A local `config.yaml` is optional; copy `config.yaml.examp
 
 ### Build & Run
 
-There is no compilation step. `./install.sh` performs a global synchronization, while `./install.sh --project` creates project-local OpenCode output and, when enabled, project-local Cursor output. See [Installation](installation.md) for target-specific behavior and [Agents](agents.md) for the installed roles.
+There is no compilation step. `./install.sh` performs a global synchronization and installs the OpenCode checkpoint plugin/support/dashboard files, while `./install.sh --project` creates project-local OpenCode output and, when enabled, project-local Cursor output. The installer prints the exact dashboard launch command; source-tree live mode is `node packages/checkpoint-core/bin/checkpoint-watch.js`. See the [dashboard quickstart](installation.md#checkpoint-dashboard-quickstart) and [Agents](agents.md).
 
 ### Testing
 
-The repository currently tracks no automated test suite. Changes should at minimum pass `bash -n install.sh`, Markdown/frontmatter checks appropriate to the changed artifacts, link validation, and an isolated installer smoke test with temporary target homes before release.
+Checkpoint behavior and OpenCode installation have automated Node tests. Run `node --test packages/checkpoint-core/test/*.test.js opencode/test/*.test.mjs` and `bash -n install.sh`; the suite uses temporary worktrees/homes and covers the five pilot scenarios, raw-log immutability, global/project installs, persona instructions, and symlink preservation.
 
 ## References
 

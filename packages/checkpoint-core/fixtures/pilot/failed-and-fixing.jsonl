@@ -1,0 +1,2 @@
+{"timestamp":"2026-07-26T14:30:00.000Z","session_id":"pilot-failed","done":"Create inspection command","next":"Run focused tests","step_failed":false,"context_used":null}
+{"timestamp":"2026-07-26T14:31:00.000Z","session_id":"pilot-failed","done":"Run focused tests","next":"Fix targeted failure","step_failed":true,"context_used":null}

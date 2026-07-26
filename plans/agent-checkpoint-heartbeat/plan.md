@@ -2,7 +2,7 @@
 type: planning
 entity: plan
 plan: "agent-checkpoint-heartbeat"
-status: draft
+status: active
 created: "2026-07-26"
 updated: "2026-07-26"
 ---
@@ -44,22 +44,22 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 ### Functional
 
 - [ ] All supported agents can call `checkpoint(done, next, step_failed=false)` after each completed or failed self-segmented subtask.
-- [ ] The tool appends one valid JSON object per line to `.agent-checkpoints/<session-id>.jsonl` without storing derived percentages or the filename.
-- [ ] Every record carries timestamp, session ID, done/next labels, step outcome, and measured context utilization.
-- [ ] The tool returns approximate context utilization and remaining K-tokens to support controlled handoff.
-- [ ] `checkpoint_path` returns the relative path for a supplied native or adapter session identifier.
-- [ ] Parent, retriever, Bash, and Python workflows can read and filter a selected session log.
-- [ ] External analysis can calculate exact-link chain percentage and exact-three-word compliance independently of `step_failed`.
-- [ ] OpenCode integrates both tools and the instruction for parent and subagent personas.
+- [x] The tool appends one valid JSON object per line to `.agent-checkpoints/<session-id>.jsonl` without storing derived percentages or the filename.
+- [x] Every record carries timestamp, session ID, done/next labels, step outcome, and measured context utilization.
+- [x] The tool returns approximate context utilization and remaining K-tokens to support controlled handoff.
+- [x] `checkpoint_path` returns the relative path for a supplied native or adapter session identifier.
+- [x] Parent, retriever, Bash, and Python workflows can read and filter a selected session log.
+- [x] External analysis can calculate exact-link chain percentage and exact-three-word compliance independently of `step_failed`.
+- [x] OpenCode integrates both tools and the instruction for parent and subagent personas.
 - [ ] Codex, Claude Code, and PydanticAI adapters preserve the same observable contract within documented harness limits.
 
 ### Non-Functional
 
-- [ ] Appends remain valid under repeated calls and do not rewrite prior records.
-- [ ] Runtime paths cannot escape `.agent-checkpoints/` through caller-provided identifiers.
-- [ ] Missing context telemetry is represented honestly rather than fabricated.
-- [ ] The pilot adds focused behavioral tests and preserves existing installer and agent behavior outside the new feature.
-- [ ] Harness-specific implementation plans cite and verify current primary APIs before execution.
+- [x] Appends remain valid under repeated calls and do not rewrite prior records.
+- [x] Runtime paths cannot escape `.agent-checkpoints/` through caller-provided identifiers.
+- [x] Missing context telemetry is represented honestly rather than fabricated.
+- [x] The pilot adds focused behavioral tests and preserves existing installer and agent behavior outside the new feature.
+- [x] Harness-specific implementation plans cite and verify current primary APIs before execution.
 
 ## Scope
 
@@ -84,31 +84,31 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 ## Definition of Done
 
 - [ ] The common contract and raw JSONL schema are documented, tested, and used consistently by every adapter.
-- [ ] `.agent-checkpoints/` is a workspace-root sibling of `docs/` and `plans/`, is ignored by Git, and safely isolates per-session files.
-- [ ] OpenCode parents and subagents can call `checkpoint` and `checkpoint_path` in an installed pilot.
-- [ ] OpenCode records and returns context telemetry according to the documented confidence limits.
-- [ ] A failed step is visible through `step_failed=true` without reducing Canary compliance calculations.
-- [ ] External analysis can answer “How far did session X get?” from a selected file and calculate chain and three-word percentages.
-- [ ] The OpenCode pilot passes focused integration tests plus an isolated installer smoke test.
-- [ ] Codex/macOS and Claude Code/macOS implementation plans are grounded in current primary APIs and executable later by the assigned colleague.
+- [x] `.agent-checkpoints/` is a workspace-root sibling of `docs/` and `plans/`, is ignored by Git, and safely isolates per-session files.
+- [x] OpenCode parents and subagents can call `checkpoint` and `checkpoint_path` in an installed pilot.
+- [x] OpenCode records and returns context telemetry according to the documented confidence limits.
+- [x] A failed step is visible through `step_failed=true` without reducing Canary compliance calculations.
+- [x] External analysis can answer “How far did session X get?” from a selected file and calculate chain and three-word percentages.
+- [x] The OpenCode pilot passes focused integration tests plus an isolated installer smoke test.
+- [x] Codex/macOS and Claude Code/macOS implementation plans are grounded in current primary APIs and executable later by the assigned colleague.
 - [ ] PydanticAI has a grounded adapter implementation and verification path.
-- [ ] User-facing documentation matches implemented behavior and identifies unsupported telemetry honestly.
+- [x] User-facing documentation matches implemented behavior and identifies unsupported telemetry honestly.
 
 ## Testing Strategy
 
-- [ ] Unit-test record serialization, safe session-to-path mapping, exact append behavior, and external calculations.
+- [x] Unit-test record serialization, safe session-to-path mapping, exact append behavior, and external calculations.
 - [ ] Integration-test each harness tool against a temporary workspace and deterministic session/context fixtures.
-- [ ] Verify controlled failure records separately from Canary compliance metrics.
+- [x] Verify controlled failure records separately from Canary compliance metrics.
 - [ ] Run isolated installation smoke tests for each adapter without modifying real user configuration.
-- [ ] Preserve `bash -n install.sh` and existing documentation/frontmatter/link checks.
+- [x] Preserve `bash -n install.sh` and existing documentation/frontmatter/link checks.
 
 ## Phases
 
 | Phase | Title | Contribution | Detail | Status |
 |-------|-------|--------------|--------|--------|
-| 1 | Shared Contract and Monorepo Foundation | Establishes the raw format, safe workspace paths, analysis rules, and testable package boundary. | [Phase](phases/phase-1.md) | pending |
-| 2 | OpenCode Pilot | Delivers native OpenCode tools, context feedback, persona instructions, and installation. | [Phase](phases/phase-2.md) | pending |
-| 3 | Pilot Evaluation and Inspection | Adds raw-log inspection/display and validates the two separate Canary and work-progress signals. | [Phase](phases/phase-3.md) | pending |
+| 1 | Shared Contract and Monorepo Foundation | Establishes the raw format, safe workspace paths, analysis rules, and testable package boundary. | [Phase](phases/phase-1.md) | completed |
+| 2 | OpenCode Pilot | Delivers native OpenCode tools, context feedback, persona instructions, and installation. | [Phase](phases/phase-2.md) | completed |
+| 3 | Pilot Evaluation and Inspection | Adds raw-log inspection/display and validates the two separate Canary and work-progress signals. | [Phase](phases/phase-3.md) | completed |
 | 4 | Codex macOS Adapter | Supplies the researched later implementation for Codex on macOS without changing the common contract. | [Phase](phases/phase-4.md) | pending |
 | 5 | Claude Code macOS Adapter | Supplies the researched later implementation for Claude Code on macOS without changing the common contract. | [Phase](phases/phase-5.md) | pending |
 | 6 | PydanticAI Adapter | Adds the Python-native adapter and verifies parity with the shared behavior. | [Phase](phases/phase-6.md) | pending |
@@ -129,3 +129,9 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 ### 2026-07-26
 
 - Plan created with OpenCode as pilot and later Codex/macOS, Claude Code/macOS, and PydanticAI phases.
+- Phase 1 completed with behavioral verification; Phase 2 started.
+- Phase 2 completed with integration and installer verification; Phase 3 started.
+- Phase 3 completed; the OpenCode pilot gate passed and later harness phases remain pending.
+- Independent Phase 1–3 review findings were remediated; a fresh isolated OpenCode host exposed and executed both tools, and the full pilot gate passed again.
+- OpenCode telemetry corrected to use the SDK client's TUI-equivalent previous-completed-step estimate with an honest null fallback; Phase 2–3 plans, tests, and docs were updated.
+- Phase 3 extended with the dependency-free `checkpoint-watch` live terminal dashboard, age-based session state, installed launch path, and one-shot test mode.

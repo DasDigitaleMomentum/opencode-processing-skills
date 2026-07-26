@@ -1,0 +1,14 @@
+{
+  "name": "@opencode-processing-skills/checkpoint-core",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.js",
+  "bin": {
+    "checkpoint-inspect": "./bin/checkpoint-inspect.js",
+    "checkpoint-watch": "./bin/checkpoint-watch.js"
+  },
+  "scripts": {
+    "inspect": "node ./bin/checkpoint-inspect.js",
+    "test": "node --test test/*.test.js"
+  }
+}

@@ -15,3 +15,6 @@ config.yaml
 .idea/
 .vscode/
 .opencode/
+
+# Agent checkpoint runtime state
+/.agent-checkpoints/

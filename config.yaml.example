@@ -32,7 +32,8 @@
 #     - auto  = install iff the target's `home` directory exists
 #   home: filesystem path (supports ~)
 #
-# OpenCode is always required; `enabled` is fixed to true for that target.
+# OpenCode is always required; `enabled` is fixed to true for that target. Its
+# home receives skills, agents, and the auto-loaded checkpoint plugin/runtime.
 # Codex installs only skills (no agents).
 # Claude installs both skills and agents. Antigravity is served transitively
 # via the bundled `anthropic.claude-code` extension, which reads from CLAUDE_HOME.

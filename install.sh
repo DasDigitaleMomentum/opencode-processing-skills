@@ -16,7 +16,7 @@
 #   3. built-in defaults            (sensible auto-detect behavior)
 #
 # Targets:
-#   - OpenCode   -> OPENCODE_HOME/{skills,agents}  (always on)
+#   - OpenCode   -> OPENCODE_HOME/{skills,agents,plugins,lib}  (always on)
 #   - Codex      -> CODEX_HOME/skills              (skills only)
 #   - Claude     -> CLAUDE_HOME/{skills,agents}    (also serves Antigravity
 #                                                   via anthropic.claude-code ext)
@@ -321,8 +321,10 @@ fi
 
 # --- Project mode override ---
 CURSOR_TARGET_HOME=""
+OPENCODE_TARGET_HOME="$OPENCODE_HOME"
 if [ "$PROJECT_MODE" = true ]; then
     PROJECT_HOME="$PWD/.opencode"
+    OPENCODE_TARGET_HOME="$PROJECT_HOME"
     echo "Project mode: installing into $PROJECT_HOME"
     echo ""
     SKILLS_DESTS=("$PROJECT_HOME/skills")
@@ -905,6 +907,80 @@ cursor_install_extras() {
     fi
 }
 
+install_opencode_checkpoint_file() {
+    local source="$1"
+    local dest="$2"
+    local label="$3"
+
+    if [ -L "$dest" ]; then
+        echo "  Symlink (skipping): $label"
+        return
+    fi
+    cp "$source" "$dest"
+    echo "  Installed: $label"
+}
+
+install_opencode_checkpoint() {
+    local target_home="$1"
+    local support_dir="$target_home/lib/opencode-processing-skills"
+    local watch_dir="$support_dir/checkpoint-watch"
+
+    echo "Step 5: Installing OpenCode checkpoint plugin to $target_home"
+    mkdir -p "$target_home/plugins" "$support_dir"
+
+    install_opencode_checkpoint_file \
+        "$SCRIPT_DIR/opencode/checkpoint-plugin.ts" \
+        "$target_home/plugins/checkpoint.ts" \
+        "plugins/checkpoint.ts"
+    install_opencode_checkpoint_file \
+        "$SCRIPT_DIR/opencode/checkpoint-runtime.mjs" \
+        "$support_dir/checkpoint-runtime.mjs" \
+        "lib/opencode-processing-skills/checkpoint-runtime.mjs"
+    install_opencode_checkpoint_file \
+        "$SCRIPT_DIR/packages/checkpoint-core/src/index.js" \
+        "$support_dir/checkpoint-core.mjs" \
+        "lib/opencode-processing-skills/checkpoint-core.mjs"
+    if [ -L "$watch_dir" ]; then
+        echo "  Symlink (skipping): lib/opencode-processing-skills/checkpoint-watch"
+    else
+        mkdir -p "$watch_dir/bin" "$watch_dir/src"
+        install_opencode_checkpoint_file \
+            "$SCRIPT_DIR/packages/checkpoint-core/bin/checkpoint-watch.js" \
+            "$watch_dir/bin/checkpoint-watch.js" \
+            "lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js"
+        install_opencode_checkpoint_file \
+            "$SCRIPT_DIR/packages/checkpoint-core/src/index.js" \
+            "$watch_dir/src/index.js" \
+            "lib/opencode-processing-skills/checkpoint-watch/src/index.js"
+    fi
+    echo ""
+}
+
+install_opencode_checkpoint_instruction() {
+    local target_home="$1"
+    local agents_dir="$target_home/agents"
+    local fragment="$SCRIPT_DIR/opencode/checkpoint-instruction.md"
+    local marker="<!-- opencode-checkpoint-instruction -->"
+    local agent_file
+
+    echo "Step 6: Installing OpenCode checkpoint instruction"
+    for agent_file in "$agents_dir"/*.md; do
+        [ -e "$agent_file" ] || continue
+        if [ -L "$agent_file" ]; then
+            echo "  Symlink (skipping): $(basename "$agent_file")"
+            continue
+        fi
+        if grep -Fq "$marker" "$agent_file"; then
+            echo "  Present: $(basename "$agent_file")"
+            continue
+        fi
+        printf '\n' >> "$agent_file"
+        cat "$fragment" >> "$agent_file"
+        echo "  Added: $(basename "$agent_file")"
+    done
+    echo ""
+}
+
 # --- Step 1: Install Skills ---
 step1_count=0
 for SKILLS_DEST in "${SKILLS_DESTS[@]}"; do
@@ -1023,9 +1099,13 @@ if [ -f "$CONFIG_FILE" ]; then
     fi
 fi
 
-# --- Step 5: Cursor orchestration layer (subagents, ops, orchestrator skills) ---
+# --- Step 5/6: OpenCode checkpoint plugin and persona instruction ---
+install_opencode_checkpoint "$OPENCODE_TARGET_HOME"
+install_opencode_checkpoint_instruction "$OPENCODE_TARGET_HOME"
+
+# --- Step 7: Cursor orchestration layer (subagents, ops, orchestrator skills) ---
 if [ -n "$CURSOR_TARGET_HOME" ]; then
-    echo "Step 5: Installing Cursor orchestration layer to $CURSOR_TARGET_HOME"
+    echo "Step 7: Installing Cursor orchestration layer to $CURSOR_TARGET_HOME"
     cursor_install_extras "$SCRIPT_DIR" "$CURSOR_TARGET_HOME" "$PROJECT_MODE"
     echo ""
 fi
@@ -1042,6 +1122,11 @@ echo ""
 echo "Installation complete!"
 echo ""
 echo "Next steps:"
+echo "  Checkpoint plugin: $OPENCODE_TARGET_HOME/plugins/checkpoint.ts"
+echo "  Checkpoint support: $OPENCODE_TARGET_HOME/lib/opencode-processing-skills/"
+echo "  Checkpoint watcher: $OPENCODE_TARGET_HOME/lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js"
+echo "  Launch command: node \"$OPENCODE_TARGET_HOME/lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js\""
+echo "  Restart OpenCode to load the checkpoint and checkpoint_path tools."
 echo "  1. In OpenCode, select the new primary agent (e.g. '@maintainer')"
 echo "  2. Generate project documentation: load the 'generate-docs' skill"
 echo "  3. Create an implementation plan: load the 'create-plan' skill"

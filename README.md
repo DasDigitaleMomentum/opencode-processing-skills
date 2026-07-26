@@ -26,6 +26,7 @@ This repo solves that. It gives OpenCode:
 - **Multi-session planning** — plans with phases, persistent todos, and handover docs. Close your laptop, open it tomorrow, pick up exactly where you left off.
 - **Gated implementation** — subagents propose a blueprint before writing code. The primary reviews and approves. Catches misunderstandings before they become bugs.
 - **File-based persistence** — `docs/` and `plans/` are the interface, not chat history. Knowledge survives session boundaries.
+- **Agent checkpoints** — parents and subagents log short done/next steps, failed attempts, and approximate context pressure to per-session JSONL files. A live terminal dashboard shows current workspace activity.
 - **Consistent templates** — every artifact uses the same structure. Information is always where you expect it.
 - **Provider-agnostic** — works with any model you configure: OpenAI, Anthropic, DeepSeek, Alibaba, and more. The architecture doesn't depend on any single provider's pricing or behavior.
 
@@ -42,6 +43,7 @@ cp config.yaml.example config.yaml   # optional: set models
 ```
 
 Then restart OpenCode and select `@maintainer`.
+The installer also prints the exact command for the live `checkpoint-watch` dashboard. Run that command from the project you want to observe.
 On OpenCode v1.18.2+, set `"subagent_depth": 2` for worker-to-retriever handoffs. Older versions do not support this setting and generally allow nested tasks through permissions alone.
 If Codex, Claude Code, Cursor, or Hermes are installed locally, skills are synced to their config directories during install.
 Hermes support covers installation, parsing, and discovery only; it does not port OpenCode-specific delegate personas, `Task` calls, or `task_id` continuation contracts.
@@ -76,6 +78,34 @@ Everything persists to files. New session? Read the plan and continue.
 
 → [Skills reference](docs/skills.md)
 → [Agents reference](docs/agents.md)
+
+---
+
+## Live agent checkpoints
+
+The OpenCode installer adds native `checkpoint` and `checkpoint_path` tools to parents and subagents. Each session appends six-field JSONL records below the active project:
+
+```text
+.agent-checkpoints/<session-id>.jsonl
+```
+
+`checkpoint` returns a TUI-equivalent estimate of the previous completed model step's context use and remaining context-window K-tokens. It falls back to `unknown` when OpenCode cannot provide defensible data. Failed work is recorded separately from Canary/instruction compliance.
+
+Watch all direct session logs in a second terminal:
+
+```bash
+# From this source checkout
+node packages/checkpoint-core/bin/checkpoint-watch.js
+
+# One non-interactive snapshot
+node packages/checkpoint-core/bin/checkpoint-watch.js --once
+```
+
+For global or project-local installations, use the exact `Launch command:` printed by `./install.sh` or `./install.sh --project`. The dashboard refreshes live and shows session age, ACTIVE/STALE state, chain and three-word compliance, work status, context, done, and next. ACTIVE/STALE is based only on checkpoint age, not process liveness.
+
+→ [Checkpoint installation and dashboard quickstart](docs/installation.md#checkpoint-dashboard-quickstart)
+
+→ [Checkpoint behavior and JSONL contract](docs/agent-checkpoint-heartbeat.md)
 
 ---
 

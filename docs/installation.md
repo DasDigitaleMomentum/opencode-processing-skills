@@ -11,7 +11,7 @@ cp config.yaml.example config.yaml         # optional: configure targets and mod
 
 The installer auto-detects which harnesses to sync into. Out of the box:
 
-- **OpenCode** (always): skills + agents to `~/.config/opencode/`
+- **OpenCode** (always): skills + agents + checkpoint plugin/support files to `~/.config/opencode/`
 - **Codex** (if `~/.codex/` exists): skills to `~/.codex/skills/`
 - **Claude Code** (if `~/.claude/` exists): skills + agents to `~/.claude/`
 - **Cursor** (if `~/.cursor/` exists): adapted skills + orchestrator to `~/.cursor/skills/`
@@ -21,6 +21,48 @@ The installer auto-detects which harnesses to sync into. Out of the box:
 Hermes is a target for installation, parsing, and discovery only; installing the skills does not port their OpenCode-specific delegate personas, `Task` calls, or `task_id` continuation contracts to Hermes.
 
 After installation, restart OpenCode and select the `@maintainer` agent. It knows when to load which skill and how to delegate to the right subagent.
+
+### OpenCode checkpoint plugin
+
+| Artifact | Global location | `--project` location |
+|---|---|---|
+| Auto-loaded plugin | `~/.config/opencode/plugins/checkpoint.ts` | `.opencode/plugins/checkpoint.ts` |
+| Runtime/core support | `~/.config/opencode/lib/opencode-processing-skills/` | `.opencode/lib/opencode-processing-skills/` |
+| OpenCode-only persona instruction | appended under `~/.config/opencode/agents/` | appended under `.opencode/agents/` |
+
+Restart OpenCode after installation to load `checkpoint` and `checkpoint_path`. Session logs are written below the active worktree as `.agent-checkpoints/<encoded-session-id>.jsonl`, not below the OpenCode config directory. Existing symlinked plugin, support, or persona destinations are preserved.
+
+### Checkpoint dashboard quickstart
+
+The installer also deploys the dependency-free `checkpoint-watch` terminal dashboard. Install globally or into the current project, then run the **exact `Launch command:` printed by that installer run**:
+
+```bash
+# Global installation (default OpenCode home shown)
+./install.sh
+node "$HOME/.config/opencode/lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js"
+
+# Project-local installation
+./install.sh --project
+node "$PWD/.opencode/lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js"
+```
+
+The printed command reflects a configured OpenCode home or the absolute project path, so prefer it over reconstructing the path. Restart OpenCode after either installation to load the **plugin tools**; the standalone dashboard itself can be launched immediately. From this repository's source tree, use `node packages/checkpoint-core/bin/checkpoint-watch.js`.
+
+With no mode flag it stays live, redraws on checkpoint-directory changes and on a timer, and exits cleanly on Ctrl-C (or SIGTERM): its watcher and timer are closed and the terminal cursor is restored. For scripts or one deterministic non-ANSI rendering, add `--once`.
+
+```bash
+node packages/checkpoint-core/bin/checkpoint-watch.js --once
+CHECKPOINT_WATCH_REFRESH_MS=500 CHECKPOINT_WATCH_STALE_MS=300000 node packages/checkpoint-core/bin/checkpoint-watch.js
+node packages/checkpoint-core/bin/checkpoint-watch.js --refresh-ms 500 --stale-ms 300000
+```
+
+Refresh and stale thresholds are positive integer milliseconds. Defaults are 1,000 ms refresh and 120,000 ms stale; CLI values override the `CHECKPOINT_WATCH_REFRESH_MS` and `CHECKPOINT_WATCH_STALE_MS` environment defaults. The columns are `SESSION`, `AGE`, `STATE`, `CHAIN`, `3-WORD`, `WORK`, `CONTEXT`, `DONE`, and `NEXT`. **ACTIVE and STALE describe only whether the latest checkpoint age is below or at/above the stale threshold. They do not establish process liveness.** `WORK` separately reflects `step_failed`.
+
+Discovery is deliberately shallow: only direct regular `.agent-checkpoints/*.jsonl` files under the current workspace are read. Nested files and other extensions are ignored. A malformed or changing JSONL file becomes an `ERROR` row with a concise parse/read message while valid sessions remain visible. This multi-session dashboard differs from `checkpoint-inspect`, which accepts exactly one explicitly selected log path, does not discover sessions, and prints that log's detailed summary.
+
+The shim prefers OpenCode's published `@opencode-ai/plugin` helper when it is resolvable. Local development builds can request an unpublished matching helper version; in that case the shim uses OpenCode's built-in JSON-Schema compatibility path, so both tools still load without adding or pinning a runtime dependency.
+
+The plugin uses OpenCode's `PluginInput.client` to query session messages and provider models. It selects the latest previous assistant step with positive output tokens, sums the TUI-equivalent input, output, reasoning, cache-read, and cache-write fields, and divides by that message's matching provider/model context limit. The resulting estimate is stored as `context_used`; tool feedback reports its approximate percentage and the remaining context-window K-tokens (`limit - token total`). The assistant step currently calling the tool is not finalized, so these are previous-completed-step estimates—not live active-step values and not compaction headroom. Missing methods or completed steps, invalid message/model data, response errors, and SDK failures still write `context_used: null` and report `unknown` without blocking the checkpoint. See [Agent Checkpoint / Heartbeat](agent-checkpoint-heartbeat.md) for the six-field contract and selected-log inspection command.
 
 ---
 
