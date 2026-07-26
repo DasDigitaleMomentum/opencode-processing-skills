@@ -1,6 +1,6 @@
 ---
 name: review-fix
-description: Apply accepted related findings from an implementation or implementation-plan review by resuming the same reviewer task_id. Use after review-implementation or review-implementation-plan returns Needs Rework or Needs Revision.
+description: Apply accepted related findings from an implementation or implementation-plan review, reusing reviewer context when its retained reasoning materially benefits remediation.
 license: MIT
 compatibility:
   opencode: ">=0.1"
@@ -11,9 +11,9 @@ metadata:
 
 # Skill: Review Fix
 
-This skill is the default remediation path after a review. It preserves the reviewer's context instead of making a new agent reconstruct it from files and artifacts.
+This skill is a remediation path after a review. It preserves reviewer context when retained analysis, unresolved assumptions, or cross-file reasoning materially benefits the accepted fix.
 
-The primary SHOULD resume the reviewer that produced the findings using the same `task_id`. The reviewer may apply related fixes across several files, call sites, and tests when they remain part of the reviewed objective. A new implementation session is an exception, not the default.
+The primary SHOULD resume the reviewer that produced the findings using the same `task_id` when that reasoning remains valuable. Prefer a fresh lean session for a fully specified, self-contained fix or verification when accumulated context cost is disproportionate. Do not decide from session age or file count alone. The reviewer may apply related fixes across several files, call sites, and tests when they remain part of the reviewed objective.
 
 ## When to Use
 
@@ -27,7 +27,7 @@ Do not use for:
 - Initial review work.
 - Plan review corrections; plans remain conversation-owned by the primary. Resume the reviewer for clarification, then update the plan through `update-plan`.
 - A genuinely new objective, changed gated scope, new dependency decision, or user-requested independent perspective.
-- An unavailable, stale, or deliberately discarded reviewer session. Use `execute-work-package` for new runtime work or `author-and-verify-implementation-plan` for new implementation-plan work.
+- An unavailable or deliberately discarded reviewer session, or a self-contained fix better served by a fresh lean context. Use `execute-work-package` for new runtime work or `author-and-verify-implementation-plan` for new implementation-plan work.
 
 ## Required Inputs
 
@@ -37,7 +37,7 @@ The continuation prompt SHOULD provide:
 - Accepted finding IDs or a clear description of the accepted findings.
 - Target type: `implementation-plan` or `implementation`.
 - Relevant scope or primary decisions. Do not require an exact file allowlist when related call sites or tests need to be discovered.
-- A verification command or the expected verification goal. The reviewer may choose a focused command when none was supplied.
+- A verification command or the expected verification goal. Identify whether a supplied command is broad/full. The reviewer may choose focused targeted tests when none were supplied.
 
 Use `tpl-review-fix-prompt.md` and resume the same reviewer `task_id`.
 
@@ -46,8 +46,9 @@ Use `tpl-review-fix-prompt.md` and resume the same reviewer `task_id`.
 1. Read the existing review artifact and use the existing session context.
 2. Confirm the requested fixes still serve the reviewed objective.
 3. Apply the necessary related corrections. Size alone does not require a new work package.
-4. Run focused verification or document consistency checks.
-5. Return the compact digest below.
+4. During fixing, run the smallest targeted tests that exercise or reproduce the changed or problematic behavior. Do not use a supplied broad/full command after every change or as the first iterative diagnostic step when a targeted test is known or can be identified.
+5. When remediation is ready, run the supplied broad/full verification once as the final gate. If it fails, return to targeted diagnosis, fix, and retest; only after targeted tests pass may the broad/full final gate run again. Never weaken or omit that final gate. For implementation-plan remediation, use the equivalent focused and final consistency checks.
+6. Return the compact digest below.
 
 ### Remediation posture
 
@@ -88,7 +89,7 @@ Do not start a fresh review merely because a fix spans several files or changes 
 
 ## Rules
 
-- Same `task_id` is the preferred path. If the original reviewer session cannot be resumed, use a new workflow rather than pretending the new agent has the old context.
+- Same `task_id` is preferred only when remediation benefits from reviewer reasoning. A fully specified, self-contained fix or verification may use a fresh lean workflow; never pretend it has the old context.
 - Keep the same delegate model/variant while resuming.
 - Do not re-open already rejected findings unless the primary explicitly asks for reconsideration.
 - Do not describe self-verification as an independent review.

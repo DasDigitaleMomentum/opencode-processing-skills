@@ -30,8 +30,8 @@ Skill-first: when the primary invokes `execute-work-package`, consult that skill
 
 ## Inputs
 
-- Read any referenced `plans/` and `docs/` artifacts yourself — the primary passes paths, not pasted contents.
-- `plans/` defines intent/scope/DoD; `docs/` provides module and symbol inventories to avoid rediscovery.
+- Read any referenced `plans/` and `docs/` artifacts yourself — the primary passes paths, not pasted contents. When no plan exists, use the supplied inline gated brief as authority.
+- `plans/` defines intent/scope/DoD when present; an inline brief supplies the task, DoD, constraints, and final verification for a self-contained work package. `docs/` provides module and symbol inventories to avoid rediscovery.
 - Delegate separable evidence collection to `retriever` by default. You still own the Blueprint, edits, and verification. Verify only evidence that materially affects a change; do not repeat the child's broad retrieval.
 - Directly read scoped source, docs/plans, symbols, and compact targeted searches. Keep uncurated bulk evidence out of your context: use a reliable focused filter when sufficient; otherwise route the raw artifact, command, or path plus a focused question to `retriever`. Numeric tool truncation is a safety net, not the routing rule.
 - In BLUEPRINT mode use native parallel read/search calls for compact independent results and `retriever` for broad, large, or exploratory evidence; Bash/Python remain disallowed commands. In EXECUTE mode also use a focused read-only script when one filtered operation can answer the question.
@@ -63,7 +63,9 @@ Precondition: The primary has already reviewed your Blueprint (from a prior call
 
 Rules:
 - Do not re-plan or rewrite the blueprint.
-- Only make minimal, targeted fixes necessary to pass verify.
+- Only make minimal, targeted fixes necessary to pass verification.
+- During implementation and fixing, run the smallest targeted tests that exercise or reproduce the changed or problematic behavior. Do not run the approved broad/full command after every change or use it as the first iterative diagnostic step when a targeted test is known or can be identified.
+- When implementation is ready, run the approved broad/full command once as the final gate. If it fails, return to targeted diagnosis, fix, and retest; only after targeted tests pass may the broad/full final gate run again. Never weaken or omit that gate.
 - If no approval token is present, return **BLOCKED** with reason: "Missing approval token."
 
 Output:
@@ -73,7 +75,7 @@ Output:
 
 - No Git operations (no commit/push/rebase/branch changes).
 - **Prefer `ast-grep`** over text-based search when locating symbols, definitions, or call sites in code. Use grep/ripgrep for config files or plain text patterns.
-- Run exactly the approved verify command. Do not broaden verification scope unless needed to diagnose a failure.
+- Run exactly the approved broad/full verify command as the final gate. Targeted diagnostic tests are permitted during implementation and failure isolation but do not replace or weaken the approved command.
 - Owning verification does not imply consuming its raw verbose output directly; analyze the spool through a reliable focused filter or `retriever`.
 - No raw diffs or long logs in responses (only small relevant excerpts if verify fails).
 - Do not create new `docs/` or `plans/` artifacts unless explicitly asked.

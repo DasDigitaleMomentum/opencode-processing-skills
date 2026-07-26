@@ -14,11 +14,16 @@ created: "{{date}}"
 
 ## References
 
-### Plans
+### Plans (when present)
 - plan: {{plan_ref}}
 - phase: {{phase_ref}}
 - implementation_plan: {{implementation_plan_ref}}
 - todo (optional): {{todo_ref}}
+
+### Inline Gated Brief (when no plan exists)
+- task: {{inline_task}}
+- DoD: {{inline_dod}}
+- constraints: {{inline_constraints}}
 
 ### Docs (optional)
 - overview: {{docs_overview_ref}}

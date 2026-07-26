@@ -9,11 +9,14 @@ created: "{{date}}"
 
 Load and follow the `review-implementation-plan` skill. Your delegate model/variant does not change this workflow.
 
-You are reviewing an implementation plan as an **independent reviewer**. You have no prior context — this is intentional. Fresh eyes catch gaps that authors miss.
+You are reviewing implementation plans as an **independent reviewer** fresh from the authoring context. In batch mode, retain useful review context between phases; independence does not require a cold reviewer per phase.
 
 ## Task
 
-Review the implementation plan for Phase {{phase_number}} and produce a structured review document.
+Review mode: `{{review_mode}}` (`single-phase` or `batch`).
+
+- Single-phase: review Phase {{phase_number}} and produce its structured review document.
+- Batch: review the ordered phase set `{{ordered_phase_set}}` sequentially in dependency order, writing each existing per-phase review artifact.
 
 ## Review Focus
 
@@ -28,6 +31,7 @@ Use these as the authoritative review scope:
 - Plan: `{{plan_ref}}`
 - Phase scope: `{{phase_ref}}`
 - Implementation plan: `{{implementation_plan_ref}}`
+- Ordered batch phase/implementation-plan/output tuples (batch only): `{{batch_review_refs}}`
 - Project docs (if available): `{{docs_refs}}`
 
 Then examine the **actual codebase** to verify:
@@ -35,7 +39,9 @@ Then examine the **actual codebase** to verify:
 - Does the proposed approach align with existing code patterns?
 - Are the "Code Anchors" in the Reality Check section accurate?
 
-Use `retriever` by default for separable codebase, reference, or test evidence collection, or `doc-explorer` for a genuinely documentation- or module-oriented child task. Read the authoritative scope artifacts and decisive evidence for actual findings yourself. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; do not repeat broad child retrieval.
+Use `retriever` by default for separable codebase, reference, or test evidence collection, or `doc-explorer` for a genuinely documentation- or module-oriented child task. Retriever delegation is evidence-oriented, not phase-oriented: collect shared or overlapping evidence once, reuse it, and do not create nested per-phase retriever fan-out by default. Read the authoritative scope artifacts and decisive evidence for actual findings yourself. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; do not repeat broad child retrieval.
+
+For a batch, use this one fresh reviewer session by default. After reviewing phases sequentially, perform exactly one integrated cross-phase consistency assessment and include it in one per-phase artifact. Do not create a consolidated artifact. Return one aggregate digest. Do not fan out reviewers per phase unless explicitly requested for independent perspectives, required by genuinely unrelated domains or specialist expertise, or needed because combined evidence exceeds practical context capacity. Partition oversized work into contiguous dependency/domain groups; do not repeat completed reviews, and centrally check only cross-partition interfaces.
 
 ## Review Criteria
 
@@ -53,6 +59,7 @@ Evaluate against these criteria (the template comments contain detailed guidance
 
 Write your review to:
 - `{{review_output_path}}`
+- Batch per-phase output paths (batch only): `{{batch_review_output_paths}}`
 
 Use the canonical template:
 - `skills/review-implementation-plan/tpl-impl-plan-review.md`
@@ -62,6 +69,5 @@ Use the canonical template:
 Require testing, rollback, edge-case, security, deployment, and documentation detail only where explicit scope or concrete risk warrants it; justified `N/A` is acceptable. Do not invent policy or infrastructure. Verify step authorization and ensure ungated blocking decisions stop dependent planning. Zero findings is valid.
 
 Return to the primary only:
-- The overall verdict (Ready / Needs Revision / Major Gaps)
-- Count of findings by severity
-- Top 3 most important findings with IDs (1 sentence each)
+- Single-phase: the overall verdict, count of findings by severity, and top 3 findings with IDs.
+- Batch: one aggregate digest with overall and per-phase verdicts, aggregate severity counts, the top 3 findings across the batch, and the integrated consistency result.

@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "agent-personas"
-version: 1.2
+version: 1.4
 ---
 
 # Module: Agent Personas
@@ -22,7 +22,7 @@ This module is the canonical source for the interactive and non-interactive prim
 | Dependency | Type | Purpose |
 |-----------|------|---------|
 | `skills/` | module | Supplies the workflow instructions and templates that personas load; skills are authoritative for task-specific execution and artifact contracts. |
-| `docs/` and `plans/` | module | Provide the persistent file-based interface that primary and documentation personas read and maintain. |
+| `docs/` and `plans/` | module | Provide curated documentation and, when durable coordination is warranted, the proportional persistent planning interface that personas read and maintain. |
 | `install.sh` and `config.yaml` | module | Install personas, inject configured model options, create delegate aliases, and adapt selected subagents for supported harnesses. |
 | OpenCode agent runtime | external | Interprets persona frontmatter such as `mode`, `hidden`, and `permission`, and provides task and skill dispatch. |
 | [Agents Reference](../agents.md) | module | Provides the maintained user-facing explanation of roles and delegation philosophy without duplicating it here. |
@@ -66,12 +66,12 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Implementer frontmatter` | frontmatter | public | `agents/implementer.md:1` | Declares execution-only subagent mode, broad edit permission, leaf-retriever access, and exclusive skill access to `execute-work-package`. |
 | `Implementer` | persona | public | `agents/implementer.md:18` | Establishes the execution-only role used by the primary orchestrator. |
 | `Implementer.Ground Truth` | section | public | `agents/implementer.md:22` | Makes the execution skill and its templates authoritative for the gated protocol. |
-| `Implementer.Inputs` | section | public | `agents/implementer.md:31` | Allows scoped direct reads, routes uncurated bulk evidence to retriever, and spools verbose EXECUTE output under `/tmp/opencode/` while retaining execution ownership. |
+| `Implementer.Inputs` | section | public | `agents/implementer.md:31` | Accepts persistent plan references or an authoritative inline gated brief, routes uncurated bulk evidence to retriever, and spools verbose EXECUTE output under `/tmp/opencode/`. |
 | `Implementer.Modes` | workflow | public | `agents/implementer.md:40` | Separates Blueprint and Execute into distinct primary task calls. |
 | `Implementer.MODE: BLUEPRINT` | workflow | public | `agents/implementer.md:44` | Produces the execution step list without commands, edits, or premature execution. |
-| `Implementer.MODE: EXECUTE` | workflow | public | `agents/implementer.md:58` | Applies an approved Blueprint, requires an approval token, and emits the canonical digest. |
-| `Implementer.Hard Constraints` | policy | public | `agents/implementer.md:72` | Prohibits Git operations, limits verification to the approved command, and separates verification ownership from ingestion of raw verbose output. |
-| `Implementer.Failure / BLOCKED` | workflow | public | `agents/implementer.md:81` | Defines the minimum execute action and the structured blocked response when execution cannot proceed. |
+| `Implementer.MODE: EXECUTE` | workflow | public | `agents/implementer.md:58` | Applies an approved Blueprint in the retained session, requires an approval token, stages targeted tests before the broad/full final gate, and emits the canonical digest. |
+| `Implementer.Hard Constraints` | policy | public | `agents/implementer.md:74` | Prohibits Git operations, preserves the approved broad/full final command while permitting targeted diagnosis, and separates verification ownership from raw-output ingestion. |
+| `Implementer.Failure / BLOCKED` | workflow | public | `agents/implementer.md:83` | Defines the minimum execute action and the structured blocked response when execution cannot proceed. |
 | `Legacy Curator frontmatter` | frontmatter | public | `agents/legacy-curator.md:1` | Declares subagent mode, edit permission, denied delegation, and exclusive access to `archive-legacy-docs`. |
 | `Legacy Curator` | persona | public | `agents/legacy-curator.md:17` | Establishes the repository-hygiene role for legacy documentation onboarding. |
 | `Legacy Curator.Ground Truth` | section | public | `agents/legacy-curator.md:21` | Makes `archive-legacy-docs` authoritative and defines the clean-state objective. |
@@ -79,47 +79,47 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Legacy Curator.Hard Constraints` | policy | public | `agents/legacy-curator.md:33` | Restricts writes to `docs-legacy/**` and prohibits commits, pushes, code refactors, and risky ambiguous moves. |
 | `Maintainer Direct frontmatter` | frontmatter | public | `agents/maintainer-direct.md:1` | Declares primary mode and the task allowlist, including level-1 access to `retriever`. |
 | `Maintainer Direct` | persona | public | `agents/maintainer-direct.md:20` | Establishes the forward-moving primary variant that interrupts only for genuine choices. |
-| `Maintainer Direct.Ground Truth` | section | public | `agents/maintainer-direct.md:28` | Assigns authoritative scope/DoD to `plans/**` and curated navigation to `docs/**`. |
+| `Maintainer Direct.Ground Truth` | section | public | `agents/maintainer-direct.md:28` | Assigns scope/DoD authority to persistent plans when present or an approved inline brief for self-contained work, with curated navigation in `docs/**`. |
 | `Maintainer Direct.Informal Scope Reminder` | policy | public | `agents/maintainer-direct.md:33` | Enforces evidence-backed, objective-bound work without suppressing real defects. |
 | `Maintainer Direct.Operating Rules (Meta)` | policy | public | `agents/maintainer-direct.md:42` | Defines documentation-first operation, safety questions, task-based delegation, non-interactive turn endings, and the uncurated-evidence and `/tmp/opencode/` spooling boundary. |
 | `Maintainer Direct.Delegation Anti-Patterns` | table | internal | `agents/maintainer-direct.md:57` | Maps common context-expensive behaviors to the intended self-execution or delegation route. |
 | `Maintainer Direct.Delegation Quick-Reference` | table | public | `agents/maintainer-direct.md:70` | Provides standard labels and prompt patterns for exploration, targeted reading, web research, and deep dives. |
-| `Maintainer Direct.Delegate Session Reuse` | policy | public | `agents/maintainer-direct.md:83` | Defines when a delegate task continues versus when a fresh task is required. |
-| `Maintainer Direct.Delegate Write Boundary` | policy | public | `agents/maintainer-direct.md:98` | Routes code, review remediation, explicit artifacts, documentation, and ad-hoc writes to their owning workflows. |
-| `Maintainer Direct.When to Use Which Agent` | section | public | `agents/maintainer-direct.md:108` | Provides the authoritative semantic role-to-persona routing guidance. |
-| `Maintainer Direct.Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer-direct.md:123` | Defines the ordered plan, optional review, implementation, remediation, update, and handover sequence. |
-| `Maintainer Direct.Policy Guardrails` | policy | public | `agents/maintainer-direct.md:146` | Keeps routing defaults proportional and stops automatic review/remediation loops. |
-| `Maintainer Direct.Additional skill loops` | section | internal | `agents/maintainer-direct.md:154` | Routes legacy preparation, documentation maintenance, and session resumption. |
-| `Maintainer Direct.Execution (Implementation) Summary` | workflow | public | `agents/maintainer-direct.md:160` | Summarizes gated execution prerequisites, valid use cases, and pre/post-change checks. |
-| `Maintainer Direct.Work Tracking` | policy | public | `agents/maintainer-direct.md:175` | Requires a single in-progress todo for work with three or more steps. |
-| `Maintainer Direct.Testing & Verification Policy` | policy | public | `agents/maintainer-direct.md:181` | Requires behavior-exercising verification and separates verification ownership from direct ingestion of raw verbose output. |
-| `Maintainer Direct.Safety and Change Discipline` | policy | public | `agents/maintainer-direct.md:189` | Requires explicit authority for destructive operations, minimal deltas, and synchronized plan state. |
+| `Maintainer Direct.Delegate Session Reuse` | policy | public | `agents/maintainer-direct.md:83` | Chooses continuation from retained reasoning value versus context cost and favors fresh lean work for self-contained checks or fixes. |
+| `Maintainer Direct.Delegate Write Boundary` | policy | public | `agents/maintainer-direct.md:97` | Routes code, review remediation, explicit artifacts, documentation, and ad-hoc writes to their owning workflows. |
+| `Maintainer Direct.When to Use Which Agent` | section | public | `agents/maintainer-direct.md:107` | Provides the authoritative semantic role-to-persona routing guidance. |
+| `Maintainer Direct.Persistent Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer-direct.md:122` | Applies proportional durable planning and routes multiple implementation plans through one dependency-ordered reviewer session by default, with contiguous partitioning only when combined review context is impractical. |
+| `Maintainer Direct.Policy Guardrails` | policy | public | `agents/maintainer-direct.md:147` | Keeps routing defaults proportional and stops automatic review/remediation loops. |
+| `Maintainer Direct.Additional skill loops` | section | internal | `agents/maintainer-direct.md:155` | Routes legacy preparation, documentation maintenance, and session resumption. |
+| `Maintainer Direct.Execution (Implementation) Summary` | workflow | public | `agents/maintainer-direct.md:161` | Accepts plan references or inline briefs and mandates same-session BLUEPRINT → EXECUTE reuse for approval context. |
+| `Maintainer Direct.Work Tracking` | policy | public | `agents/maintainer-direct.md:177` | Requires a single in-progress todo for work with three or more steps. |
+| `Maintainer Direct.Testing & Verification Policy` | policy | public | `agents/maintainer-direct.md:183` | Requires targeted iterative tests followed by the unchanged approved broad/full final gate and separates ownership from raw-output ingestion. |
+| `Maintainer Direct.Safety and Change Discipline` | policy | public | `agents/maintainer-direct.md:193` | Requires explicit authority for destructive operations, minimal deltas, and synchronized state when a persistent plan exists. |
 | `Maintainer frontmatter` | frontmatter | public | `agents/maintainer.md:1` | Declares primary mode and the task allowlist for all supported execution and analysis roles. |
 | `Maintainer` | persona | public | `agents/maintainer.md:20` | Establishes the interactive primary orchestrator for planning and implementation. |
-| `Maintainer.Ground Truth` | section | public | `agents/maintainer.md:26` | Assigns authoritative scope/DoD to `plans/**` and curated navigation to `docs/**`. |
+| `Maintainer.Ground Truth` | section | public | `agents/maintainer.md:26` | Assigns scope/DoD authority to persistent plans when present or an approved inline brief for self-contained work, with curated navigation in `docs/**`. |
 | `Maintainer.Informal Scope Reminder` | policy | public | `agents/maintainer.md:31` | Enforces evidence-backed, objective-bound work without suppressing real defects. |
 | `Maintainer.Operating Rules (Meta)` | policy | public | `agents/maintainer.md:40` | Defines documentation-first operation, safety questions, task-based delegation, interactive turn endings, and the uncurated-evidence and `/tmp/opencode/` spooling boundary. |
 | `Maintainer.Delegation Anti-Patterns` | table | internal | `agents/maintainer.md:55` | Maps common context-expensive behaviors to the intended self-execution or delegation route. |
 | `Maintainer.Delegation Quick-Reference` | table | public | `agents/maintainer.md:69` | Provides standard labels and prompt patterns for exploration, targeted reading, web research, and deep dives. |
-| `Maintainer.Delegate Session Reuse` | policy | public | `agents/maintainer.md:82` | Defines when a delegate task continues versus when a fresh task is required. |
-| `Maintainer.Delegate Write Boundary` | policy | public | `agents/maintainer.md:97` | Routes code, review remediation, explicit artifacts, documentation, and ad-hoc writes to their owning workflows. |
-| `Maintainer.When to Use Which Agent` | section | public | `agents/maintainer.md:107` | Provides the authoritative semantic role-to-persona routing guidance. |
-| `Maintainer.Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer.md:122` | Defines the ordered plan, optional review, implementation, remediation, update, and handover sequence. |
-| `Maintainer.Policy Guardrails` | policy | public | `agents/maintainer.md:145` | Keeps routing defaults proportional and stops automatic review/remediation loops. |
-| `Maintainer.Additional skill loops` | section | internal | `agents/maintainer.md:153` | Routes legacy preparation, documentation maintenance, and session resumption. |
-| `Maintainer.Execution (Implementation) Summary` | workflow | public | `agents/maintainer.md:159` | Summarizes gated execution prerequisites, valid use cases, and pre/post-change checks. |
-| `Maintainer.Work Tracking` | policy | public | `agents/maintainer.md:175` | Requires a single in-progress todo for work with three or more steps. |
-| `Maintainer.Testing & Verification Policy` | policy | public | `agents/maintainer.md:181` | Requires behavior-exercising verification and separates verification ownership from direct ingestion of raw verbose output. |
-| `Maintainer.Safety and Change Discipline` | policy | public | `agents/maintainer.md:189` | Requires explicit authority for destructive operations, minimal deltas, and synchronized plan state. |
+| `Maintainer.Delegate Session Reuse` | policy | public | `agents/maintainer.md:82` | Chooses continuation from retained reasoning value versus context cost and favors fresh lean work for self-contained checks or fixes. |
+| `Maintainer.Delegate Write Boundary` | policy | public | `agents/maintainer.md:96` | Routes code, review remediation, explicit artifacts, documentation, and ad-hoc writes to their owning workflows. |
+| `Maintainer.When to Use Which Agent` | section | public | `agents/maintainer.md:106` | Provides the authoritative semantic role-to-persona routing guidance. |
+| `Maintainer.Persistent Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer.md:121` | Applies proportional durable planning and routes multiple implementation plans through one dependency-ordered reviewer session by default, with contiguous partitioning only when combined review context is impractical. |
+| `Maintainer.Policy Guardrails` | policy | public | `agents/maintainer.md:146` | Keeps routing defaults proportional and stops automatic review/remediation loops. |
+| `Maintainer.Additional skill loops` | section | internal | `agents/maintainer.md:154` | Routes legacy preparation, documentation maintenance, and session resumption. |
+| `Maintainer.Execution (Implementation) Summary` | workflow | public | `agents/maintainer.md:160` | Accepts plan references or inline briefs and mandates same-session BLUEPRINT → EXECUTE reuse for approval context. |
+| `Maintainer.Work Tracking` | policy | public | `agents/maintainer.md:177` | Requires a single in-progress todo for work with three or more steps. |
+| `Maintainer.Testing & Verification Policy` | policy | public | `agents/maintainer.md:183` | Requires targeted iterative tests followed by the unchanged approved broad/full final gate and separates ownership from raw-output ingestion. |
+| `Maintainer.Safety and Change Discipline` | policy | public | `agents/maintainer.md:193` | Requires explicit authority for destructive operations, minimal deltas, and synchronized state when a persistent plan exists. |
 
 ## Data Flow
 
 1. The installer deploys `maintainer.md` and `maintainer-direct.md` as selectable primary agents and installs the five subagent personas. It may add configured model fields or generate `delegate-*` aliases without changing the canonical persona body.
-2. A primary agent begins from persistent `docs/**` and `plans/**` artifacts, loads the matching workflow skill, and selects a role according to the task's risk and context cost.
+2. A primary agent begins from `docs/**` and any warranted persistent `plans/**` artifacts, loads the matching workflow skill, and selects a role according to risk and context cost. A bounded self-contained package may instead carry an inline gated brief.
 3. Task permissions admit only declared personas. The primary sends paths and a focused objective; the receiving persona loads the skill that owns the task contract rather than relying on pasted history.
 4. A maintainer, delegate/reviewer, or implementer may directly read scoped source, docs/plans, symbols, and compact targeted results. It uses a reliable focused filter when sufficient and routes uncurated bulk artifacts, verbose output, mass-search results, or coherent multi-file evidence to leaf `retriever`. Potentially verbose commands spool complete output under `/tmp/opencode/`, leaving only the path, command, exit status, and compact evidence in the owning context. The parent retains judgment, artifact, and execution ownership.
 5. `delegate` returns analysis or writes an explicitly templated artifact, `doc-explorer` maintains allowed documentation/planning files, `implementer` performs approved code execution, and `legacy-curator` writes only the legacy archive.
-6. Subagents return compact status or digests. Retriever may consume complete raw artifacts and returns referenced synthesis rather than concatenation. There is no universal hard numeric read/output cap; tool truncation is a safety net rather than the routing rule. `/tmp/opencode/` spools aid same-machine interruption recovery but are not reboot-durable.
+6. Subagents return compact status or digests. BLUEPRINT → EXECUTE reuses one implementer session because approval context is required. Implementation-plan batch review starts fresh from authoring but reuses one reviewer across dependency-ordered phases so shared evidence can be consolidated and one integrated assessment returned; automatic reviewer-per-phase and nested phase-retriever fan-out are avoided. Other follow-ups reuse sessions only when retained reasoning outweighs context cost. Retriever may consume complete raw artifacts and returns referenced synthesis rather than concatenation. There is no universal hard numeric read/output cap; tool truncation is a safety net rather than the routing rule. `/tmp/opencode/` spools aid same-machine interruption recovery but are not reboot-durable.
 7. Selected subagent bodies are also consumed by the [Cursor Adapter](cursor-adapter.md), which strips OpenCode frontmatter and maps the canonical personas onto Cursor Task types.
 
 ## Configuration

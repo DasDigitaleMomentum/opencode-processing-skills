@@ -1,6 +1,6 @@
 ---
 name: execute-work-package
-description: Execute a significant implementation unit (phase or major slice) using a gated, stateful subagent loop (steps -> gate -> execute -> digest) without creating new persistent artifacts.
+description: Execute a bounded implementation unit from authoritative plan references or an inline gated brief using a stateful subagent loop (steps -> gate -> execute -> digest) without creating new persistent artifacts.
 license: MIT
 compatibility:
   opencode: ">=0.1"
@@ -28,11 +28,12 @@ This skill deliberately **does not** create new persistent artifacts in `docs/` 
 
 Use this skill when:
 
-- A plan/phase (or a major slice of a phase) already has a clear **DoD** and **verification** approach.
+- A plan/phase (or a major slice of a phase) already has a clear **DoD** and **verification** approach; or
+- A self-contained work package has an inline gated brief with its task, DoD, constraints, and approved broad/full final verification.
 - You want to offload implementation to a subagent without causing primary context bloat.
 - You want predictable, reviewable execution with a single explicit gate.
 
-If your phase implementation plan is still vague or unverified against the repo, run `author-and-verify-implementation-plan` first.
+If persistent phase work has a vague or unverified implementation plan, run `author-and-verify-implementation-plan` first. Do not create a persistent plan solely because a bounded inline work package is significant or non-trivial.
 
 **Multi-phase ordering:** When a plan has multiple phases, create **all** implementation plans first (via `author-and-verify-implementation-plan`), then execute phases **sequentially** — one at a time. Do not alternate between planning and executing per phase; the cross-phase view catches conflicts early and sequential execution avoids errors from interdependencies.
 
@@ -49,9 +50,9 @@ Do **not** use this skill to:
 
 - **Primary (maintainer)**
   - Owns scope/DoD/risk decisions and gating.
-  - Chooses the work package (phase or significant phase slice).
+  - Chooses the work package (phase, significant phase slice, or self-contained inline brief).
   - Owns Git operations (stage/commit/PR) unless explicitly delegated.
-  - Updates plan/todo via `update-plan` as needed.
+  - Updates plan/todo via `update-plan` as needed when a persistent plan exists.
 
 - **Subagent (implementer)**
   - Does execution only.
@@ -66,14 +67,15 @@ Do **not** use this skill to:
 
 - **Writes**: code files in the target repository (working tree changes) and runs verification commands.
 - **Does NOT write**: `plans/**` or `docs/**` artifacts.
-- **Primary**: owns gating/approval, Git operations, and any updates to `plans/**` (typically via `update-plan`).
+- **Primary**: owns gating/approval, Git operations, and, when a persistent plan exists, updates to `plans/**` (typically via `update-plan`).
 - **implementer**: execution only (blueprint → execute → digest), no Git.
 - **retriever**: default leaf for separable evidence collection by the implementer; no edits, decisions, or artifact ownership.
 - **doc-explorer**: not used for this skill (unless you explicitly want docs/plan artifacts, in which case use the appropriate planning/doc skills).
 
-### Why `docs/` and `plans/` matter here
+### Authority and navigation
 
-- `plans/` provides the gated intent/DoD and references for what to implement.
+- `plans/` provides gated intent/DoD and references when the package belongs to a persistent plan lifecycle.
+- Otherwise, the inline gated work-package brief is authoritative and supplies the task, DoD, constraints, and final verification.
 - `docs/` (if present) provides curated inventories (modules/features/symbols) so the subagent does not rediscover everything.
 
 ### Statefulness
@@ -83,6 +85,8 @@ The protocol relies on continuing the subagent in the **same** session via **the
 - **Call 1** (`task`): request "Step List only" → receive Blueprint
 - Primary reviews and approves (internal gate)
 - **Call 2** (`task` with same `task_id`): request "Execute approved steps" → receive Digest
+
+This reuse remains mandatory even when a fresh lean session would normally be preferred: EXECUTE depends on the retained Blueprint inspection and explicit approval context.
 
 > **CRITICAL: Two separate `task` calls required.**
 >
@@ -115,19 +119,19 @@ The two-call pattern requires **session resumption** — continuing a subagent i
 Before delegating:
 
 - Ensure the work package is already gated (scope/DoD decided).
-- Provide an explicit **task statement** plus **references** to the relevant planning artifacts.
-  The subagent should read these references itself (the primary does not need to paste content).
-  Recommended references:
-  - `plans/<plan>/plan.md`
-  - `plans/<plan>/phases/phase-N.md`
-  - `plans/<plan>/implementation/phase-N-impl.md`
-  - `plans/<plan>/todo.md` (optional)
+- Provide exactly one authoritative scope source:
+  - **Persistent plan references**: an explicit task statement plus the relevant planning artifacts. The subagent reads these references itself (the primary does not paste their contents). Recommended references:
+    - `plans/<plan>/plan.md`
+    - `plans/<plan>/phases/phase-N.md`
+    - `plans/<plan>/implementation/phase-N-impl.md`
+    - `plans/<plan>/todo.md` (optional)
+  - **Inline gated work-package brief**: task, DoD, constraints, and approved broad/full final verification. No `plans/` artifact is required.
 - If project documentation exists, also provide references to it so the subagent can use the curated inventories
   (symbols, modules, features) instead of rediscovering everything from scratch:
   - `docs/overview.md` (optional)
   - `docs/modules/*.md` (optional)
   - `docs/features/*.md` (optional)
-- Provide a **Verify Command** if one is already decided.
+- Provide the approved broad/full **Verify Command** if one is already decided.
   If not, the subagent proposes exactly **one** verify command in the BLUEPRINT (to be gated by the primary).
 
 ### 1) MODE: BLUEPRINT (Execution Blueprint)
@@ -181,7 +185,7 @@ Read the digest carefully. The subagent's verification result determines next st
 
 Then:
 
-- Updates `plans/<plan>/todo.md` and phase status via `update-plan`
+- If a persistent plan exists, updates `plans/<plan>/todo.md` and phase status via `update-plan`.
 - Commits / creates PR **only** when explicitly requested by the user
 
 Optional but recommended (Primary):
@@ -230,9 +234,11 @@ In EXECUTE mode, the subagent must:
 
 - Subagent must not run Git operations (commit, rebase, push).
 - Skill-first: when this skill is invoked, follow its MODE + output contracts before doing anything else.
-- Keep verification minimal: **one** explicit verify command unless the work package DoD requires more. The verify command must **exercise the changed behavior** (e.g., run relevant tests, hit the affected endpoint, trigger the modified flow) — not just compile, lint, or type-check.
+- Keep the Blueprint to **one** explicit approved broad/full verify command unless the work package DoD requires more. It must exercise the changed behavior (for example, run relevant tests, hit the affected endpoint, or trigger the modified flow), not just compile, lint, or type-check.
+- During implementation and fixing, run the smallest targeted tests that exercise or reproduce the changed or problematic behavior. Do not run the approved broad/full command after every change or use it as the first iterative diagnostic step when a targeted test is known or can be identified.
+- Run the approved broad/full command once only when implementation is ready, as the final gate. If that final gate exposes a failure, return to targeted diagnosis, fix, and retest. Only after targeted tests pass may the broad/full final gate run again. Never weaken or omit the final broad gate.
 - No raw diffs or long logs in responses.
-- If verify fails: apply **minimal, targeted fixes** (no refactors) and re-run verify. If still failing or a larger change is required, stop and report a digest with a minimal relevant excerpt.
+- If targeted verification or the final gate fails, apply **minimal, targeted fixes** (no refactors) under the staged sequence above. If a larger change is required, stop and report a digest with a minimal relevant excerpt.
 - If the step list must change during execution: stop and ask Primary for a new gate.
 
 ---

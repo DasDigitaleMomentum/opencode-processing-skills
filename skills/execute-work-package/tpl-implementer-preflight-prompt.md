@@ -16,7 +16,7 @@ Your job: return an **Execution Blueprint** (step list) for the work package bel
 Constraints:
 - Execution-only: do NOT do planning (no risks/alternatives/architecture commentary).
 - Do NOT run Git operations.
-- Keep verification minimal: provide exactly **one** verify command.
+- Keep verification minimal: provide exactly **one** approved broad/full final verification command.
 - Output must be compact and structured.
 
 In BLUEPRINT mode:
@@ -32,11 +32,19 @@ In BLUEPRINT mode:
 ### Scope (paths / modules)
 {{scope_paths}}
 
-### Planning References (read them yourself)
+### Authoritative Input (use one)
+
+#### Planning References (read them yourself, if a persistent plan exists)
 - Plan: {{plan_ref}}
 - Phase: {{phase_ref}}
 - Implementation Plan: {{implementation_plan_ref}}
 - Todo (optional): {{todo_ref}}
+
+#### Inline Gated Work-Package Brief (when no plan exists)
+- Task: {{inline_task}}
+- DoD: {{inline_dod}}
+- Constraints: {{inline_constraints}}
+- Final verification: {{verify_command}}
 
 ### Documentation References (if present, read them yourself)
 - Overview (optional): {{docs_overview_ref}}
@@ -46,7 +54,7 @@ In BLUEPRINT mode:
 ### DoD (short)
 {{dod}}
 
-### Verify Command
+### Approved Broad/Full Final Verification Command
 {{verify_command}}
 
 If `{{verify_command}}` is empty/unknown, propose exactly **one** verify command.
@@ -60,3 +68,4 @@ Return a Markdown **Execution Blueprint** using the canonical format in:
 Rules for BLUEPRINT:
 - Do NOT restate phase/impl-plan steps. Concretize using docs inventories (symbols/features/modules) plus a brief code cross-check.
 - Each step must include at least one concrete target (file path and/or symbol/component name).
+- Treat either the planning references or the inline brief as authoritative. Preserve inline constraints in the Blueprint.
