@@ -1,7 +1,7 @@
 ---
 type: documentation
 entity: project-overview
-version: 1.4
+version: 1.5
 ---
 
 # OpenCode Processing Skills
@@ -12,7 +12,7 @@ OpenCode Processing Skills is a distributable collection of agent personas, work
 
 ## Architecture
 
-The repository has three cooperating planes. The workflow plane defines skills, artifact templates, and agent responsibilities; the distribution plane resolves local configuration and installs those definitions into supported AI-development harnesses; the checkpoint plane provides a dependency-free six-field JSONL contract, selected-log inspection, and an OpenCode-native pilot plugin. OpenCode receives checkpoint tools and OpenCode-only persona instructions in addition to skills and agents. Through `PluginInput.client`, the plugin estimates context-window use from the latest previous completed assistant step using the TUI's token accounting and the matching provider/model context limit. It stores that estimate as `context_used` and returns the estimated percentage and remaining context-window K-tokens; the active tool-calling step is unfinished, the remainder is not compaction headroom, and unavailable or invalid SDK data remains `null`/`unknown`.
+The repository has three cooperating planes. The workflow plane defines skills, artifact templates, and agent responsibilities; the distribution plane resolves local configuration and installs those definitions into supported AI-development harnesses; the checkpoint plane provides a dependency-free eight-field current JSONL contract, backward-compatible six-field parsing, selected-log inspection, and an OpenCode-native pilot plugin. Current records add nullable `agent` and point-in-time `session_title` metadata; legacy records normalize both to `null` when read. OpenCode receives checkpoint tools and OpenCode-only persona instructions in addition to skills and agents. Through `PluginInput.client`, the plugin snapshots `ToolContext.agent`, obtains the current title through SDK `session.get`, and estimates context-window use from the latest previous completed assistant step using the TUI's token accounting and the matching provider/model context limit. Session identity remains definitive if a title changes. Metadata or telemetry lookup failures do not block writes; unavailable values remain `null`/`unknown`.
 
 The module inventories cover operational source under `agents/`, `skills/`, `cursor/`, `packages/checkpoint-core/`, `opencode/`, and the root distribution boundary. Tracked `plans/**` files are project-management artifacts rather than an implementation module; `docs/agents.md`, `docs/installation.md`, and `docs/skills.md` are manually maintained source references and are intentionally not re-inventoried as implementation.
 
@@ -56,8 +56,8 @@ user request -> orchestrator -> matching skill -> scoped subagent
 | Workflow Skills | Self-contained workflows and normative templates for documentation, planning, review, execution, and handover. | [Detail](modules/workflow-skills.md) |
 | Cursor Adapter | Cursor-specific orchestration skills, subagent mapping, bootstrap guidance, and project-rule template. | [Detail](modules/cursor-adapter.md) |
 | Installation and Configuration | Multi-target synchronization, target/model resolution, variant generation, and repository-level distribution metadata. | [Detail](modules/installation-and-configuration.md) |
-| Checkpoint Core | Six-field JSONL contract, safe paths, append-only persistence, analysis, selected-log inspection, live/one-shot dashboard, fixtures, and tests. | [Detail](modules/checkpoint-core.md) |
-| OpenCode Checkpoint Adapter | Native tools, previous-completed-step context estimates with null fallback, and OpenCode-only persona instruction. | [Detail](modules/opencode-checkpoint-adapter.md) |
+| Checkpoint Core | Eight-field current/six-field legacy JSONL contract, safe paths, append-only persistence, count-based analysis, selected-log inspection, adaptive live/one-shot dashboard, fixtures, and tests. | [Detail](modules/checkpoint-core.md) |
+| OpenCode Checkpoint Adapter | Native tools, agent/title snapshots, previous-completed-step context estimates, non-blocking null fallbacks, and OpenCode-only persona instruction. | [Detail](modules/opencode-checkpoint-adapter.md) |
 
 ## Key Features
 

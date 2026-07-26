@@ -1,7 +1,7 @@
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
-const RECORD_FIELDS = [
+const LEGACY_RECORD_FIELDS = [
   "timestamp",
   "session_id",
   "done",
@@ -9,6 +9,8 @@ const RECORD_FIELDS = [
   "step_failed",
   "context_used",
 ];
+const METADATA_FIELDS = ["agent", "session_title"];
+const RECORD_FIELDS = [...LEGACY_RECORD_FIELDS, ...METADATA_FIELDS];
 
 const UTC_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 
@@ -61,11 +63,20 @@ export function validateCheckpointRecord(record) {
 
   const keys = Object.keys(record).sort();
   const expectedKeys = [...RECORD_FIELDS].sort();
+  const legacyKeys = [...LEGACY_RECORD_FIELDS].sort();
+  const hasCurrentSchema =
+    keys.length === expectedKeys.length &&
+    keys.every((key, index) => key === expectedKeys[index]);
+  const hasLegacySchema =
+    keys.length === legacyKeys.length &&
+    keys.every((key, index) => key === legacyKeys[index]);
   if (
-    keys.length !== expectedKeys.length ||
-    keys.some((key, index) => key !== expectedKeys[index])
+    !hasCurrentSchema &&
+    !hasLegacySchema
   ) {
-    throw new TypeError(`checkpoint record must contain exactly: ${RECORD_FIELDS.join(", ")}`);
+    throw new TypeError(
+      `checkpoint record must contain exactly the legacy fields (${LEGACY_RECORD_FIELDS.join(", ")}) or current fields (${RECORD_FIELDS.join(", ")})`,
+    );
   }
 
   if (!isValidUtcTimestamp(record.timestamp)) {
@@ -89,8 +100,27 @@ export function validateCheckpointRecord(record) {
   ) {
     throw new TypeError("context_used must be null or a finite number from 0 through 1");
   }
+  if (hasCurrentSchema) {
+    for (const field of METADATA_FIELDS) {
+      if (
+        record[field] !== null &&
+        (typeof record[field] !== "string" || record[field].trim().length === 0)
+      ) {
+        throw new TypeError(`${field} must be null or a non-empty string`);
+      }
+    }
+  }
 
   return record;
+}
+
+function normalizeCheckpointRecord(record) {
+  validateCheckpointRecord(record);
+  return {
+    ...record,
+    agent: record.agent ?? null,
+    session_title: record.session_title ?? null,
+  };
 }
 
 export function createCheckpointRecord({
@@ -99,6 +129,8 @@ export function createCheckpointRecord({
   next,
   stepFailed = false,
   contextUsed = null,
+  agent = null,
+  sessionTitle = null,
   clock = () => new Date(),
 }) {
   const record = {
@@ -108,6 +140,8 @@ export function createCheckpointRecord({
     next,
     step_failed: stepFailed,
     context_used: contextUsed,
+    agent,
+    session_title: sessionTitle,
   };
   validateCheckpointRecord(record);
   return record;
@@ -145,6 +179,8 @@ export async function checkpoint({
   next,
   stepFailed = false,
   contextUsed = null,
+  agent = null,
+  sessionTitle = null,
   remainingKTokens,
   clock = () => new Date(),
   workspaceRoot = process.cwd(),
@@ -155,6 +191,8 @@ export async function checkpoint({
     next,
     stepFailed,
     contextUsed,
+    agent,
+    sessionTitle,
     clock,
   });
   const { checkpointRoot, filePath } = resolveCheckpointFile(workspaceRoot, sessionId);
@@ -191,8 +229,7 @@ export function parseCheckpointJsonl(jsonl) {
     } catch (error) {
       throw new SyntaxError(`invalid checkpoint JSON on line ${index + 1}: ${error.message}`);
     }
-    validateCheckpointRecord(record);
-    return record;
+    return normalizeCheckpointRecord(record);
   });
 }
 
@@ -202,11 +239,11 @@ function hasExactlyThreeWords(label) {
 }
 
 export function analyzeCheckpoints(input) {
-  const records = typeof input === "string" ? parseCheckpointJsonl(input) : input;
-  if (!Array.isArray(records) || records.length === 0) {
+  const sourceRecords = typeof input === "string" ? parseCheckpointJsonl(input) : input;
+  if (!Array.isArray(sourceRecords) || sourceRecords.length === 0) {
     throw new TypeError("analysis requires at least one checkpoint record");
   }
-  records.forEach(validateCheckpointRecord);
+  const records = sourceRecords.map(normalizeCheckpointRecord);
 
   let matchingTransitions = 0;
   for (let index = 1; index < records.length; index += 1) {
@@ -220,11 +257,31 @@ export function analyzeCheckpoints(input) {
       count + Number(hasExactlyThreeWords(record.done)) + Number(hasExactlyThreeWords(record.next)),
     0,
   );
+  const checkedTransitions = records.length - 1;
+  const successfulRecords = records.reduce(
+    (count, record) => count + Number(record.step_failed === false),
+    0,
+  );
+  const checkedRecords = records.length;
+  const checkedLabels = records.length * 2;
+  const chainPercent =
+    checkedTransitions === 0 ? null : (matchingTransitions / checkedTransitions) * 100;
+  const workPercent = (successfulRecords / checkedRecords) * 100;
+  const threeWordPercent = (compliantLabels / checkedLabels) * 100;
 
   return {
     records: records.map((record) => ({ ...record })),
-    chainPercent:
-      records.length === 1 ? null : (matchingTransitions / (records.length - 1)) * 100,
-    threeWordPercent: (compliantLabels / (records.length * 2)) * 100,
+    matchingTransitions,
+    checkedTransitions,
+    successfulRecords,
+    checkedRecords,
+    compliantLabels,
+    checkedLabels,
+    chainPercent,
+    workPercent,
+    threeWordPercent,
+    chain: { success: matchingTransitions, count: checkedTransitions, percent: chainPercent },
+    work: { success: successfulRecords, count: checkedRecords, percent: workPercent },
+    threeWord: { success: compliantLabels, count: checkedLabels, percent: threeWordPercent },
   };
 }

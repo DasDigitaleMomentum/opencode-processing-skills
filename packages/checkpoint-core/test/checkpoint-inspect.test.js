@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   formatCheckpointSummary,
   formatContext,
+  formatMetric,
   formatPercent,
   main,
 } from "../bin/checkpoint-inspect.js";
@@ -50,8 +51,9 @@ test("pilot scenarios isolate work status, chain drift, and word drift", async (
     assert.equal(fixture.analysis.threeWordPercent, result.words, name);
     const summary = formatCheckpointSummary(`fixtures/pilot/${name}`, fixture.records, fixture.analysis);
     assert.match(summary, new RegExp(`Work status: ${result.status}`), name);
-    assert.match(summary, new RegExp(`Chain: ${formatPercent(result.chain)}`), name);
-    assert.match(summary, new RegExp(`Three-word compliance: ${formatPercent(result.words)}`), name);
+    assert.match(summary, new RegExp(`Chain: ${fixture.analysis.chain.success}/${fixture.analysis.chain.count} \\(${formatPercent(result.chain)}\\)`), name);
+    assert.match(summary, new RegExp(`Work: ${fixture.analysis.work.success}/${fixture.analysis.work.count} \\(${formatPercent(fixture.analysis.work.percent)}\\)`), name);
+    assert.match(summary, new RegExp(`Three-word compliance: ${fixture.analysis.threeWord.success}/${fixture.analysis.threeWord.count} \\(${formatPercent(result.words)}\\)`), name);
   }
 });
 
@@ -73,6 +75,8 @@ test("inspection prints deterministic selected-session summaries without changin
     assert.match(result.stdout, new RegExp(`File: fixtures/pilot/${name}`), name);
     assert.match(result.stdout, /Last attempted: /, name);
     assert.match(result.stdout, /Next announced: /, name);
+    assert.match(result.stdout, /Agent: -/, name);
+    assert.match(result.stdout, /Name\/title: -/, name);
     assert.deepEqual(after, before, name);
   }
 
@@ -85,11 +89,32 @@ test("first record and null context use explicit n/a and unknown displays", asyn
   const { records, analysis } = await loadFixture("successful.jsonl");
   const firstAnalysis = analyzeCheckpoints([records[0]]);
   const summary = formatCheckpointSummary("selected.jsonl", [records[0]], firstAnalysis);
-  assert.match(summary, /Chain: n\/a/);
+  assert.match(summary, /Chain: 0\/0 \(n\/a\)/);
+  assert.match(summary, /Work: 1\/1 \(100%\)/);
+  assert.match(summary, /Three-word compliance: 2\/2 \(100%\)/);
+  assert.match(summary, /Agent: -/);
+  assert.match(summary, /Name\/title: -/);
   assert.match(summary, /Context used: unknown/);
   assert.equal(formatContext(0), "0%");
   assert.equal(formatContext(1), "100%");
   assert.equal(formatPercent(null), "n/a");
+  assert.equal(formatMetric({ success: 0, count: 0, percent: null }), "0/0 (n/a)");
+});
+
+test("inspection displays latest metadata and count-based metrics", async () => {
+  const { records } = await loadFixture("successful.jsonl");
+  const enriched = records.map((record, index) => ({
+    ...record,
+    agent: index === records.length - 1 ? "implementer" : null,
+    session_title: index === records.length - 1 ? "Checkpoint TUI refinement" : null,
+  }));
+  const analysis = analyzeCheckpoints(enriched);
+  const summary = formatCheckpointSummary("selected.jsonl", enriched, analysis);
+  assert.match(summary, /Agent: implementer/);
+  assert.match(summary, /Name\/title: Checkpoint TUI refinement/);
+  assert.match(summary, /Chain: \d+\/\d+ \([^\n]+%\)/);
+  assert.match(summary, /Work: \d+\/\d+ \([^\n]+%\)/);
+  assert.match(summary, /Three-word compliance: \d+\/\d+ \([^\n]+%\)/);
 });
 
 test("invalid invocation and unreadable, empty, malformed, or invalid logs fail concisely", async (t) => {

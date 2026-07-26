@@ -9,6 +9,37 @@ function validTokenCount(value) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
+function nonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+export function createOpenCodeSessionTitle(client) {
+  return async function getOpenCodeSessionTitle(context) {
+    try {
+      if (
+        client === null ||
+        typeof client !== "object" ||
+        typeof client.session?.get !== "function" ||
+        typeof context?.sessionID !== "string" ||
+        context.sessionID.length === 0 ||
+        typeof context.directory !== "string" ||
+        context.directory.length === 0
+      ) {
+        return null;
+      }
+
+      const response = await client.session.get({
+        path: { id: context.sessionID },
+        query: { directory: context.directory },
+      });
+      if (response?.error) return null;
+      return nonEmptyString(response?.data?.title);
+    } catch {
+      return null;
+    }
+  };
+}
+
 export function createOpenCodeContextTelemetry(client) {
   return async function getOpenCodeContextTelemetry(context) {
     try {
@@ -92,6 +123,7 @@ export function createOpenCodeCheckpointPlugin({
   tool,
   checkpointCore,
   getContextTelemetry = unknownTelemetry,
+  getSessionTitle = async () => null,
 }) {
   if (typeof tool !== "function" || tool.schema === undefined) {
     throw new TypeError("tool must be the OpenCode tool helper");
@@ -107,6 +139,9 @@ export function createOpenCodeCheckpointPlugin({
   if (typeof getContextTelemetry !== "function") {
     throw new TypeError("getContextTelemetry must be a function");
   }
+  if (typeof getSessionTitle !== "function") {
+    throw new TypeError("getSessionTitle must be a function");
+  }
 
   return async function OpenCodeCheckpointPlugin(pluginContext = {}) {
     return {
@@ -120,12 +155,16 @@ export function createOpenCodeCheckpointPlugin({
             step_failed: tool.schema.boolean().optional().default(false),
           },
           async execute(args, context) {
-            let telemetry;
-            try {
-              telemetry = await getContextTelemetry(context);
-            } catch {
-              telemetry = unknownTelemetry();
-            }
+            const [telemetryResult, titleResult] = await Promise.allSettled([
+              getContextTelemetry(context),
+              getSessionTitle(context),
+            ]);
+            let telemetry =
+              telemetryResult.status === "fulfilled"
+                ? telemetryResult.value
+                : unknownTelemetry();
+            const sessionTitle =
+              titleResult.status === "fulfilled" ? nonEmptyString(titleResult.value) : null;
             if (
               telemetry === null ||
               typeof telemetry !== "object" ||
@@ -148,6 +187,8 @@ export function createOpenCodeCheckpointPlugin({
               next: args.next,
               stepFailed: args.step_failed ?? false,
               contextUsed: telemetry.contextUsed,
+              agent: nonEmptyString(context.agent),
+              sessionTitle,
               remainingKTokens: telemetry.remainingKTokens,
             });
             return formatCheckpointResult(feedback);

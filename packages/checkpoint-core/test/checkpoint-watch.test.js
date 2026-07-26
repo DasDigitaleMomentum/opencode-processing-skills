@@ -37,6 +37,7 @@ test("rows sort by latest activity and separate age, state, metrics, status, and
     record("older", "2026-07-26T10:00:00.000Z", { next: "Run focused tests" }),
     record("older", "2026-07-26T10:00:10.000Z", {
       done: "broken chain here", next: "Correct failed work", step_failed: true, context_used: 0.5,
+      agent: "implementer", session_title: "Checkpoint TUI refinement",
     }),
   ]);
   await writeLog(root, "newer.jsonl", [record("newer", "2026-07-26T10:00:29.500Z")]);
@@ -46,9 +47,13 @@ test("rows sort by latest activity and separate age, state, metrics, status, and
   assert.deepEqual(rows.map((row) => row.state), ["ACTIVE", "STALE"]);
   assert.equal(rows[0].context, "unknown");
   assert.equal(rows[1].context, "50%");
-  assert.equal(rows[1].work, "FAILED");
-  assert.equal(rows[1].chain, "0%");
-  assert.equal(rows[1].words, "100%");
+  assert.equal(rows[1].work, "1/2 (50%)");
+  assert.equal(rows[1].chain, "0/1 (0%)");
+  assert.equal(rows[1].words, "4/4 (100%)");
+  assert.equal(rows[1].agent, "implementer");
+  assert.equal(rows[1].title, "Checkpoint TUI refinement");
+  assert.equal(rows[0].agent, "-");
+  assert.equal(rows[0].title, "-");
 });
 
 test("malformed files become concise error rows and only direct regular JSONL files are read", async (t) => {
@@ -71,15 +76,43 @@ test("dashboard truncates deterministically within terminal width", () => {
   const row = {
     session: "session-name-that-is-much-too-long", ageMs: 2000, state: "ACTIVE",
     chain: "100%", words: "100%", work: "COMPLETED", context: "unknown",
+    agent: "implementer", title: "A human-readable session title",
     done: "A deliberately oversized completed work description",
     next: "A deliberately oversized next work description",
   };
-  const first = formatDashboard([row], { columns: 80, staleMs: 1000 });
-  const second = formatDashboard([row], { columns: 80, staleMs: 1000 });
+  row.chain = "1/1 (100%)";
+  row.work = "1/1 (100%)";
+  row.words = "2/2 (100%)";
+  const first = formatDashboard([row], { columns: 140, staleMs: 1000 });
+  const second = formatDashboard([row], { columns: 140, staleMs: 1000 });
   assert.equal(first, second);
-  assert.ok(first.split("\n").every((line) => line.length <= 80));
+  assert.ok(first.split("\n").every((line) => line.length <= 140));
   assert.match(first, /…/);
-  assert.match(first, /SESSION.*AGE.*STATE.*CHAIN.*3-WORD.*WORK.*CONTEXT.*DONE.*NEXT/);
+  assert.match(first, /SESSION.*AGENT.*NAME\/TITLE.*AGE.*STATE.*CHAIN.*WORK.*3-WORD.*CONTEXT.*DONE.*NEXT/);
+  assert.match(first, /1\/1 \(100%\).*1\/1 \(100%\).*2\/2 \(100%\)/);
+});
+
+test("dashboard distributes added terminal width across title, done, and next", () => {
+  const row = {
+    session: "session-with-long-id", agent: "maintainer-direct",
+    title: "A descriptive human readable checkpoint session title",
+    ageMs: 2000, state: "ACTIVE", chain: "1/1 (100%)", work: "2/2 (100%)",
+    words: "4/4 (100%)", context: "50%",
+    done: "A deliberately oversized completed work description",
+    next: "A deliberately oversized next work description",
+  };
+  const narrow = formatDashboard([row], { columns: 80, staleMs: 1000 });
+  const medium = formatDashboard([row], { columns: 140, staleMs: 1000 });
+  const wide = formatDashboard([row], { columns: 240, staleMs: 1000 });
+  assert.ok(narrow.split("\n").every((line) => line.length <= 80));
+  assert.ok(medium.split("\n").every((line) => line.length <= 140));
+  assert.ok(wide.split("\n").every((line) => line.length <= 240));
+  assert.match(narrow, /…/);
+  assert.match(medium, /…/);
+  assert.match(wide, /A descriptive human readable checkpoint session title/);
+  assert.match(wide, /A deliberately oversized completed work description/);
+  assert.match(wide, /A deliberately oversized next work description/);
+  assert.ok(wide.split("\n")[3].length > medium.split("\n")[3].length);
 });
 
 test("once mode is deterministic and emits no terminal control sequences", async (t) => {

@@ -10,6 +10,7 @@ import * as checkpointCore from "../../packages/checkpoint-core/src/index.js";
 import {
   createOpenCodeCheckpointPlugin,
   createOpenCodeContextTelemetry,
+  createOpenCodeSessionTitle,
 } from "../checkpoint-runtime.mjs";
 
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, "../..");
@@ -61,12 +62,30 @@ function assistant({
   };
 }
 
-function fakeClient({ messages, contextLimit = 1000, messageError, providerError } = {}) {
+function fakeClient({
+  messages,
+  contextLimit = 1000,
+  messageError,
+  providerError,
+  sessionError,
+  sessionResponseError,
+  title,
+  expectedSessionId = "session-a",
+} = {}) {
   return {
     session: {
+      async get(options) {
+        if (sessionError) throw sessionError;
+        assert.deepEqual(options, {
+          path: { id: expectedSessionId },
+          query: { directory: "/workspace" },
+        });
+        if (sessionResponseError) return { error: sessionResponseError };
+        return { data: { title } };
+      },
       async messages(options) {
         if (messageError) throw messageError;
-        assert.equal(options.path.id, "session-a");
+        assert.equal(options.path.id, expectedSessionId);
         assert.equal(options.query.directory, "/workspace");
         return { data: messages };
       },
@@ -177,6 +196,7 @@ async function assertInstalledOpenCodePilot(home) {
   assert.match(plugin, /fallbackTool/);
   assert.match(plugin, /await import\("@opencode-ai\/plugin"\)/);
   assert.match(plugin, /createOpenCodeContextTelemetry\(pluginContext\?\.client\)/);
+  assert.match(plugin, /createOpenCodeSessionTitle\(pluginContext\?\.client\)/);
   assert.match(runtime, /createOpenCodeCheckpointPlugin/);
   assert.match(core, /export async function checkpoint/);
   assert.match(watcher, /runLiveDashboard/);
@@ -238,9 +258,13 @@ test("native tools isolate parent and subagent logs with honest unknown telemetr
       "next",
       "step_failed",
       "context_used",
+      "agent",
+      "session_title",
     ]);
     assert.equal(record.session_id, sessionId);
     assert.equal(record.context_used, null);
+    assert.equal(record.agent, null);
+    assert.equal(record.session_title, null);
   }
   const subagentRaw = await readFile(
     path.join(worktree, ...checkpointCore.checkpointPath("subagent-session").split("/")),
@@ -259,11 +283,13 @@ test("native tools isolate parent and subagent logs with honest unknown telemetr
   assert.match(parentSummary, /Session: parent\/session/);
   assert.match(parentSummary, /Work status: COMPLETED/);
   assert.match(parentSummary, /Context used: unknown/);
-  assert.match(parentSummary, /Chain: n\/a/);
-  assert.match(parentSummary, /Three-word compliance: 100%/);
+  assert.match(parentSummary, /Chain: 0\/0 \(n\/a\)/);
+  assert.match(parentSummary, /Work: 1\/1 \(100%\)/);
+  assert.match(parentSummary, /Three-word compliance: 2\/2 \(100%\)/);
   assert.match(failedSummary, /Work status: FAILED/);
-  assert.match(failedSummary, /Chain: n\/a/);
-  assert.match(failedSummary, /Three-word compliance: 100%/);
+  assert.match(failedSummary, /Chain: 0\/0 \(n\/a\)/);
+  assert.match(failedSummary, /Work: 0\/1 \(0%\)/);
+  assert.match(failedSummary, /Three-word compliance: 2\/2 \(100%\)/);
   assert.deepEqual(await readFile(path.join(worktree, ...parentPath.split("/"))), parentBefore);
   assert.deepEqual(
     await readFile(path.join(worktree, ...subagentPath.split("/"))),
@@ -279,8 +305,9 @@ test("native tools isolate parent and subagent logs with honest unknown telemetr
   assert.match(correctedSummary, /Last attempted: Test failure correct/);
   assert.match(correctedSummary, /Next announced: Run focused tests/);
   assert.match(correctedSummary, /Work status: COMPLETED/);
-  assert.match(correctedSummary, /Chain: 100%/);
-  assert.match(correctedSummary, /Three-word compliance: 100%/);
+  assert.match(correctedSummary, /Chain: 1\/1 \(100%\)/);
+  assert.match(correctedSummary, /Work: 1\/2 \(50%\)/);
+  assert.match(correctedSummary, /Three-word compliance: 4\/4 \(100%\)/);
   assert.deepEqual(await readFile(path.join(worktree, ...subagentPath.split("/"))), correctedBefore);
 
   await hooks.tool.checkpoint.execute(
@@ -316,6 +343,114 @@ test("telemetry uses the latest completed assistant step and sums all token cate
     contextUsed: 0.8,
     remainingKTokens: 0.2,
   });
+});
+
+test("native checkpoints snapshot parent and subagent persona and session title", async (t) => {
+  const worktree = await mkdtemp(path.join(os.tmpdir(), "checkpoint-opencode-metadata-"));
+  t.after(() => rm(worktree, { recursive: true, force: true }));
+  const titles = new Map([
+    ["parent-session", "Parent planning session"],
+    ["subagent-session", "Focused implementation"],
+  ]);
+  const calls = [];
+  const client = {
+    session: {
+      async get(options) {
+        calls.push(options);
+        return { data: { title: titles.get(options.path.id) } };
+      },
+    },
+  };
+  const plugin = createOpenCodeCheckpointPlugin({
+    tool: fakeTool,
+    checkpointCore,
+    getSessionTitle: createOpenCodeSessionTitle(client),
+  });
+  const hooks = await plugin({ worktree });
+
+  await hooks.tool.checkpoint.execute(
+    { done: "Parent metadata captured", next: "Delegate metadata capture" },
+    {
+      sessionID: "parent-session",
+      directory: "/workspace",
+      worktree,
+      agent: "maintainer",
+    },
+  );
+  await hooks.tool.checkpoint.execute(
+    { done: "Delegate metadata capture", next: "Review metadata records" },
+    {
+      sessionID: "subagent-session",
+      directory: "/workspace",
+      worktree,
+      agent: "implementer",
+    },
+  );
+  titles.set("parent-session", "Renamed parent session");
+  await hooks.tool.checkpoint.execute(
+    { done: "Delegate metadata capture", next: "Review metadata records" },
+    {
+      sessionID: "parent-session",
+      directory: "/workspace",
+      worktree,
+      agent: "maintainer-direct",
+    },
+  );
+
+  const parentRaw = await readFile(
+    path.join(worktree, ...checkpointCore.checkpointPath("parent-session").split("/")),
+    "utf8",
+  );
+  const subagentRaw = await readFile(
+    path.join(worktree, ...checkpointCore.checkpointPath("subagent-session").split("/")),
+    "utf8",
+  );
+  const parentRecords = checkpointCore.parseCheckpointJsonl(parentRaw);
+  const [subagentRecord] = checkpointCore.parseCheckpointJsonl(subagentRaw);
+  assert.deepEqual(
+    parentRecords.map(({ agent, session_title: sessionTitle }) => ({ agent, sessionTitle })),
+    [
+      { agent: "maintainer", sessionTitle: "Parent planning session" },
+      { agent: "maintainer-direct", sessionTitle: "Renamed parent session" },
+    ],
+  );
+  assert.equal(subagentRecord.agent, "implementer");
+  assert.equal(subagentRecord.session_title, "Focused implementation");
+  assert.deepEqual(calls, [
+    { path: { id: "parent-session" }, query: { directory: "/workspace" } },
+    { path: { id: "subagent-session" }, query: { directory: "/workspace" } },
+    { path: { id: "parent-session" }, query: { directory: "/workspace" } },
+  ]);
+});
+
+test("session title failures and empty host metadata persist null without blocking", async (t) => {
+  const worktree = await mkdtemp(path.join(os.tmpdir(), "checkpoint-opencode-title-error-"));
+  t.after(() => rm(worktree, { recursive: true, force: true }));
+  const cases = [
+    { sessionId: "title-throws", client: fakeClient({ sessionError: new Error("unavailable"), expectedSessionId: "title-throws" }) },
+    { sessionId: "title-errors", client: fakeClient({ sessionResponseError: { message: "missing" }, expectedSessionId: "title-errors" }) },
+    { sessionId: "title-empty", client: fakeClient({ title: "   ", expectedSessionId: "title-empty" }) },
+  ];
+
+  for (const { sessionId, client } of cases) {
+    const plugin = createOpenCodeCheckpointPlugin({
+      tool: fakeTool,
+      checkpointCore,
+      getSessionTitle: createOpenCodeSessionTitle(client),
+    });
+    const hooks = await plugin({ worktree });
+    await hooks.tool.checkpoint.execute(
+      { done: "Session title queried", next: "Checkpoint persistence verified" },
+      { sessionID: sessionId, directory: "/workspace", worktree, agent: "" },
+    );
+    const raw = await readFile(
+      path.join(worktree, ...checkpointCore.checkpointPath(sessionId).split("/")),
+      "utf8",
+    );
+    const [record] = checkpointCore.parseCheckpointJsonl(raw);
+    assert.equal(record.agent, null);
+    assert.equal(record.session_title, null);
+  }
 });
 
 test("telemetry clamps exhausted context and rejects malformed host data", async () => {
@@ -365,10 +500,14 @@ test("SDK telemetry failures fall back to null without blocking persistence", as
     "session_id",
     "done",
     "next",
-    "step_failed",
-    "context_used",
+      "step_failed",
+      "context_used",
+      "agent",
+      "session_title",
   ]);
   assert.equal(record.context_used, null);
+  assert.equal(record.agent, null);
+  assert.equal(record.session_title, null);
   assert.doesNotMatch(raw, /remaining|telemetry|provider|model/i);
 });
 

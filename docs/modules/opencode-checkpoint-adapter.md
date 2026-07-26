@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "opencode-checkpoint-adapter"
-version: 1.1
+version: 1.2
 ---
 
 # Module: OpenCode Checkpoint Adapter
@@ -11,11 +11,13 @@ version: 1.1
 
 ## Overview
 
-`opencode/` supplies the native OpenCode pilot. A minimal TypeScript plugin composes the installed core with OpenCode's `tool` helper when available and otherwise uses the host's dependency-free JSON-Schema compatibility path; a testable runtime binds `ToolContext.sessionID` and `worktree` and derives telemetry through `PluginInput.client`; one instruction fragment is appended only to installed OpenCode personas.
+`opencode/` supplies the native OpenCode pilot. A minimal TypeScript plugin composes the installed core with OpenCode's `tool` helper when available and otherwise uses the host's dependency-free JSON-Schema compatibility path; a testable runtime binds `ToolContext.sessionID`, `worktree`, and `agent`, snapshots the session title through `PluginInput.client`, and derives telemetry through the same client; one instruction fragment is appended only to installed OpenCode personas.
 
 ### Responsibility
 
-The adapter owns OpenCode tool schemas, telemetry derivation, and feedback, not the raw six-field contract. `createOpenCodeContextTelemetry` queries session messages and provider models through `PluginInput.client`, selects the latest previous assistant step with positive output tokens, sums the same five token categories as the TUI, and resolves that message's provider/model context limit (`opencode/checkpoint-runtime.mjs:12-78`). It returns a clamped estimated context fraction and remaining context-window K-tokens. The active assistant step invoking the tool is not finalized, so the values are previous-completed-step estimates, not live occupancy or compaction headroom. Missing, invalid, unmatched, or failed SDK data returns null/unknown without blocking persistence (`opencode/checkpoint-runtime.mjs:14-80`).
+The adapter owns OpenCode tool schemas, metadata/telemetry derivation, and feedback, not raw-record validation. Every call snapshots nullable `agent` from `ToolContext.agent` and nullable `session_title` from SDK `session.get`. The title is point-in-time display metadata: it may change in later records, while `session_id` remains definitive (`opencode/checkpoint-runtime.mjs:16-41`, `opencode/checkpoint-runtime.mjs:157-193`). A missing/empty title, SDK error response, thrown title lookup, or rejected metadata promise becomes `null`; title lookup and telemetry run independently with `Promise.allSettled`, so failures do not block the write.
+
+`createOpenCodeContextTelemetry` queries session messages and provider models through `PluginInput.client`, selects the latest previous assistant step with positive output tokens, sums the same five token categories as the TUI, and resolves that message's provider/model context limit (`opencode/checkpoint-runtime.mjs:43-113`). It returns a clamped estimated context fraction and remaining context-window K-tokens. The active assistant step invoking the tool is not finalized, so the values are previous-completed-step estimates, not live occupancy or compaction headroom. Missing, invalid, unmatched, or failed SDK data returns null/unknown without blocking persistence.
 
 ### Dependencies
 
@@ -38,21 +40,23 @@ The adapter owns OpenCode tool schemas, telemetry derivation, and feedback, not 
 
 | Symbol | Kind | Visibility | Location | Purpose |
 |---|---|---|---|---|
-| `CheckpointPlugin` | plugin export | public | `opencode/checkpoint-plugin.ts:52` | Composes the helper/core/runtime and creates telemetry from `pluginContext.client`. |
-| `createOpenCodeContextTelemetry` | function | public | `opencode/checkpoint-runtime.mjs:12` | Derives TUI-equivalent previous-completed-step estimates with null fallback. |
-| `createOpenCodeCheckpointPlugin` | function | public | `opencode/checkpoint-runtime.mjs:91` | Builds `checkpoint` and `checkpoint_path` native tools. |
-| `checkpoint.execute` | tool executor | public | `opencode/checkpoint-runtime.mjs:122` | Queries telemetry and writes using `context.sessionID` and `context.worktree` (plugin worktree fallback). |
-| `checkpoint_path.execute` | tool executor | public | `opencode/checkpoint-runtime.mjs:162` | Returns only the workspace-relative encoded JSONL path. |
+| `CheckpointPlugin` | plugin export | public | `opencode/checkpoint-plugin.ts:53` | Composes helper/core/runtime and creates title/telemetry readers from `pluginContext.client`. |
+| `createOpenCodeSessionTitle` | function | public | `opencode/checkpoint-runtime.mjs:16` | Calls `session.get` for the active ID/directory and returns a non-empty title or `null`. |
+| `createOpenCodeContextTelemetry` | function | public | `opencode/checkpoint-runtime.mjs:43` | Derives TUI-equivalent previous-completed-step estimates with null fallback. |
+| `createOpenCodeCheckpointPlugin` | function | public | `opencode/checkpoint-runtime.mjs:122` | Builds `checkpoint` and `checkpoint_path` native tools. |
+| `checkpoint.execute` | tool executor | public | `opencode/checkpoint-runtime.mjs:157` | Settles title/telemetry independently and writes session/worktree plus nullable agent/title snapshots. |
+| `checkpoint_path.execute` | tool executor | public | `opencode/checkpoint-runtime.mjs:203` | Returns only the workspace-relative encoded JSONL path. |
 | `Checkpoint Heartbeat` | instruction | installed | `opencode/checkpoint-instruction.md:3` | Directs parents/subagents on chaining, failed steps, and unknown telemetry. |
 
 ## Data Flow
 
 1. OpenCode auto-loads installed `plugins/checkpoint.ts`.
-2. The shim creates telemetry with `PluginInput.client`; `checkpoint(done, next, step_failed=false)` queries session messages and provider models for `context.sessionID`/`directory`.
-3. The runtime scans backward to the latest assistant message with positive output, sums input/output/reasoning/cache-read/cache-write, and matches `providerID`/`modelID` to its context limit. The output-zero active tool-calling step is not selected.
-4. The core persists the estimated fraction as `context_used`; feedback reports the estimated percentage and remaining context-window K-tokens. Remaining K-tokens are not persisted and are not compaction headroom.
-5. Missing or malformed data and SDK failures persist `context_used: null` and report both values as `unknown`.
-6. `checkpoint_path(session_id)` returns the selected relative path for direct reading or core inspection.
+2. The shim creates session-title and telemetry readers with `PluginInput.client`; `checkpoint(done, next, step_failed=false)` starts both lookups for `context.sessionID`/`directory`.
+3. `session.get` supplies the point-in-time title while `context.agent` supplies the current persona. Either normalizes to `null` when absent/empty; title lookup failure is isolated and cannot prevent persistence.
+4. The runtime scans backward to the latest assistant message with positive output, sums input/output/reasoning/cache-read/cache-write, and matches `providerID`/`modelID` to its context limit. The output-zero active tool-calling step is not selected.
+5. The core persists an eight-field record containing metadata and the estimated fraction; feedback reports the estimated percentage and remaining context-window K-tokens. Remaining K-tokens are not persisted and are not compaction headroom.
+6. Missing or malformed telemetry and SDK failures persist `context_used: null` and report both values as `unknown`; metadata failures likewise persist `null` without blocking the record.
+7. `checkpoint_path(session_id)` returns the selected relative path for direct reading or core inspection. The stable ID, not mutable title text, selects the log.
 
 ## Configuration
 
@@ -61,4 +65,4 @@ No new YAML key exists. `targets.opencode.home` is also the global checkpoint pl
 ## Inventory Notes
 
 - **Coverage**: full
-- **Notes**: The adapter has three runtime/instruction source files and one integration test. It does not alter canonical cross-harness `agents/*.md` sources.
+- **Notes**: The adapter has three runtime/instruction source files and one integration test. Metadata coverage verifies parent/subagent personas, renamed title snapshots, exact `session.get` arguments, and non-blocking null fallback (`opencode/test/checkpoint-plugin.test.mjs:348-454`). It does not alter canonical cross-harness `agents/*.md` sources.
