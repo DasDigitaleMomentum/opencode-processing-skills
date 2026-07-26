@@ -58,7 +58,7 @@ The primary passes the focus via `{{focus}}` in the delegation prompt. If no foc
   - Invokes the review skill after implementation is complete.
   - Delegates to `delegate-strong` (default) or `general` (for same-model perspective).
   - Receives review summary and decides on follow-up actions.
-  - Retains the reviewer `task_id` for possible remediation.
+   - Retains the reviewer `task_id` while deciding whether its reasoning is valuable for possible remediation.
 
 - **Subagent (delegate-strong / general)**
   - Reads plan, phase, implementation plan, and execution digest with **no prior context**.
@@ -114,8 +114,8 @@ Subagent returns:
 
 Primary decides:
 - **Accepted**: Proceed to commit/merge. Update plan via `update-plan`.
-- **Needs Rework**: Prefer accepting the findings and resuming the same reviewer `task_id` through `review-fix`. Related fixes may span multiple files, call sites, tests, and runtime code; size alone does not require a new work package.
-- **New work package**: Use `execute-work-package` only when the objective/gated scope changes, a new dependency or primary decision is required, the reviewer session is unavailable, or the primary explicitly wants a fresh implementation context.
+- **Needs Rework**: After accepting findings, resume the same reviewer `task_id` through `review-fix` when remediation materially benefits from retained analysis, unresolved assumptions, or cross-file reasoning. Related fixes may span multiple files, call sites, tests, and runtime code; size alone does not decide reuse.
+- **Fresh lean work**: Prefer a fresh session for a fully specified, self-contained fix or verification when accumulated context cost is disproportionate. Use a new gated `execute-work-package` when the objective/gated scope changes, a new dependency or primary decision is required, or a fresh implementation context is explicitly chosen.
 - **Rejected**: Discuss with user. May require replanning via `update-plan`.
 
 The review pass ends before remediation begins. A reviewer that applies fixes is no longer independent; an additional review is optional and requires an explicit primary or user decision. Do not automatically chain review and remediation loops.
@@ -145,6 +145,7 @@ The review artifact `plans/<name>/reviews/impl-review-phase-N.md` MUST:
 - Do not discard the reviewer `task_id` until the primary has decided whether remediation is needed.
 - Ensure the `reviews/` directory exists before delegating (create if needed).
 - **Test quality is a first-class concern.** A review that only checks "tests pass" without evaluating test meaningfulness is incomplete.
+- When broad/full verification is supplied for review or remediation, use the smallest targeted tests for iterative diagnosis. Run the approved broad/full command once only when ready as the final gate; if it fails, return to targeted diagnosis and pass targeted tests before running the final gate again. Never weaken or omit it.
 - Owning review and test verification does not imply consuming raw verbose output directly. Potentially verbose output should be spooled under `/tmp/opencode/`, with only path, command, exit status, and compact metadata/evidence retained; use focused filtering or `retriever` for analysis.
 - Flag mock-only testing as a limitation unless the user explicitly waived real-world testing.
 

@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.5.3 — 2026-07-26
+
+### Changed
+- **Proportional work packages**: Bounded single-work-package changes can proceed directly through an inline gated Blueprint instead of requiring a persistent plan.
+- **Context-aware session reuse**: Reviewer and implementer sessions are resumed only when retained reasoning outweighs accumulated context; self-contained follow-ups prefer lean sessions.
+- **Staged verification**: Iterative fixes use targeted tests, with the approved broad verification reserved for the final gate and rerun only after targeted failures pass.
+- **Batch implementation-plan review**: Multiple phase plans default to one fresh reviewer session that reviews sequentially, reuses shared evidence, writes per-phase artifacts, and performs one integrated cross-phase consistency assessment.
+
 ## 0.5.2 — 2026-07-24
 
 ### Changed

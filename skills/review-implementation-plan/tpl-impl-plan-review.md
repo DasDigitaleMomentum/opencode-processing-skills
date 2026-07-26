@@ -3,6 +3,8 @@ type: review
 entity: implementation-plan-review
 plan: "{{plan_name}}"
 phase: {{phase_number}}
+review_mode: "{{review_mode}}"  # single-phase | batch
+batch_phases: "{{batch_phases}}"  # optional; ordered phase set for batch review
 status: draft  # draft | final
 reviewer: "{{agent_type}}"  # delegate | general
 created: "{{date}}"
@@ -11,12 +13,12 @@ created: "{{date}}"
 <!-- REVIEW PRIORITY GUIDE
      Focus sections (always address thoroughly):
      - Overall Assessment, Scope Alignment, Technical Feasibility, Step Quality Assessment, Testing Plan Assessment, Findings Summary
-     
+
      Secondary sections (include only when real problems found):
      - Reference Consistency, Documentation & Cleanup, formal DoD checklisting
-     
+
      If a secondary section has no real findings, OMIT it entirely rather than
-     writing "No issues found." A shorter, focused review is better than a 
+     writing "No issues found." A shorter, focused review is better than a
      comprehensive-but-cluttered one.
 -->
 
@@ -169,3 +171,25 @@ created: "{{date}}"
 <!-- Prioritized list of actions. Start with Critical, then Major, then Minor. -->
 
 1. {{recommendation}}
+
+## Cross-Phase Consistency (Batch Review Only)
+
+<!-- OPTIONAL: Include this section in exactly one per-phase review artifact for
+     the batch, normally after all per-phase passes are complete. Omit it from
+     single-phase reviews and all other artifacts in the same batch. Do not
+     create a separate consolidated artifact.
+
+     Record:
+     - the ordered phase set and any contiguous dependency/domain partitions
+     - shared interfaces, naming, data flow assumptions, and dependency order
+     - cross-partition interfaces checked centrally, without repeating completed
+       phase reviews
+     - one integrated assessment and any findings that arise from it -->
+
+**Reviewed phases**: {{ordered_phase_set}}
+
+**Integrated assessment**: {{cross_phase_assessment}}
+
+### Cross-Phase Findings
+
+- {{finding_or_no_findings}}

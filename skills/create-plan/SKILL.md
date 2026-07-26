@@ -1,6 +1,6 @@
 ---
 name: create-plan
-description: Create a structured plan (plan.md, phases/, todo.md) for a feature or change. Use this skill when planning non-trivial work before implementation.
+description: Create a persistent structured plan (plan.md, phases/, todo.md) when work needs multi-phase or multi-session coordination, durable tracking, or an explicitly requested plan.
 license: MIT
 compatibility: opencode
 metadata:
@@ -26,11 +26,11 @@ Default next step (second pass): use `author-and-verify-implementation-plan` to 
 
 ## When to Use
 
-- When the user wants to plan a feature, refactoring, or migration before implementing
-- When a task is too large for a single session and needs phasing
-- When the user asks to "create a plan" or "plan this feature"
+- When work is multi-phase or too large for a single session.
+- When the user explicitly requests a persistent plan.
+- When durable coordination or tracking is needed across agents, contributors, or sessions.
 
-Do NOT use for simple, one-shot tasks that don't need formal planning.
+Do NOT use for a single bounded work package that can be gated with an inline brief containing its task, DoD, constraints, and final verification. Significance or non-triviality alone does not require `plans/` persistence.
 
 ## Execution Model (Recommended)
 
@@ -78,9 +78,10 @@ If the plan involves changes to existing code:
 
 Determine if phasing is needed:
 
-**Single-phase plans** (simple features):
+**Single-phase plans** (work that otherwise warrants persistence):
 - One phase covering the entire scope
 - Still create the full directory structure for consistency
+- Create this structure only because the work needs persistent coordination or tracking, or the user requested it; a single-phase shape alone is not a reason to create a plan.
 
 **Multi-phase plans** (complex features):
 - Each phase must be completable in a single session

@@ -14,7 +14,7 @@ The orchestrator. Handles planning decisions, user interaction, and Git operatio
 - Loads skills automatically based on what you're asking for
 - Delegates expensive exploration to subagents
 - Keeps context lean by receiving digests instead of full outputs
-- Persists everything to `docs/` and `plans/`
+- Persists curated documentation to `docs/` and uses `plans/` proportionally for multi-phase, multi-session, explicitly requested, or durably coordinated/tracked work
 - Commits only when you ask
 
 **When it works itself vs. delegates:**
@@ -43,7 +43,9 @@ The one canonical, skill-driven delegate persona. Skills provide task expertise,
 
 **Write boundary:** `delegate` is read/analyze/verify by default. It may write skill-defined artifacts with explicit output paths/templates, such as reviews and implementation plans. Larger ad-hoc writes with undefined shape/targets should start with an informal Blueprint for primary approval. Code changes normally route to `implementer`; delegates do not perform Git operations.
 
-After an implementation or implementation-plan review, `review-fix` is the preferred same-session remediation path for accepted related findings, including multi-file runtime changes. The review artifact remains unchanged. A new implementation or authoring session is reserved for changed scope/objective, missing context, new primary decisions, or an explicit fresh perspective.
+After an implementation or implementation-plan review, choose remediation-session reuse by retained context value versus context cost. Resume the reviewer through `review-fix` when its analysis, unresolved assumptions, or cross-file reasoning materially helps; prefer a fresh lean task, or a tiny primary check, for a fully specified fix, test, or command. File count and session age do not decide reuse. The review artifact remains unchanged, and no review/fix loop starts automatically.
+
+For multiple implementation-plan reviews, the maintainer defaults to one reviewer session that is fresh from the authoring session, not one reviewer per phase. The reviewer works sequentially in dependency order, reuses consolidated evidence, writes each per-phase review artifact, performs one integrated consistency assessment, and returns one aggregate digest. Parallel per-phase reviewers and nested phase-oriented retriever fan-out are not defaults; oversized review is divided only into contiguous dependency/domain groups with a central cross-partition interface check.
 
 Delegates and reviewers send separable evidence collection to `retriever` by default, and may call `doc-explorer` only for genuinely documentation- or module-oriented child tasks. They may directly read scoped source, authoritative docs/plans, symbols, and compact targeted evidence, but route uncurated bulk evidence or coherent multi-file collection to `retriever`. The parent owns synthesis, verdicts, severity, scope interpretation, and final artifacts without repeating broad child retrieval.
 
@@ -82,9 +84,11 @@ In BLUEPRINT it uses native parallel reads for compact independent results and `
 
 **Protocol:** BLUEPRINT → GATE → EXECUTE → DIGEST
 
+BLUEPRINT and EXECUTE always use the same compact `task_id`: the second turn depends on the inspection and approval context retained from the first. This gate-specific requirement overrides the general preference for fresh lean sessions when old context has little value.
+
 **Does:**
 - Proposes step lists (blueprint mode)
-- Implements changes and runs verification (execute mode)
+- Implements changes and stages verification: smallest targeted tests while changing/fixing, then the approved broad/full command as the final gate
 - Returns compact digests
 
 **Does NOT:**
@@ -135,7 +139,9 @@ Potentially verbose commands spool their complete output to a predictable path u
 
 ### Stateful delegate reuse
 
-The primary should resume an existing delegate `task_id` for follow-ups within the same analysis, review, or debugging thread. This includes loading `review-fix` after an implementation or implementation-plan review. Start a new delegate for changed scope, parallel work, model/variant changes, fresh independent opinions, or stale context. `task_id`s are session-local; durable continuity belongs in `docs/`, `plans/`, todos, and handovers.
+Reuse a delegate `task_id` when retained reasoning materially reduces reconstruction cost: follow-up analysis, unresolved assumptions, cross-file reasoning, or review remediation that depends on the original findings. Prefer a fresh lean task—or the primary for a tiny focused check—when a test, command, verification, or fully specified fix is self-contained, or accumulated context costs more than it contributes. BLUEPRINT → EXECUTE is the exception: it must reuse the same compact implementer session because execution depends on the approved Blueprint context. Start fresh for changed scope, parallel work, model/variant changes, or an independent opinion. `task_id`s are session-local; durable continuity belongs in files when a persistent workflow exists.
+
+Batch implementation-plan review is another deliberate reuse case: the reviewer starts independently from the author, then keeps its session across the ordered phases because shared evidence and cross-phase reasoning are review inputs. Separate reviewers are exceptions for explicit independent perspectives, unrelated domains, specialist requirements, or impractical combined context—not an automatic phase fan-out.
 
 ### When to use delegate variants
 
@@ -158,8 +164,8 @@ You ──prompt──▸ @maintainer ──delegates──▸ subagents
                     │  skills loaded           │  writes to disk
                     │  automatically           │  returns digest
                     ▼                         ▼
-               docs/ & plans/           code changes
-               (persistent)             (maintainer commits
+               docs/ & proportional     code changes
+               plans/ persistence       (maintainer commits
                                          when you ask)
 
 Delegation targets:
@@ -173,4 +179,4 @@ Delegation targets:
 
 Maintainers call `retriever` at delegation level 1. Delegates, reviewers, and implementers use it at level 2 for separable evidence; delegates may also call `doc-explorer` for documentation/module child tasks. OpenCode v1.18.2+ requires top-level `subagent_depth: 2`; older versions do not support that setting. See [Installation → Nested Delegation](installation.md#nested-delegation-opencode).
 
-The file structure IS the interface. Framework docs/plans persist in `docs/` and `plans/`, and the primary reads from them. No magic state, no hidden context — just files.
+The file structure IS the durable interface. Framework docs persist in `docs/`; work that needs multi-phase or multi-session coordination, explicit planning, or durable tracking persists in `plans/`. A bounded self-contained package may instead go directly to `execute-work-package` with an inline gated brief containing task, DoD, constraints, and final verification. No magic durable state—just explicit files or the approved compact execution session.

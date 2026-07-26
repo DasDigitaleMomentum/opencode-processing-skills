@@ -8,7 +8,7 @@ Skills are loaded automatically by the agent when they match what you're asking 
 
 ### Entities
 
-Planning uses a hierarchy of artifacts:
+When work is multi-phase, multi-session, explicitly requested as a plan, or needs durable coordination/tracking, planning uses this persistent hierarchy:
 
 | Entity | File | Purpose |
 |--------|------|---------|
@@ -32,14 +32,14 @@ plans/<name>/
 │   └── phase-2-impl.md        # How for phase 2
 ├── reviews/
 │   ├── plan-review.md         # Plan quality gate
-│   ├── impl-plan-review-1.md  # Impl-plan quality gate
+│   ├── impl-plan-review-phase-1.md  # Impl-plan quality gate
 │   └── impl-review-1.md       # Implementation quality gate
 ├── todo.md                    # Current phase items
 └── handovers/
     └── session-2024-01-15.md  # End-of-session context
 ```
 
-### Typical Flow
+### Persistent Plan Flow
 
 ```
 1. Discuss        → User and agent clarify requirements
@@ -49,10 +49,12 @@ plans/<name>/
 5. Review Impl    → review-implementation-plan (optional)
 6. Implement      → execute-work-package (gated: blueprint → approve → execute)
 7. Review Code    → review-implementation (optional)
-8. Fix Findings   → review-fix (same reviewer session, related findings)
+8. Fix Findings   → review-fix (reuse reviewer when retained reasoning is valuable)
 9. Update Plan    → update-plan (track progress, transition phases)
 10. Handover      → generate-handover (end of session)
 ```
+
+A bounded self-contained work package does not automatically require this hierarchy. It can go directly to `execute-work-package` with an inline gated brief containing the task, DoD, constraints, and approved broad/full final verification.
 
 All review workflows use the same informal reminder: **No Gold-Plating. No
 Adversarial Reviewing. No Scope Creep.** Findings should be evidence-backed and
@@ -65,6 +67,8 @@ Across analysis, review, and execution workflows, the owning maintainer, delegat
 **Key insight:** Phases define *what* and *why*. Implementation plans define *how*. This separation lets you change the technical approach without changing the scope.
 
 **Batch authoring:** You can author all implementation plans at once (e.g., "write all implementation plans for this plan"). The skill processes them sequentially (phase 1, then 2, etc.) and runs a consistency check at the end — shared interfaces, naming, data flow assumptions — fixing any issues before returning.
+
+**Batch review:** Multiple authored implementation plans default to one fresh reviewer session independent from the authoring session. It reviews phases sequentially in dependency order, reuses shared evidence, writes the existing per-phase review artifacts, performs one integrated cross-phase consistency assessment, and returns one aggregate digest. This validates the author's consistency work proportionally rather than reconstructing the complete authoring pass.
 
 ---
 
@@ -110,6 +114,8 @@ Creates a structured plan in `plans/<name>/`:
 
 This is a conversation, not a one-shot prompt. The model asks clarifying questions until the scope is clear.
 
+Use it proportionally: for multi-phase or multi-session work, an explicitly requested persistent plan, or durable coordination/tracking. Significance alone does not require a plan when one bounded package can be gated inline.
+
 ```
 > I want to add multi-tenant support. Let's think about what that involves.
   ... (back and forth, model asks questions, you refine scope) ...
@@ -129,7 +135,7 @@ Default routing: the canonical `delegate` writes the explicit implementation-pla
 
 ### `update-plan`
 
-Updates plan status, todo items, and phase transitions. Maintains the changelog. Typically triggered automatically by the maintainer after implementation — you rarely call this directly.
+Updates plan status, todo items, and phase transitions. Maintains the changelog. It is typically triggered by the maintainer after implementation when a persistent plan exists—you rarely call it directly.
 
 ```
 > (usually automatic after implementing a phase)
@@ -155,7 +161,7 @@ Creates session handover docs for context transfer. Captures progress, decisions
 
 ## Review Skills
 
-Independent quality gates. A fresh subagent reviews artifacts without authoring context — catching gaps you've stopped seeing.
+Independent quality gates. A fresh subagent reviews artifacts without authoring context — catching gaps you've stopped seeing. For an implementation-plan batch, freshness is relative to the authoring session, not each phase: one reviewer normally retains useful review context across the ordered batch.
 
 ### `review-plan`
 
@@ -167,10 +173,13 @@ Reviews a plan for scope clarity, requirement coverage, DoD quality, testing str
 
 ### `review-implementation-plan`
 
-Reviews an implementation plan for actionability, codebase grounding, feasibility.
+Reviews one implementation plan or an ordered batch for actionability, codebase grounding, feasibility, and cross-phase consistency. Batch review is sequential, writes one existing per-phase artifact per phase, and returns one aggregate digest. Retriever delegation follows evidence boundaries: overlapping evidence is collected once rather than through nested phase-oriented fan-out.
+
+Automatic reviewer-per-phase parallelism is not the default. Separate reviewers are reserved for an explicit independent perspective, genuinely unrelated domains, specialist requirements, or impractical combined context. Oversized batches are split only into contiguous dependency/domain groups; a central check covers cross-partition interfaces without re-reviewing completed phases.
 
 ```
 > Review the implementation plan for phase 2
+> Review all implementation plans as one ordered batch
 ```
 
 ### `review-implementation`
@@ -185,7 +194,7 @@ The reviewer owns findings and verdicts but does not need to ingest raw verbose 
 
 ### `review-fix`
 
-Resumes the same reviewer session to apply accepted related findings from an implementation or implementation-plan review. Related fixes may span multiple files, call sites, tests, and runtime code. The review artifact stays immutable. A new implementation or authoring session is reserved for changed scope/objective, missing context, new primary decisions, or an explicit fresh perspective. Further reviews are optional and never loop automatically.
+Applies accepted related findings from an implementation or implementation-plan review. Resume the reviewer when retained analysis, unresolved assumptions, or cross-file reasoning materially benefits remediation; prefer a fresh lean session for a fully specified, self-contained fix or verification when old context costs more than it contributes. File count and session age do not decide. The review artifact stays immutable, and further reviews are optional rather than automatic.
 
 ```
 > Fix findings F-1 and F-3 from that review in the same delegate session
@@ -209,8 +218,11 @@ Gated execution protocol:
 
 ```
 > Implement the next phase of the auth-refactor plan
+> Execute this bounded inline brief without creating a persistent plan
 ```
 
-The primary verifies understanding before any code gets written. Git operations stay with you.
+The authoritative input can be persistent plan references or an inline gated brief containing task, DoD, constraints, and final verification. The primary verifies understanding before any code gets written. BLUEPRINT and EXECUTE are separate calls but must reuse the same compact implementer `task_id`, because execution depends on the approved Blueprint context. Git operations stay with you.
+
+Verification is staged during execution and remediation: use the smallest targeted test to exercise or reproduce behavior while iterating, then run the approved broad/full command only when ready as the final gate. If that gate fails, return to targeted diagnosis, fix, and retest before rerunning it. Targeted tests never replace or weaken the final broad verification.
 
 During Execute, complete potentially verbose command and verification output is spooled to a predictable path under `/tmp/opencode/`. The owning context retains the path, command, exit status, and compact metadata/evidence; `retriever` may inspect the complete spool when needed. These temporary files aid same-machine continuation after an interruption, but are not reboot-durable.
