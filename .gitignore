@@ -18,3 +18,6 @@ config.yaml
 
 # Agent checkpoint runtime state
 /.agent-checkpoints/
+
+# Python bytecode caches
+__pycache__/

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "checkpoint": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/checkpoint-mcp-server.mjs"]
+    }
+  }
+}
