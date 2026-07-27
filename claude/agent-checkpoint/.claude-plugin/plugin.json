@@ -1,0 +1,9 @@
+{
+  "name": "agent-checkpoint",
+  "version": "1.0.0",
+  "description": "Checkpoint heartbeat tools (checkpoint, checkpoint_path) with hook-injected session identity and statusline-fed context telemetry.",
+  "author": {
+    "name": "OpenCode Processing Skills",
+    "url": "https://github.com/DasDigitaleMomentum/opencode-processing-skills"
+  }
+}

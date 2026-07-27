@@ -1,0 +1,12 @@
+name: agent-checkpoint
+version: 1.0.0
+description: "Session-heartbeat checkpoints for the shared .agent-checkpoints/ JSONL contract: agent-callable checkpoint/checkpoint_path tools plus lifecycle hooks that bind the native session_id, workspace, and honest telemetry."
+author: "opencode-processing-skills"
+kind: standalone
+provides_tools:
+  - checkpoint
+  - checkpoint_path
+provides_hooks:
+  - on_session_start
+  - pre_tool_call
+  - pre_api_request

@@ -12,13 +12,13 @@ cp config.yaml.example config.yaml         # optional: configure targets and mod
 The installer auto-detects which harnesses to sync into. Out of the box:
 
 - **OpenCode** (always): skills + agents + checkpoint plugin/support files to `~/.config/opencode/`
-- **Codex** (if `~/.codex/` exists): skills to `~/.codex/skills/`
-- **Claude Code** (if `~/.claude/` exists): skills + agents to `~/.claude/`
+- **Codex** (if `~/.codex/` exists): skills to `~/.codex/skills/` + the agent-checkpoint adapter to `~/.codex/agent-checkpoint/` with an additive `agent-checkpoint.config.toml` profile (global installs only; the base `config.toml` is never modified)
+- **Claude Code** (if `~/.claude/` exists): skills + agents to `~/.claude/` + the agent-checkpoint plugin to `~/.claude/skills/agent-checkpoint/` with an opt-in `agent-checkpoint.settings.json` statusline file (global installs only; the base `settings.json` and `~/.claude.json` are never modified)
 - **Cursor** (if `~/.cursor/` exists): adapted skills + orchestrator to `~/.cursor/skills/`
-- **Hermes** (if `~/.hermes/` exists): skills to `~/.hermes/skills/processing/` (a namespaced category dir — Hermes discovers `SKILL.md` files recursively and shows top-level dirs as categories)
+- **Hermes** (if `~/.hermes/` exists): skills to `~/.hermes/skills/processing/` (a namespaced category dir — Hermes discovers `SKILL.md` files recursively and shows top-level dirs as categories) + the agent-checkpoint user plugin to `~/.hermes/plugins/agent-checkpoint/` with the documented opt-in enablement as a single additive `plugins.enabled` entry in `~/.hermes/config.yaml` (global installs only; all other config content is preserved byte-for-byte)
 - **Antigravity**: served transitively by the Claude Code target (it loads skills through the bundled `anthropic.claude-code` extension, which reads from the same path)
 
-Hermes is a target for installation, parsing, and discovery only; installing the skills does not port their OpenCode-specific delegate personas, `Task` calls, or `task_id` continuation contracts to Hermes.
+Hermes is a target for installation, parsing, and discovery plus the agent-checkpoint plugin; installing the skills does not port their OpenCode-specific delegate personas, `Task` calls, or `task_id` continuation contracts to Hermes.
 
 After installation, restart OpenCode and select the `@maintainer` agent. It knows when to load which skill and how to delegate to the right subagent.
 
@@ -31,6 +31,49 @@ After installation, restart OpenCode and select the `@maintainer` agent. It know
 | OpenCode-only persona instruction | appended under `~/.config/opencode/agents/` | appended under `.opencode/agents/` |
 
 Restart OpenCode after installation to load `checkpoint` and `checkpoint_path`. Session logs are written below the active worktree as `.agent-checkpoints/<encoded-session-id>.jsonl`, not below the OpenCode config directory. Existing symlinked plugin, support, or persona destinations are preserved.
+
+### Codex checkpoint adapter
+
+When the Codex target is enabled, global installs also deploy the Codex adapter (never in `--project` mode):
+
+| Artifact | Location |
+|---|---|
+| Hook bridge, instruction, MCP runtime/server, core | `~/.codex/agent-checkpoint/` |
+| Additive profile-v2 file | `~/.codex/agent-checkpoint.config.toml` |
+
+Activate per invocation with `codex --profile-v2 agent-checkpoint`. Verify registration with the proof set from [codex/README.md](../codex/README.md): the generated `agent-checkpoint.config.toml` parses, profile layering is accepted (`codex --profile-v2 agent-checkpoint debug prompt-input` exits 0), and the credential-free stdio E2E (SessionStart hook → PreToolUse hook → installed MCP → `checkpoint-inspect` exact eight-field record) passes. Pinned codex-cli 0.131.0 rejects `codex --profile-v2 agent-checkpoint mcp list` — `--profile-v2` only applies to runtime commands and `codex mcp list` has no profile support. The profile enables `[features] hooks = true`, registers the stdio MCP server exposing `checkpoint`/`checkpoint_path`, and adds `SessionStart`/`PreToolUse` command hooks that inject the heartbeat instruction and the native session/workspace identity. New hooks require Codex's hook trust review on first use. The base `~/.codex/config.toml` is left byte-for-byte unchanged, and symlinked destinations are preserved. Logging is session-level under the native hook `session_id`; the pinned build (codex-cli 0.131.0) exposes no subagent identity, so subagent checkpoints share the session log, and context telemetry is honestly `null`/`unknown`. See [codex/README.md](../codex/README.md) for prerequisites, semantics, and uninstall.
+
+### Claude Code checkpoint plugin
+
+When the Claude target is enabled, global installs also deploy the Claude Code plugin (never in `--project` mode):
+
+| Artifact | Location |
+|---|---|
+| Skills-directory plugin (manifest, `.mcp.json`, hooks, scripts, instruction, MCP server, core) | `~/.claude/skills/agent-checkpoint/` |
+| Opt-in statusline settings file | `~/.claude/agent-checkpoint.settings.json` |
+
+The plugin auto-loads as `agent-checkpoint@skills-dir` on the next session (restart Claude Code or run `/reload-plugins`) and passes `claude plugin validate --strict` on the pinned claude 2.1.170 build. It bundles a dependency-free stdio MCP server exposing `checkpoint`/`checkpoint_path` as the scoped tools `mcp__plugin_agent-checkpoint_checkpoint__checkpoint` / `..._checkpoint_path`. `SessionStart`/`SubagentStart` hooks inject the heartbeat instruction with the session checkpoint ID, and `PreToolUse` hooks inject the parent (native `session_id`) or composite subagent (`<session_id>--<agent_id>`) identity into tool calls; new hooks require Claude Code's hook trust approval on first use.
+
+Activate the statusline telemetry bridge explicitly — `--settings` **merges** with the base configuration on the pinned build, it never replaces it:
+
+```bash
+CLAUDE_CONFIG_DIR=<claude-home> claude --settings <claude-home>/agent-checkpoint.settings.json
+```
+
+The generated file contains only the `statusLine` command; the base `~/.claude/settings.json` and `~/.claude.json` are left byte-for-byte unchanged, and symlinked destinations are preserved. Telemetry is honest: the statusline wrapper atomically caches the latest snapshot under `.agent-checkpoints/.runtime/claude/`, `context_used` maps the latest-response, input-only `used_percentage` (null before the first response and after compaction), remaining K-tokens are approximate, and every absent/null/mismatched case degrades to `null`/`unknown`. `agent` records the subagent `agent_type` (else `null`), `session_title` the statusline `session_name` (else `null`). See [claude/agent-checkpoint/README.md](../claude/agent-checkpoint/README.md) for prerequisites, semantics, and uninstall.
+
+### Hermes checkpoint plugin
+
+When the Hermes target is enabled, global installs also deploy the Hermes user plugin (never in `--project` mode):
+
+| Artifact | Location |
+|---|---|
+| User plugin (manifest, tools/hooks module, README) | `~/.hermes/plugins/agent-checkpoint/` |
+| Opt-in enablement | additive `plugins.enabled` entry in `~/.hermes/config.yaml` |
+
+The plugin is verified against the pinned Hermes Agent v0.19.0 build (upstream `e0b9ab5a`). Hermes loads user plugins only when listed in `plugins.enabled`; the installer performs the documented enablement flow's additive config delta as a text edit (idempotent, everything else preserved byte-for-byte, symlinked destinations skipped), while `hermes plugins enable|disable agent-checkpoint` remains the documented user-facing flow. Removal: `hermes plugins disable agent-checkpoint`, then delete `~/.hermes/plugins/agent-checkpoint/`; a restart starts sessions with the changed plugin set.
+
+The plugin registers the agent-callable `checkpoint`/`checkpoint_path` tools and binds the native `session_id` plus the session workspace through `on_session_start`/`pre_tool_call` hooks. Limits on the pinned build: logging is session-level (subagent checkpoints share the parent session log; the `subagent_start` hook exists but start-time subagent identity is deliberately not adopted — a documented follow-up option); `context_used` is an estimate from `pre_api_request` `approx_input_tokens` only when a defensible model context limit is known, otherwise honestly `null`; `agent`/`session_title` are always `null`. Note the name collision: `hermes checkpoints` is Hermes' shadow-git rollback store, unrelated to the `.agent-checkpoints/` contract. See [hermes/agent-checkpoint/README.md](../hermes/agent-checkpoint/README.md) for prerequisites, semantics, and uninstall.
 
 ### Checkpoint dashboard quickstart
 

@@ -34,15 +34,27 @@
 #
 # OpenCode is always required; `enabled` is fixed to true for that target. Its
 # home receives skills, agents, and the auto-loaded checkpoint plugin/runtime.
-# Codex installs only skills (no agents).
-# Claude installs both skills and agents. Antigravity is served transitively
+# Codex installs skills (no agents) plus, in global mode, the agent-checkpoint
+# adapter: hook/MCP bridge files under CODEX_HOME/agent-checkpoint/ and an
+# additive CODEX_HOME/agent-checkpoint.config.toml profile (activate with
+# `codex --profile-v2 agent-checkpoint`). The base config.toml is never modified.
+# Claude installs both skills and agents plus, in global mode, the agent-checkpoint
+# skills-directory plugin under CLAUDE_HOME/skills/agent-checkpoint/ and an opt-in
+# CLAUDE_HOME/agent-checkpoint.settings.json (statusLine command only; activate with
+# `claude --settings <home>/agent-checkpoint.settings.json`). The base settings.json
+# and ~/.claude.json are never modified. Antigravity is served transitively
 # via the bundled `anthropic.claude-code` extension, which reads from CLAUDE_HOME.
 # Cursor installs workflow skills + orchestration layer (subagents, ops-orchestrator
 # skills). See docs/installation.md and cursor/README.md. Use ./install.sh --project
 # to install into ./.cursor/ per repo.
-# Hermes installs only skills (like Codex), into the namespaced category directory
+# Hermes installs skills into the namespaced category directory
 # HERMES_HOME/skills/processing/ — Hermes discovers SKILL.md files recursively
-# and shows top-level directories as categories in its skills hub.
+# and shows top-level directories as categories in its skills hub. In global
+# mode it also installs the agent-checkpoint user plugin to
+# HERMES_HOME/plugins/agent-checkpoint/ and performs the documented opt-in
+# enablement as a single additive plugins.enabled entry in
+# HERMES_HOME/config.yaml (all other config content preserved byte-for-byte;
+# activate/remove via `hermes plugins enable|disable agent-checkpoint`).
 # Hermes support covers installation, parsing, and discovery only; it does not port
 # OpenCode-specific delegate personas, Task calls, or task_id continuation contracts.
 
