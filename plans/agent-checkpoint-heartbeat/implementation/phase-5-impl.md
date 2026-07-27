@@ -8,6 +8,8 @@ created: "2026-07-26"
 updated: "2026-07-26"
 ---
 
+> **Superseded (2026-07-27):** This draft is superseded as execution authority by [plans/checkpoint-harness-integration/implementation/phase-3-impl.md](../../checkpoint-harness-integration/implementation/phase-3-impl.md), which was derived from it after pinned-build revalidation (claude 2.1.170). It remains as research evidence; any stop-and-revise targets the derived plan.
+
 # Implementation Plan: Phase 5 - Claude Code macOS Adapter
 
 > Implements [Phase 5](../phases/phase-5.md) of [agent-checkpoint-heartbeat](../plan.md)

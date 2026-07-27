@@ -3,9 +3,9 @@ type: planning
 entity: phase
 plan: "agent-checkpoint-heartbeat"
 phase: 4
-status: pending
+status: completed
 created: "2026-07-26"
-updated: "2026-07-26"
+updated: "2026-07-27"
 ---
 
 # Phase 4: Codex macOS Adapter

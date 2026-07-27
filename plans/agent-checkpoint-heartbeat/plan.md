@@ -4,7 +4,7 @@ entity: plan
 plan: "agent-checkpoint-heartbeat"
 status: active
 created: "2026-07-26"
-updated: "2026-07-26"
+updated: "2026-07-27"
 ---
 
 # Plan: agent-checkpoint-heartbeat
@@ -109,8 +109,8 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 | 1 | Shared Contract and Monorepo Foundation | Establishes the raw format, safe workspace paths, analysis rules, and testable package boundary. | [Phase](phases/phase-1.md) | completed |
 | 2 | OpenCode Pilot | Delivers native OpenCode tools, context feedback, persona instructions, and installation. | [Phase](phases/phase-2.md) | completed |
 | 3 | Pilot Evaluation and Inspection | Adds raw-log inspection/display and validates the two separate Canary and work-progress signals. | [Phase](phases/phase-3.md) | completed |
-| 4 | Codex macOS Adapter | Supplies the researched later implementation for Codex on macOS without changing the common contract. | [Phase](phases/phase-4.md) | pending |
-| 5 | Claude Code macOS Adapter | Supplies the researched later implementation for Claude Code on macOS without changing the common contract. | [Phase](phases/phase-5.md) | pending |
+| 4 | Codex macOS Adapter | Supplies the researched later implementation for Codex on macOS without changing the common contract. | [Phase](phases/phase-4.md) | completed (via checkpoint-harness-integration Phase 2, 2026-07-27) |
+| 5 | Claude Code macOS Adapter | Supplies the researched later implementation for Claude Code on macOS without changing the common contract. | [Phase](phases/phase-5.md) | completed (via checkpoint-harness-integration Phase 3, 2026-07-27) |
 | 6 | PydanticAI Adapter | Adds the Python-native adapter and verifies parity with the shared behavior. | [Phase](phases/phase-6.md) | pending |
 
 ## Risks & Open Questions

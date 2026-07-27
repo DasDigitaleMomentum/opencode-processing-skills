@@ -3,9 +3,9 @@ type: planning
 entity: phase
 plan: "agent-checkpoint-heartbeat"
 phase: 5
-status: pending
+status: completed
 created: "2026-07-26"
-updated: "2026-07-26"
+updated: "2026-07-27"
 ---
 
 # Phase 5: Claude Code macOS Adapter

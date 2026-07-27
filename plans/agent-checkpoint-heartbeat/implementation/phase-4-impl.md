@@ -8,6 +8,8 @@ created: "2026-07-26"
 updated: "2026-07-26"
 ---
 
+> **Superseded (2026-07-27):** This draft is superseded as execution authority by [plans/checkpoint-harness-integration/implementation/phase-2-impl.md](../../checkpoint-harness-integration/implementation/phase-2-impl.md), which was derived from it after pinned-build revalidation (codex-cli 0.131.0). It remains as research evidence; any stop-and-revise targets the derived plan.
+
 # Implementation Plan: Phase 4 - Codex macOS Adapter
 
 > Implements [Phase 4](../phases/phase-4.md) of [agent-checkpoint-heartbeat](../plan.md)
