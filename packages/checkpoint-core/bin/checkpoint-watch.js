@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { watch as watchDirectory } from "node:fs";
+import { realpathSync, watch as watchDirectory } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import { analyzeCheckpoints, parseCheckpointJsonl } from "../src/index.js";
 
@@ -286,6 +286,12 @@ export async function main(args, io = {}) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+// Resolve symlinks on both sides: installed paths may sit below a symlinked
+// directory (e.g. /var -> /private/var on macOS), while import.meta.url is
+// always the fully resolved module URL.
+const isMain =
+  process.argv[1] &&
+  realpathSync(path.resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url));
+if (isMain) {
   process.exitCode = await main(process.argv.slice(2));
 }

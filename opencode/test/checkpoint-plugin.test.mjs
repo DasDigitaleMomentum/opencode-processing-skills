@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -570,10 +570,16 @@ test("project installer targets only the workspace .opencode directory", async (
     configFile,
     opencodeHome: forbiddenGlobal,
   });
-  assert.match(output, new RegExp(`Project mode: installing into ${project.replaceAll("\\", "\\\\")}`));
+  // Bash reports the physical $PWD, which canonicalizes macOS /var symlinks;
+  // compare installer output against the real path.
+  const canonicalProject = await realpath(project);
+  assert.match(output, new RegExp(`Project mode: installing into ${canonicalProject.replaceAll("\\", "\\\\")}`));
   const projectHome = path.join(project, ".opencode");
   await assertInstalledOpenCodePilot(projectHome);
-  const watcherPath = path.join(projectHome, "lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js");
+  const watcherPath = path.join(
+    canonicalProject,
+    ".opencode/lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js",
+  );
   assert.match(output, new RegExp(`Launch command: node "${watcherPath.replaceAll("\\", "\\\\")}"`));
   await assert.rejects(readFile(path.join(forbiddenGlobal, "plugins/checkpoint.ts")), /ENOENT/);
 });

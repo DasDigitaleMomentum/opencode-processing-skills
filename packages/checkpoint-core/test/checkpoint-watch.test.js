@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   formatDashboard,
@@ -165,4 +167,39 @@ test("live refresh disposes watcher and timer and restores cursor", async (t) =>
   assert.ok(output.startsWith("\x1b[?25l"));
   assert.ok(output.endsWith("\x1b[?25h"));
   assert.match(output, /\x1b\[H\x1b\[2J/);
+});
+
+test("watcher main runs when invoked through a symlinked directory path", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-link-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, ".agent-checkpoints"));
+  await writeLog(root, "linked.jsonl", [record("linked", "2026-07-26T10:00:00.000Z")]);
+
+  const binDir = await realpath(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin"));
+  const linkParent = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-linkdir-"));
+  t.after(() => rm(linkParent, { recursive: true, force: true }));
+  const link = path.join(linkParent, "linked-bin");
+  try {
+    await symlink(binDir, link, "junction");
+  } catch (error) {
+    if (["EPERM", "EACCES", "ENOTSUP"].includes(error?.code)) {
+      t.skip("directory symlinks unavailable on this platform");
+      return;
+    }
+    throw error;
+  }
+
+  const env = { ...process.env };
+  delete env.CHECKPOINT_WATCH_REFRESH_MS;
+  delete env.CHECKPOINT_WATCH_STALE_MS;
+  const run = (scriptPath) => spawnSync(process.execPath, [scriptPath, "--once"], { cwd: root, encoding: "utf8", env });
+
+  const canonical = run(path.join(binDir, "checkpoint-watch.js"));
+  assert.equal(canonical.status, 0, canonical.stderr);
+  assert.match(canonical.stdout, /Checkpoint sessions/);
+
+  const viaLink = run(path.join(link, "checkpoint-watch.js"));
+  assert.equal(viaLink.status, 0, viaLink.stderr);
+  assert.match(viaLink.stdout, /Checkpoint sessions/);
+  assert.match(viaLink.stdout, /linked/);
 });
