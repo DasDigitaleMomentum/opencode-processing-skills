@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, mkdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   formatCheckpointSummary,
@@ -142,4 +144,53 @@ test("invalid invocation and unreadable, empty, malformed, or invalid logs fail 
   const usage = await main([], { stderr: (text) => { stderr += text; } });
   assert.equal(usage, 1);
   assert.match(stderr, /usage: checkpoint-inspect/);
+});
+
+test("inspect main runs when invoked through a symlinked directory path", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-inspect-link-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, ".agent-checkpoints"));
+  const record = {
+    timestamp: "2026-07-26T10:00:00.000Z",
+    session_id: "linked",
+    done: "Write linked log",
+    next: "Inspect linked log",
+    step_failed: false,
+    context_used: null,
+    agent: null,
+    session_title: null,
+  };
+  await writeFile(
+    path.join(root, ".agent-checkpoints", "linked.jsonl"),
+    `${JSON.stringify(record)}\n`,
+  );
+
+  const binDir = await realpath(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin"));
+  const linkParent = await mkdtemp(path.join(os.tmpdir(), "checkpoint-inspect-linkdir-"));
+  t.after(() => rm(linkParent, { recursive: true, force: true }));
+  const link = path.join(linkParent, "linked-bin");
+  try {
+    await symlink(binDir, link, "junction");
+  } catch (error) {
+    if (["EPERM", "EACCES", "ENOTSUP"].includes(error?.code)) {
+      t.skip("directory symlinks unavailable on this platform");
+      return;
+    }
+    throw error;
+  }
+
+  const run = (scriptPath) =>
+    spawnSync(process.execPath, [scriptPath, ".agent-checkpoints/linked.jsonl"], {
+      cwd: root,
+      encoding: "utf8",
+    });
+
+  const canonical = run(path.join(binDir, "checkpoint-inspect.js"));
+  assert.equal(canonical.status, 0, canonical.stderr);
+  assert.match(canonical.stdout, /Session: linked/);
+
+  const viaLink = run(path.join(link, "checkpoint-inspect.js"));
+  assert.equal(viaLink.status, 0, viaLink.stderr);
+  assert.match(viaLink.stdout, /Session: linked/);
+  assert.match(viaLink.stdout, /Work status: COMPLETED/);
 });
