@@ -11,13 +11,16 @@ byte-compatible JSONL records without a Node dependency:
   ``<workspace>/.agent-checkpoints/<encoded-session-id>.jsonl``.
 * ``checkpoint_path(session_id)`` returns the shared workspace-relative
   path without writing.
+* A verified new-parent ``on_session_start`` appends one exact four-field
+  ``session_status: open`` record to that parent-owned log. Continued-session
+  and child-mapping hooks append no lifecycle record, and no close hook is
+  registered on the pinned surface.
 
 Identity and telemetry are process-local state captured via lifecycle hooks
-(``on_session_start``, ``pre_tool_call``, ``pre_api_request``); that state
-is never persisted into JSONL. Subagent start-time identity
-(``subagent_start``) exists on the pinned build but is deliberately not
-adopted — logging is session-level and subagent checkpoints share the
-parent session log.
+(``on_session_start``, ``subagent_start``, ``pre_tool_call``,
+``pre_api_request``); that state is never persisted into JSONL. Native child
+session IDs resolve internally to their parent-owned log while invocation and
+telemetry state remain isolated by native session.
 """
 
 from __future__ import annotations
@@ -45,6 +48,8 @@ LEGACY_RECORD_FIELDS = [
 ]
 METADATA_FIELDS = ["agent", "session_title"]
 RECORD_FIELDS = LEGACY_RECORD_FIELDS + METADATA_FIELDS
+STATUS_RECORD_FIELDS = ["timestamp", "session_id", "event", "status"]
+_SESSION_STATUS_VALUES = frozenset({"open", "closed"})
 
 _UTC_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$")
 
@@ -76,6 +81,8 @@ _MODEL_PREFIX_LIMITS = (
     ("gpt-4-32k", 32768),
 )
 _CONTEXT_LIMIT_ENV = "AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS"
+_INSTRUCTION_PATH = Path(__file__).with_name("checkpoint-instruction.md")
+_CHECKPOINT_INSTRUCTION = _INSTRUCTION_PATH.read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -83,23 +90,21 @@ _CONTEXT_LIMIT_ENV = "AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS"
 # ---------------------------------------------------------------------------
 
 _LOCK = threading.Lock()
-_SESSION = {"session_id": None, "cwd": None}
-_PENDING = {"session_id": None, "mismatch": None}
-_TELEMETRY_SLOT = {"value": None}
+_SESSIONS = {}
+_PENDING = set()
+_TELEMETRY = {}
 
 
 def _reset_state() -> None:
     """Clear all hook-captured state. Self-test helper; not used at runtime."""
     with _LOCK:
-        _SESSION["session_id"] = None
-        _SESSION["cwd"] = None
-        _PENDING["session_id"] = None
-        _PENDING["mismatch"] = None
-        _TELEMETRY_SLOT["value"] = None
+        _SESSIONS.clear()
+        _PENDING.clear()
+        _TELEMETRY.clear()
 
 
 # ---------------------------------------------------------------------------
-# Contract primitives (mirror validateCheckpointRecord/createCheckpointRecord)
+# Contract primitives (mirror checkpoint and session-status record APIs)
 # ---------------------------------------------------------------------------
 
 def _is_valid_utc_timestamp(value) -> bool:
@@ -180,6 +185,26 @@ def _normalize_record(record):
     return normalized
 
 
+def _validate_status_record(record):
+    """Mirror validateSessionStatusRecord: exact four-field event variant."""
+    if not isinstance(record, dict):
+        raise TypeError("session status record must be an object")
+    if sorted(record.keys()) != sorted(STATUS_RECORD_FIELDS):
+        raise TypeError(
+            "session status record must contain exactly the fields "
+            f"({', '.join(STATUS_RECORD_FIELDS)})"
+        )
+    if not _is_valid_utc_timestamp(record.get("timestamp")):
+        raise TypeError("timestamp must be a valid ISO UTC timestamp")
+    if not isinstance(record.get("session_id"), str) or len(record["session_id"]) == 0:
+        raise TypeError("session_id must be a non-empty string")
+    if record.get("event") != "session_status":
+        raise TypeError('event must be exactly "session_status"')
+    if record.get("status") not in _SESSION_STATUS_VALUES:
+        raise TypeError('status must be exactly "open" or "closed"')
+    return record
+
+
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -223,6 +248,18 @@ def _create_record(
         "session_title": session_title,
     }
     _validate_record(record)
+    return record
+
+
+def _create_status_record(session_id, status, clock=_utc_now):
+    """Mirror createSessionStatusRecord (four-field, validated)."""
+    record = {
+        "timestamp": _timestamp_from_clock(clock),
+        "session_id": session_id,
+        "event": "session_status",
+        "status": status,
+    }
+    _validate_status_record(record)
     return record
 
 
@@ -284,7 +321,7 @@ def _env_context_limit():
     return value if value > 0 else None
 
 
-def _telemetry():
+def _telemetry(native_session_id=None):
     """Return ``(context_used, remaining_k_tokens)`` or ``(None, None)``.
 
     Estimate only: the latest valid ``pre_api_request`` token count divided
@@ -292,7 +329,11 @@ def _telemetry():
     Absent/invalid data or an unknown limit degrades to honest unknowns.
     """
     with _LOCK:
-        slot = _TELEMETRY_SLOT["value"]
+        if native_session_id is None:
+            if len(_TELEMETRY) != 1:
+                return None, None
+            native_session_id = next(iter(_TELEMETRY))
+        slot = _TELEMETRY.get(native_session_id)
     if slot is None:
         return None, None
     limit = _env_context_limit() or _context_limit_for_model(slot.get("model"))
@@ -300,7 +341,7 @@ def _telemetry():
         return None, None
     approx = slot["approx_input_tokens"]
     context_used = min(max(approx / limit, 0.0), 1.0)
-    remaining_k = round((limit - approx) / 1000)
+    remaining_k = max(0, round((limit - approx) / 1000))
     return context_used, remaining_k
 
 
@@ -309,32 +350,44 @@ def _telemetry():
 # ---------------------------------------------------------------------------
 
 def _on_session_start(session_id: str = "", **_) -> None:
-    """Capture the native session id and the agent process cwd (workspace)."""
+    """Initialize a parent mapping and persist the observed parent open."""
+    _require_session_id(session_id)
+    workspace_root = os.getcwd()
     with _LOCK:
-        _SESSION["session_id"] = session_id if isinstance(session_id, str) and session_id else None
-        _SESSION["cwd"] = os.getcwd()
+        _SESSIONS[session_id] = {"root_session_id": session_id, "cwd": workspace_root}
+    record = _create_status_record(session_id, "open")
+    _append_record(workspace_root, session_id, record)
+
+
+def _on_subagent_start(parent_session_id: str = "", child_session_id: str = "", **_) -> None:
+    """Map a native child to its transitive parent-owned checkpoint log."""
+    _require_session_id(parent_session_id)
+    _require_session_id(child_session_id)
+    with _LOCK:
+        parent = _SESSIONS.get(parent_session_id)
+        if parent is None:
+            parent = {"root_session_id": parent_session_id, "cwd": os.getcwd()}
+            _SESSIONS[parent_session_id] = parent
+        _SESSIONS[child_session_id] = {
+            "root_session_id": parent["root_session_id"],
+            "cwd": parent["cwd"],
+        }
 
 
 def _on_pre_tool_call(tool_name: str = "", session_id: str = "", **_) -> None:
-    """Bind the payload session id to this plugin's tool invocations.
-
-    A mismatch against the session-start id is recorded so the tool call
-    fails with a visible error instead of silently merging sessions.
-    """
+    """Bind this plugin invocation to its native Hermes session."""
     if tool_name not in _PLUGIN_TOOLS:
         return
+    _require_session_id(session_id)
     with _LOCK:
-        start_id = _SESSION["session_id"]
-        call_id = session_id if isinstance(session_id, str) and session_id else None
-        if start_id and call_id and start_id != call_id:
-            _PENDING["mismatch"] = (start_id, call_id)
-        else:
-            _PENDING["mismatch"] = None
-        _PENDING["session_id"] = call_id
+        if session_id not in _SESSIONS:
+            _SESSIONS[session_id] = {"root_session_id": session_id, "cwd": os.getcwd()}
+        _PENDING.add(session_id)
 
 
-def _on_pre_api_request(approx_input_tokens=None, model=None, **_) -> None:
-    """Record the latest valid approx token count (+ model) for telemetry."""
+def _on_pre_api_request(session_id: str = "", approx_input_tokens=None, model=None, **_) -> None:
+    """Record one native session's latest valid token estimate and model."""
+    _require_session_id(session_id)
     valid = (
         isinstance(approx_input_tokens, (int, float))
         and not isinstance(approx_input_tokens, bool)
@@ -343,49 +396,50 @@ def _on_pre_api_request(approx_input_tokens=None, model=None, **_) -> None:
     )
     with _LOCK:
         if not valid:
-            _TELEMETRY_SLOT["value"] = None
+            _TELEMETRY.pop(session_id, None)
         else:
-            _TELEMETRY_SLOT["value"] = {
+            _TELEMETRY[session_id] = {
                 "approx_input_tokens": approx_input_tokens,
                 "model": model if isinstance(model, str) and model else None,
             }
 
 
-def _resolve_invocation():
-    """Resolve ``(session_id, workspace_root)`` for a tool invocation.
+def _resolve_invocation(native_session_id=None):
+    """Resolve ``(native_session_id, root_session_id, workspace_root)``.
 
-    Never invents identity: mismatches and unknown sessions raise visible
-    errors (surfaced to the model by the Hermes tool dispatcher).
+    Never invents identity: invalid, unknown, or ambiguous sessions raise
+    visible errors (surfaced to the model by the Hermes tool dispatcher).
     """
+    if native_session_id is not None:
+        _require_session_id(native_session_id)
     with _LOCK:
-        mismatch = _PENDING["mismatch"]
-        pending_id = _PENDING["session_id"]
-        start_id = _SESSION["session_id"]
-        cwd = _SESSION["cwd"]
-    if mismatch is not None:
-        raise ValueError(
-            "checkpoint session mismatch: session started as "
-            f"{mismatch[0]!r} but the tool call arrived for {mismatch[1]!r}; "
-            "refusing to merge sessions"
-        )
-    session_id = pending_id or start_id
-    if session_id is None:
+        if native_session_id is None:
+            if len(_PENDING) == 1:
+                native_session_id = next(iter(_PENDING))
+            elif not _PENDING and len(_SESSIONS) == 1:
+                native_session_id = next(iter(_SESSIONS))
+            elif len(_PENDING) > 1:
+                raise ValueError(
+                    "checkpoint has multiple bound Hermes sessions; "
+                    "the native invocation session_id is required"
+                )
+        session = _SESSIONS.get(native_session_id)
+    if session is None:
         raise ValueError(
             "checkpoint has no bound Hermes session (on_session_start/pre_tool_call "
             "did not fire in this process); refusing to invent a session identity"
         )
-    workspace_root = cwd or os.getcwd()
-    return session_id, workspace_root
+    return native_session_id, session["root_session_id"], session["cwd"]
 
 
 # ---------------------------------------------------------------------------
 # Agent-callable tools
 # ---------------------------------------------------------------------------
 
-def checkpoint(done, next, step_failed=False, *, _clock=_utc_now) -> str:
+def checkpoint(done, next, step_failed=False, *, _clock=_utc_now, _native_session_id=None) -> str:
     """Append an eight-field checkpoint record for the hook-bound session."""
-    session_id, workspace_root = _resolve_invocation()
-    context_used, remaining_k = _telemetry()
+    native_session_id, session_id, workspace_root = _resolve_invocation(_native_session_id)
+    context_used, remaining_k = _telemetry(native_session_id)
     record = _create_record(
         session_id,
         done,
@@ -454,14 +508,20 @@ _CHECKPOINT_PATH_SCHEMA = {
 }
 
 
-def _handle_checkpoint(args, **_) -> str:
+def _handle_checkpoint(args, session_id="", **_) -> str:
     if not isinstance(args, dict):
         raise TypeError("checkpoint expects an arguments object")
     return checkpoint(
         args.get("done"),
         args.get("next"),
         step_failed=args.get("step_failed", False),
+        _native_session_id=session_id,
     )
+
+
+def _on_pre_llm_call(**_):
+    """Inject the complete heartbeat instruction into parent and child turns."""
+    return {"context": _CHECKPOINT_INSTRUCTION}
 
 
 def _handle_checkpoint_path(args, **_) -> str:
@@ -488,5 +548,7 @@ def register(ctx) -> None:
         handler=_handle_checkpoint_path,
     )
     ctx.register_hook("on_session_start", _on_session_start)
+    ctx.register_hook("subagent_start", _on_subagent_start)
     ctx.register_hook("pre_tool_call", _on_pre_tool_call)
     ctx.register_hook("pre_api_request", _on_pre_api_request)
+    ctx.register_hook("pre_llm_call", _on_pre_llm_call)

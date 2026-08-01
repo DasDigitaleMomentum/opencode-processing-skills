@@ -11,6 +11,8 @@ const LEGACY_RECORD_FIELDS = [
 ];
 const METADATA_FIELDS = ["agent", "session_title"];
 const RECORD_FIELDS = [...LEGACY_RECORD_FIELDS, ...METADATA_FIELDS];
+const SESSION_STATUS_FIELDS = ["timestamp", "session_id", "event", "status"];
+const SESSION_STATUS_VALUES = new Set(["open", "closed"]);
 
 const UTC_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 
@@ -114,6 +116,37 @@ export function validateCheckpointRecord(record) {
   return record;
 }
 
+export function validateSessionStatusRecord(record) {
+  if (record === null || typeof record !== "object" || Array.isArray(record)) {
+    throw new TypeError("session status record must be an object");
+  }
+
+  const keys = Object.keys(record).sort();
+  const expectedKeys = [...SESSION_STATUS_FIELDS].sort();
+  if (
+    keys.length !== expectedKeys.length ||
+    !keys.every((key, index) => key === expectedKeys[index])
+  ) {
+    throw new TypeError(
+      `session status record must contain exactly the fields (${SESSION_STATUS_FIELDS.join(", ")})`,
+    );
+  }
+  if (!isValidUtcTimestamp(record.timestamp)) {
+    throw new TypeError("timestamp must be a valid ISO UTC timestamp");
+  }
+  if (typeof record.session_id !== "string" || record.session_id.length === 0) {
+    throw new TypeError("session_id must be a non-empty string");
+  }
+  if (record.event !== "session_status") {
+    throw new TypeError('event must be exactly "session_status"');
+  }
+  if (!SESSION_STATUS_VALUES.has(record.status)) {
+    throw new TypeError('status must be exactly "open" or "closed"');
+  }
+
+  return record;
+}
+
 function normalizeCheckpointRecord(record) {
   validateCheckpointRecord(record);
   return {
@@ -147,6 +180,21 @@ export function createCheckpointRecord({
   return record;
 }
 
+export function createSessionStatusRecord({
+  sessionId,
+  status,
+  clock = () => new Date(),
+}) {
+  const record = {
+    timestamp: timestampFromClock(clock),
+    session_id: sessionId,
+    event: "session_status",
+    status,
+  };
+  validateSessionStatusRecord(record);
+  return record;
+}
+
 export function checkpointPath(sessionId) {
   return `.agent-checkpoints/${encodeSessionId(sessionId)}.jsonl`;
 }
@@ -173,6 +221,12 @@ function resolveCheckpointFile(workspaceRoot, sessionId) {
   return { checkpointRoot, filePath, relativePath };
 }
 
+async function appendRecord(workspaceRoot, sessionId, record) {
+  const { checkpointRoot, filePath } = resolveCheckpointFile(workspaceRoot, sessionId);
+  await mkdir(checkpointRoot, { recursive: true });
+  await appendFile(filePath, `${JSON.stringify(record)}\n`, "utf8");
+}
+
 export async function checkpoint({
   sessionId,
   done,
@@ -195,10 +249,7 @@ export async function checkpoint({
     sessionTitle,
     clock,
   });
-  const { checkpointRoot, filePath } = resolveCheckpointFile(workspaceRoot, sessionId);
-
-  await mkdir(checkpointRoot, { recursive: true });
-  await appendFile(filePath, `${JSON.stringify(record)}\n`, "utf8");
+  await appendRecord(workspaceRoot, sessionId, record);
 
   return {
     contextUsed,
@@ -206,7 +257,31 @@ export async function checkpoint({
   };
 }
 
-export function parseCheckpointJsonl(jsonl) {
+export async function appendSessionStatus({
+  sessionId,
+  status,
+  clock = () => new Date(),
+  workspaceRoot = process.cwd(),
+}) {
+  const record = createSessionStatusRecord({ sessionId, status, clock });
+  await appendRecord(workspaceRoot, sessionId, record);
+  return record;
+}
+
+function normalizeLogRecord(record) {
+  if (
+    record !== null &&
+    typeof record === "object" &&
+    !Array.isArray(record) &&
+    Object.hasOwn(record, "event")
+  ) {
+    validateSessionStatusRecord(record);
+    return { ...record };
+  }
+  return normalizeCheckpointRecord(record);
+}
+
+export function parseCheckpointLogJsonl(jsonl) {
   if (typeof jsonl !== "string") {
     throw new TypeError("checkpoint JSONL must be a string");
   }
@@ -229,8 +304,27 @@ export function parseCheckpointJsonl(jsonl) {
     } catch (error) {
       throw new SyntaxError(`invalid checkpoint JSON on line ${index + 1}: ${error.message}`);
     }
-    return normalizeCheckpointRecord(record);
+    return normalizeLogRecord(record);
   });
+}
+
+export function filterCheckpointRecords(records) {
+  if (!Array.isArray(records)) {
+    throw new TypeError("checkpoint records must be an array");
+  }
+
+  const checkpoints = [];
+  for (const record of records) {
+    const normalized = normalizeLogRecord(record);
+    if (!Object.hasOwn(normalized, "event")) {
+      checkpoints.push(normalized);
+    }
+  }
+  return checkpoints;
+}
+
+export function parseCheckpointJsonl(jsonl) {
+  return filterCheckpointRecords(parseCheckpointLogJsonl(jsonl));
 }
 
 function hasExactlyThreeWords(label) {
@@ -240,10 +334,13 @@ function hasExactlyThreeWords(label) {
 
 export function analyzeCheckpoints(input) {
   const sourceRecords = typeof input === "string" ? parseCheckpointJsonl(input) : input;
-  if (!Array.isArray(sourceRecords) || sourceRecords.length === 0) {
+  if (!Array.isArray(sourceRecords)) {
+    throw new TypeError("analysis requires checkpoint records");
+  }
+  const records = filterCheckpointRecords(sourceRecords);
+  if (records.length === 0) {
     throw new TypeError("analysis requires at least one checkpoint record");
   }
-  const records = sourceRecords.map(normalizeCheckpointRecord);
 
   let matchingTransitions = 0;
   for (let index = 1; index < records.length; index += 1) {
@@ -283,5 +380,64 @@ export function analyzeCheckpoints(input) {
     chain: { success: matchingTransitions, count: checkedTransitions, percent: chainPercent },
     work: { success: successfulRecords, count: checkedRecords, percent: workPercent },
     threeWord: { success: compliantLabels, count: checkedLabels, percent: threeWordPercent },
+  };
+}
+
+export function reduceSessionStatus(input) {
+  const records = typeof input === "string" ? parseCheckpointLogJsonl(input) : input;
+  if (!Array.isArray(records)) {
+    throw new TypeError("session status reduction requires records");
+  }
+
+  let state = "UNKNOWN";
+  for (const sourceRecord of records) {
+    const record = normalizeLogRecord(sourceRecord);
+    if (Object.hasOwn(record, "event")) {
+      state = record.status === "open" ? "OPEN" : "CLOSED";
+    }
+  }
+  return state;
+}
+
+function emptyCheckpointAnalysis() {
+  return {
+    records: [],
+    matchingTransitions: 0,
+    checkedTransitions: 0,
+    successfulRecords: 0,
+    checkedRecords: 0,
+    compliantLabels: 0,
+    checkedLabels: 0,
+    chainPercent: null,
+    workPercent: null,
+    threeWordPercent: null,
+    chain: { success: 0, count: 0, percent: null },
+    work: { success: 0, count: 0, percent: null },
+    threeWord: { success: 0, count: 0, percent: null },
+  };
+}
+
+export function analyzeCheckpointLog(input) {
+  const records = typeof input === "string"
+    ? parseCheckpointLogJsonl(input)
+    : Array.isArray(input)
+      ? input.map(normalizeLogRecord)
+      : null;
+  if (!records || records.length === 0) {
+    throw new TypeError("checkpoint log analysis requires at least one record");
+  }
+
+  const checkpoints = filterCheckpointRecords(records);
+  const statusEvents = records.filter((record) => Object.hasOwn(record, "event"));
+  return {
+    records: records.map((record) => ({ ...record })),
+    checkpoints,
+    latestEvent: { ...records.at(-1) },
+    latestStatusEvent: statusEvents.length === 0 ? null : { ...statusEvents.at(-1) },
+    latestCheckpoint: checkpoints.length === 0 ? null : { ...checkpoints.at(-1) },
+    state: reduceSessionStatus(records),
+    analysis: checkpoints.length === 0
+      ? emptyCheckpointAnalysis()
+      : analyzeCheckpoints(checkpoints),
   };
 }

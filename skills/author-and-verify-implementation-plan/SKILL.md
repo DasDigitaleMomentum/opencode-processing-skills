@@ -45,6 +45,7 @@ Do **not** use this skill to:
   - Reviews the resulting implementation plan for scope compliance.
 
 - **Subagent (delegate or justified model alias)**
+  - Uses one fresh Delegate session for exactly one phase implementation plan.
   - Reads: phase + existing implementation plan (if any) + relevant docs + relevant code.
   - Writes: `plans/**/implementation/phase-N-impl.md`.
 
@@ -83,7 +84,7 @@ Provide:
 
 ### 1) Author + verify
 
-Primary delegates directly to the canonical `delegate` using the bundled prompt template. A justified model alias may be selected without changing the workflow. This is a skill-defined artifact with an explicit output path and canonical template, so it does **not** require an informal Blueprint.
+Primary starts a fresh canonical `delegate` session for the target phase using the bundled prompt template. A justified model alias may be selected without changing the workflow. This is a skill-defined artifact with an explicit output path and canonical template, so it does **not** require an informal Blueprint.
 
 The delegate:
 
@@ -97,7 +98,7 @@ The delegate:
    - captures mismatches as “Reality Check” notes
    - marks any necessary but ungated decision as blocking and does not plan work that depends on it
 
-If the phase depends on previous phases, the delegate should read the necessary prior implementation plans to keep continuity.
+If the phase depends on previous phases, its fresh delegate reads the necessary completed implementation plans to keep continuity. The Maintainer retains phase ordering and cross-phase decisions.
 
 ### 2) Primary review
 
@@ -130,9 +131,9 @@ The implementation plan must follow the canonical headings and frontmatter keys 
 ## Rules
 
 - Skill-first: when invoked, follow this workflow and template.
-- **Sequential processing only.** When authoring implementation plans for multiple phases, process them strictly one at a time (phase 1, then phase 2, etc.). Parallel authoring causes drift – later phases cannot account for decisions made in earlier ones.
-- **Consistency check and fix after completion.** Once all phase implementation plans are authored, verify cross-phase consistency: shared interfaces, naming, data flow assumptions, and dependency ordering. Fix any inconsistencies directly in the implementation plans – the agent is authoring them, so they should be delivered in a consistent state. Only flag issues under "Reality Check" that require a user decision or cannot be resolved without changing the gated phase scope.
-- **Independent review handoff.** Author-owned consistency QA remains part of batch authoring. A later independent batch review validates that completed work proportionally; it does not reconstruct the authoring pass or require a cold reviewer per phase. Hand the ordered implementation-plan set to one reviewer session by default so it can review sequentially and reuse shared evidence.
+- **Fresh phase sessions, sequential processing.** When authoring implementation plans for multiple phases, the Maintainer starts one fresh Delegate session per phase and processes phases strictly one at a time in dependency order. Each delegate writes only its target phase plan; do not reuse the authoring `task_id` for another phase or author phases in parallel.
+- **Artifact-based cross-phase continuity.** Each later phase delegate reads the completed prior implementation plans and checks shared interfaces, naming, data-flow assumptions, and dependency ordering while authoring its own target. It reports any inconsistency that requires changing a prior artifact or gated decision to the Maintainer rather than silently taking ownership of another phase.
+- **Independent review handoff.** After all phase plans are authored, hand the ordered implementation-plan set to one fresh reviewer session by default so it can review sequentially, reuse shared evidence, and perform the existing integrated cross-phase consistency assessment. Do not change implementation-plan review batching or create a consolidated artifact.
 - Do not change phase scope/DoD; record mismatches under "Reality Check" and raise to the primary.
 - Prefer minimal, accurate plan updates over speculative completeness.
 - Unspecified product, policy, security, privacy, compliance, authorization, or operational behavior is not authorization to add it. Preserve applicable existing invariants and avoid concrete regressions or vulnerabilities, but do not invent new policy.

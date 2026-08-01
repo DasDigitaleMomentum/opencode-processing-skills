@@ -21,7 +21,7 @@ The primary maintainer first decides whether persistence is proportional to the 
 
 1. The user and maintainer determine whether work needs multi-phase/multi-session coordination, durable tracking, or an explicitly requested plan.
 2. When persistence is warranted, `create-plan` writes the plan hub, phase files, todo, and required directories; otherwise the bounded package routes to an inline gated execution brief.
-3. Before execution, `author-and-verify-implementation-plan` records each phase's technical approach sequentially, verifies references against the current codebase, and performs author-owned consistency QA across the completed set.
+3. Before execution, `author-and-verify-implementation-plan` records each phase's technical approach in a fresh Delegate session, sequentially under Maintainer coordination; later delegates read prior artifacts to preserve cross-phase continuity.
 4. When independent implementation-plan review is requested for multiple phases, one fresh reviewer session normally processes the dependency-ordered batch, writes each per-phase review artifact, performs one integrated cross-phase assessment, and returns one aggregate digest.
 5. `update-plan` records completed work, changes item status, and performs evidence-backed phase transitions.
 6. `generate-handover` captures current state and decisions when work will continue in another session; `resume-plan` later rebuilds the ordered context and checks prerequisites.

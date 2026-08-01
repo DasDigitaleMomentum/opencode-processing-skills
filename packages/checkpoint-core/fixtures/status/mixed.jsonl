@@ -1,0 +1,4 @@
+{"timestamp":"2026-07-26T10:00:00.000Z","session_id":"mixed","done":"Initial work completed","next":"Continue planned work","step_failed":false,"context_used":null}
+{"timestamp":"2026-07-26T10:00:01.000Z","session_id":"mixed","event":"session_status","status":"open"}
+{"timestamp":"2026-07-26T10:00:02.000Z","session_id":"mixed","done":"Continue planned work","next":"Run focused tests","step_failed":false,"context_used":0.5,"agent":"implementer","session_title":"Mixed status fixture"}
+{"timestamp":"2026-07-26T10:00:03.000Z","session_id":"mixed","event":"session_status","status":"closed"}

@@ -13,7 +13,7 @@ import {
   formatPercent,
   main,
 } from "../bin/checkpoint-inspect.js";
-import { analyzeCheckpoints, parseCheckpointJsonl } from "../src/index.js";
+import { analyzeCheckpointLog, analyzeCheckpoints, parseCheckpointJsonl } from "../src/index.js";
 
 const PILOT_FIXTURES = new URL("../fixtures/pilot/", import.meta.url);
 
@@ -119,6 +119,59 @@ test("inspection displays latest metadata and count-based metrics", async () => 
   assert.match(summary, /Three-word compliance: \d+\/\d+ \([^\n]+%\)/);
 });
 
+test("inspection separates mixed-log lifecycle, event, status, and checkpoint data", async () => {
+  const root = path.resolve(import.meta.dirname, "..");
+  const result = await inspect("fixtures/status/mixed.jsonl", root);
+  assert.equal(result.status, 0);
+  assert.equal(result.stderr, "");
+  assert.match(result.stdout, /Session: mixed/);
+  assert.match(result.stdout, /Session state: CLOSED/);
+  assert.match(result.stdout, /Latest event timestamp: 2026-07-26T10:00:03\.000Z/);
+  assert.match(result.stdout, /Latest status timestamp: 2026-07-26T10:00:03\.000Z/);
+  assert.match(result.stdout, /Latest raw status: closed/);
+  assert.match(result.stdout, /Latest checkpoint timestamp: 2026-07-26T10:00:02\.000Z/);
+  assert.match(result.stdout, /Agent: implementer/);
+  assert.match(result.stdout, /Chain: 1\/1 \(100%\)/);
+  assert.match(result.stdout, /Work: 2\/2 \(100%\)/);
+  assert.match(result.stdout, /Three-word compliance: 4\/4 \(100%\)/);
+});
+
+test("inspection renders status-only, duplicate, and reopened logs deterministically", async () => {
+  const root = path.resolve(import.meta.dirname, "..");
+  const statusOnly = await inspect("fixtures/status/status-only.jsonl", root);
+  assert.equal(statusOnly.status, 0);
+  assert.match(statusOnly.stdout, /Session state: OPEN/);
+  assert.match(statusOnly.stdout, /Latest raw status: open/);
+  assert.match(statusOnly.stdout, /Agent: -/);
+  assert.match(statusOnly.stdout, /Latest checkpoint timestamp: -/);
+  assert.match(statusOnly.stdout, /Last attempted: -/);
+  assert.match(statusOnly.stdout, /Next announced: -/);
+  assert.match(statusOnly.stdout, /Work status: -/);
+  assert.match(statusOnly.stdout, /Context used: unknown/);
+  assert.match(statusOnly.stdout, /Chain: 0\/0 \(n\/a\)/);
+  assert.match(statusOnly.stdout, /Work: 0\/0 \(n\/a\)/);
+  assert.match(statusOnly.stdout, /Three-word compliance: 0\/0 \(n\/a\)/);
+
+  const duplicate = analyzeCheckpointLog(await readFile(
+    new URL("../fixtures/status/duplicate-status.jsonl", import.meta.url),
+    "utf8",
+  ));
+  assert.match(formatCheckpointSummary("duplicate.jsonl", duplicate), /Session state: OPEN/);
+  const reopened = await inspect("fixtures/status/reopened-physical-order.jsonl", root);
+  assert.equal(reopened.status, 0);
+  assert.match(reopened.stdout, /Session state: OPEN/);
+  assert.match(reopened.stdout, /Latest event timestamp: 2026-07-26T10:00:01\.000Z/);
+});
+
+test("checkpoint-only inspection reports UNKNOWN without age inference", async () => {
+  const root = path.resolve(import.meta.dirname, "..");
+  const result = await inspect("fixtures/pilot/successful.jsonl", root);
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /Session state: UNKNOWN/);
+  assert.match(result.stdout, /Latest status timestamp: -/);
+  assert.match(result.stdout, /Latest raw status: -/);
+});
+
 test("invalid invocation and unreadable, empty, malformed, or invalid logs fail concisely", async (t) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-inspect-errors-"));
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -144,6 +197,32 @@ test("invalid invocation and unreadable, empty, malformed, or invalid logs fail 
   const usage = await main([], { stderr: (text) => { stderr += text; } });
   assert.equal(usage, 1);
   assert.match(stderr, /usage: checkpoint-inspect/);
+
+  let unreadableOut = "";
+  let unreadableError = "";
+  const unreadableStatus = await main(["unreadable.jsonl"], {
+    cwd: root,
+    readFile: async () => {
+      const error = new Error("permission denied");
+      error.code = "EACCES";
+      throw error;
+    },
+    stdout: (text) => { unreadableOut += text; },
+    stderr: (text) => { unreadableError += text; },
+  });
+  assert.equal(unreadableStatus, 1);
+  assert.equal(unreadableOut, "");
+  assert.match(unreadableError, /^checkpoint-inspect: permission denied/);
+  assert.doesNotMatch(unreadableError, /Session state: ERROR/);
+
+  const malformedStatus = await inspect(
+    path.resolve(import.meta.dirname, "../fixtures/status/malformed-status.jsonl"),
+    root,
+  );
+  assert.equal(malformedStatus.status, 1);
+  assert.equal(malformedStatus.stdout, "");
+  assert.match(malformedStatus.stderr, /^checkpoint-inspect: /);
+  assert.doesNotMatch(malformedStatus.stderr, /Session state: ERROR/);
 });
 
 test("inspect main runs when invoked through a symlinked directory path", async (t) => {

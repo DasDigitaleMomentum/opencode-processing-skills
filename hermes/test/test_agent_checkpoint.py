@@ -10,6 +10,7 @@ absent for the tests that require them.
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -28,6 +29,9 @@ INSPECT_BIN = REPO_ROOT / "packages" / "checkpoint-core" / "bin" / "checkpoint-i
 WATCH_BIN = REPO_ROOT / "packages" / "checkpoint-core" / "bin" / "checkpoint-watch.js"
 CODEX_RUNTIME = REPO_ROOT / "codex" / "checkpoint-mcp-runtime.mjs"
 CLAUDE_RUNTIME = REPO_ROOT / "claude" / "agent-checkpoint" / "server" / "checkpoint-mcp-runtime.mjs"
+OPENCODE_RUNTIME = REPO_ROOT / "opencode" / "checkpoint-runtime.mjs"
+CODEX_HOOK = REPO_ROOT / "codex" / "checkpoint-hook.mjs"
+CLAUDE_HOOK = REPO_ROOT / "claude" / "agent-checkpoint" / "scripts" / "checkpoint-hook.mjs"
 
 HERMES = shutil.which("hermes")
 NODE = shutil.which("node")
@@ -51,6 +55,24 @@ def require_hermes():
     if HERMES is None:
         raise unittest.TestCase.failureException(
             "hermes binary not found on PATH; pinned Hermes v0.19.0 is required for this suite"
+        )
+    result = subprocess.run(
+        [HERMES, "--version"], capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        raise unittest.TestCase.failureException(
+            f"could not read Hermes version: {result.stderr or result.stdout}"
+        )
+    output = f"{result.stdout}\n{result.stderr}"
+    match = re.search(r"(?:^|\D)(\d+)\.(\d+)\.(\d+)(?:\D|$)", output)
+    if match is None:
+        raise unittest.TestCase.failureException(
+            f"could not parse Hermes version from: {output.strip()}"
+        )
+    version = tuple(int(part) for part in match.groups())
+    if version != (0, 19, 0):
+        raise unittest.TestCase.failureException(
+            f"Hermes v{'.'.join(map(str, version))} does not match the required pinned version v0.19.0"
         )
 
 
@@ -94,18 +116,22 @@ class PluginTestCase(unittest.TestCase):
             tool_name=tool_name, session_id=session_id, task_id="task", tool_call_id="call"
         )
 
-    def read_records(self, relative_path):
+    def read_records(self, relative_path, *, include_status=False):
         text = (self.workspace / relative_path).read_text(encoding="utf-8")
-        return text, [json.loads(line) for line in text.splitlines()]
+        records = [json.loads(line) for line in text.splitlines()]
+        if not include_status:
+            records = [record for record in records if record.get("event") != "session_status"]
+        return text, records
 
 
 class RegistrationTests(unittest.TestCase):
-    def test_register_wires_two_tools_and_three_hooks(self):
+    def test_register_wires_two_tools_and_five_hooks(self):
         ctx = FakeCtx()
         ac.register(ctx)
         self.assertEqual(sorted(ctx.tools), ["checkpoint", "checkpoint_path"])
         self.assertEqual(
-            sorted(ctx.hooks), ["on_session_start", "pre_api_request", "pre_tool_call"]
+            sorted(ctx.hooks),
+            ["on_session_start", "pre_api_request", "pre_llm_call", "pre_tool_call", "subagent_start"],
         )
         self.assertEqual(ctx.tools["checkpoint"]["schema"]["name"], "checkpoint")
         self.assertEqual(ctx.tools["checkpoint_path"]["schema"]["name"], "checkpoint_path")
@@ -121,13 +147,97 @@ class RegistrationTests(unittest.TestCase):
             self.addCleanup(os.chdir, cwd)
             ac._on_session_start(session_id="wired")
             ac._on_pre_tool_call(tool_name="checkpoint", session_id="wired")
-            result = ctx.tools["checkpoint"]["handler"]({"done": "One two three", "next": "Four five six"})
+            result = ctx.tools["checkpoint"]["handler"](
+                {"done": "One two three", "next": "Four five six"}, session_id="wired"
+            )
             self.assertIn("Checkpoint saved.", result)
             path_result = ctx.tools["checkpoint_path"]["handler"]({"session_id": "wired"})
             self.assertEqual(path_result, ".agent-checkpoints/wired.jsonl")
 
+    def test_pre_llm_call_injects_complete_instruction_for_parent_and_child(self):
+        ctx = FakeCtx()
+        ac.register(ctx)
+        required = (
+            "parents and subagents",
+            "meaningful subtasks",
+            "exactly three words",
+            "reuse the previous `next` text verbatim",
+            "same parallel tool-call block",
+            "step_failed=true",
+            "unknown context telemetry as unknown",
+            "final checkpoint",
+            "compact handoff",
+            "does not prove work quality",
+        )
+        for platform in ("cli", "subagent"):
+            with self.subTest(platform=platform):
+                result = ctx.hooks["pre_llm_call"](platform=platform, session_id="session")
+                self.assertEqual(set(result), {"context"})
+                for clause in required:
+                    self.assertIn(clause, result["context"])
+
 
 class CheckpointWriteTests(PluginTestCase):
+    def test_session_start_appends_exact_parent_owned_open_only(self):
+        self.start_session("parent")
+        text, records = self.read_records(
+            ".agent-checkpoints/parent.jsonl", include_status=True
+        )
+        self.assertEqual(len(records), 1)
+        self.assertEqual(
+            list(records[0].keys()),
+            ["timestamp", "session_id", "event", "status"],
+        )
+        self.assertEqual(records[0]["session_id"], "parent")
+        self.assertEqual(records[0]["event"], "session_status")
+        self.assertEqual(records[0]["status"], "open")
+        self.assertTrue(ac._is_valid_utc_timestamp(records[0]["timestamp"]))
+        self.assertNotIn('": ', text)
+
+        ac._on_subagent_start(parent_session_id="parent", child_session_id="child")
+        self.assertFalse((self.workspace / ".agent-checkpoints/child.jsonl").exists())
+        _, after_child = self.read_records(
+            ".agent-checkpoints/parent.jsonl", include_status=True
+        )
+        self.assertEqual(after_child, records)
+
+    def test_continued_session_binding_does_not_fabricate_status(self):
+        self.bind_call("continued")
+        ac.checkpoint(
+            "Continued session checkpoint",
+            "Keep status unknown",
+            _native_session_id="continued",
+        )
+        _, records = self.read_records(
+            ".agent-checkpoints/continued.jsonl", include_status=True
+        )
+        self.assertEqual(len(records), 1)
+        self.assertNotIn("event", records[0])
+
+    def test_status_record_contract_is_exact(self):
+        record = ac._create_status_record(
+            "parent", "open", clock=lambda: "2026-07-26T14:30:00Z"
+        )
+        self.assertEqual(
+            record,
+            {
+                "timestamp": "2026-07-26T14:30:00.000Z",
+                "session_id": "parent",
+                "event": "session_status",
+                "status": "open",
+            },
+        )
+        ac._validate_status_record(record)
+        for bad in (
+            dict(record, status="OPEN"),
+            dict(record, status="closed", extra=True),
+            dict(record, event="session_start"),
+            {key: value for key, value in record.items() if key != "status"},
+        ):
+            with self.subTest(record=bad):
+                with self.assertRaises(TypeError):
+                    ac._validate_status_record(bad)
+
     def test_eight_field_record_with_null_metadata(self):
         self.start_session()
         self.bind_call()
@@ -168,14 +278,20 @@ class CheckpointWriteTests(PluginTestCase):
             ac.checkpoint("Done step label", 42)
         with self.assertRaises(TypeError):
             ac.checkpoint("Done step label", "Next step label", step_failed="yes")
-        self.assertFalse((self.workspace / ".agent-checkpoints").exists())
+        _, records = self.read_records(
+            ".agent-checkpoints/hermes-sess.jsonl", include_status=True
+        )
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["status"], "open")
 
-    def test_session_mismatch_fails_visibly(self):
+    def test_pre_tool_call_initializes_unseen_resumed_parent(self):
         self.start_session("session-a")
         ac._on_pre_tool_call(tool_name="checkpoint", session_id="session-b")
-        with self.assertRaisesRegex(ValueError, "session mismatch"):
-            ac.checkpoint("Done step label", "Next step label")
-        self.assertFalse((self.workspace / ".agent-checkpoints").exists())
+        ac.checkpoint(
+            "Done step label", "Next step label", _native_session_id="session-b"
+        )
+        _, records = self.read_records(".agent-checkpoints/session-b.jsonl")
+        self.assertEqual(records[0]["session_id"], "session-b")
 
     def test_unknown_session_fails_visibly(self):
         with self.assertRaisesRegex(ValueError, "no bound Hermes session"):
@@ -195,6 +311,69 @@ class CheckpointWriteTests(PluginTestCase):
         ac.checkpoint("Done step label", "Next step label")
         _, records = self.read_records(".agent-checkpoints/hermes-sess.jsonl")
         self.assertEqual(records[0]["session_id"], "hermes-sess")
+
+    def test_parent_child_and_resumed_parent_share_parent_log(self):
+        self.start_session("parent")
+        ac._on_subagent_start(parent_session_id="parent", child_session_id="child")
+        for native_id, done in (
+            ("parent", "Parent wrote checkpoint"),
+            ("child", "Child wrote checkpoint"),
+            ("parent", "Parent resumed checkpoint"),
+        ):
+            self.bind_call(native_id)
+            ac.checkpoint(done, "Continue parent session", _native_session_id=native_id)
+        _, records = self.read_records(".agent-checkpoints/parent.jsonl")
+        self.assertEqual([record["session_id"] for record in records], ["parent"] * 3)
+        self.assertFalse((self.workspace / ".agent-checkpoints/child.jsonl").exists())
+
+    def test_nested_child_resolves_transitively_to_root_parent(self):
+        self.start_session("root")
+        ac._on_subagent_start(parent_session_id="root", child_session_id="child")
+        ac._on_subagent_start(parent_session_id="child", child_session_id="grandchild")
+        self.bind_call("grandchild")
+        ac.checkpoint(
+            "Nested child checkpoint", "Resume root session", _native_session_id="grandchild"
+        )
+        _, records = self.read_records(".agent-checkpoints/root.jsonl")
+        self.assertEqual(records[0]["session_id"], "root")
+
+    def test_interleaved_parent_trees_isolate_binding_and_telemetry(self):
+        ctx = FakeCtx()
+        ac.register(ctx)
+        self.start_session("parent-a")
+        ac._on_subagent_start(parent_session_id="parent-a", child_session_id="child-a")
+        self.start_session("parent-b")
+        ac._on_subagent_start(parent_session_id="parent-b", child_session_id="child-b")
+        ac._on_pre_api_request(
+            session_id="child-a", approx_input_tokens=20000, model="claude-sonnet-4-6"
+        )
+        ac._on_pre_api_request(
+            session_id="child-b", approx_input_tokens=100000, model="claude-sonnet-4-6"
+        )
+        self.bind_call("child-b")
+        self.bind_call("child-a")
+        ctx.tools["checkpoint"]["handler"](
+            {"done": "Child A checkpoint", "next": "Resume parent A"},
+            session_id="child-a",
+        )
+        ctx.tools["checkpoint"]["handler"](
+            {"done": "Child B checkpoint", "next": "Resume parent B"},
+            session_id="child-b",
+        )
+        _, records_a = self.read_records(".agent-checkpoints/parent-a.jsonl")
+        _, records_b = self.read_records(".agent-checkpoints/parent-b.jsonl")
+        self.assertAlmostEqual(records_a[0]["context_used"], 0.1)
+        self.assertAlmostEqual(records_b[0]["context_used"], 0.5)
+        self.assertFalse((self.workspace / ".agent-checkpoints/child-a.jsonl").exists())
+        self.assertFalse((self.workspace / ".agent-checkpoints/child-b.jsonl").exists())
+
+    def test_invalid_subagent_identity_fails_visibly(self):
+        for parent_id, child_id in (("", "child"), ("parent", ""), (None, "child")):
+            with self.subTest(parent_id=parent_id, child_id=child_id):
+                with self.assertRaisesRegex(TypeError, "non-empty string"):
+                    ac._on_subagent_start(
+                        parent_session_id=parent_id, child_session_id=child_id
+                    )
 
     def test_record_rejects_non_object_and_field_sets(self):
         with self.assertRaises(TypeError):
@@ -288,7 +467,9 @@ class TelemetryTests(PluginTestCase):
         os.environ["AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS"] = "100000"
         self.start_session()
         self.bind_call()
-        ac._on_pre_api_request(approx_input_tokens=25000, model="mystery-model")
+        ac._on_pre_api_request(
+            session_id="hermes-sess", approx_input_tokens=25000, model="mystery-model"
+        )
         result = ac.checkpoint("Done step label", "Next step label")
         self.assertIn("~25%", result)
         _, records = self.read_records(".agent-checkpoints/hermes-sess.jsonl")
@@ -305,23 +486,39 @@ class TelemetryTests(PluginTestCase):
     def test_null_fallback_on_invalid_payload_clears_slot(self):
         self.start_session()
         self.bind_call()
-        ac._on_pre_api_request(approx_input_tokens=84000, model="claude-sonnet-4-6")
+        ac._on_pre_api_request(
+            session_id="hermes-sess", approx_input_tokens=84000, model="claude-sonnet-4-6"
+        )
         for invalid in (-1, float("nan"), "84000", True, None):
-            ac._on_pre_api_request(approx_input_tokens=invalid, model="claude-sonnet-4-6")
-            context_used, remaining_k = ac._telemetry()
+            ac._on_pre_api_request(
+                session_id="hermes-sess", approx_input_tokens=invalid, model="claude-sonnet-4-6"
+            )
+            context_used, remaining_k = ac._telemetry("hermes-sess")
             self.assertIsNone(context_used, msg=f"invalid={invalid!r}")
             self.assertIsNone(remaining_k, msg=f"invalid={invalid!r}")
 
     def test_null_fallback_on_unknown_model(self):
-        ac._on_pre_api_request(approx_input_tokens=1000, model="totally-unknown-model")
-        context_used, remaining_k = ac._telemetry()
+        ac._on_pre_api_request(
+            session_id="hermes-sess", approx_input_tokens=1000, model="totally-unknown-model"
+        )
+        context_used, remaining_k = ac._telemetry("hermes-sess")
         self.assertIsNone(context_used)
         self.assertIsNone(remaining_k)
 
     def test_estimate_clamped_to_unit_interval(self):
-        ac._on_pre_api_request(approx_input_tokens=999999, model="gpt-4")
-        context_used, _ = ac._telemetry()
-        self.assertEqual(context_used, 1.0)
+        self.start_session()
+        self.bind_call()
+        for approx in (8193, 999999):
+            with self.subTest(approx=approx):
+                ac._on_pre_api_request(
+                    session_id="hermes-sess", approx_input_tokens=approx, model="gpt-4"
+                )
+                context_used, remaining_k = ac._telemetry("hermes-sess")
+                self.assertEqual(context_used, 1.0)
+                self.assertEqual(remaining_k, 0)
+                result = ac.checkpoint("Done step label", "Next step label")
+                self.assertIn("~0k", result)
+                self.assertNotRegex(result, r"~-\d+k")
 
     def test_gpt4_family_model_limits(self):
         cases = {
@@ -334,13 +531,17 @@ class TelemetryTests(PluginTestCase):
         for model, approx in cases.items():
             with self.subTest(model=model):
                 ac._reset_state()
-                ac._on_pre_api_request(approx_input_tokens=approx, model=model)
-                context_used, _ = ac._telemetry()
+                ac._on_pre_api_request(
+                    session_id="hermes-sess", approx_input_tokens=approx, model=model
+                )
+                context_used, _ = ac._telemetry("hermes-sess")
                 self.assertAlmostEqual(context_used, 0.5)
 
     def test_unlisted_gpt4_variant_falls_back_to_null(self):
-        ac._on_pre_api_request(approx_input_tokens=1000, model="gpt-4-nextgen")
-        context_used, remaining_k = ac._telemetry()
+        ac._on_pre_api_request(
+            session_id="hermes-sess", approx_input_tokens=1000, model="gpt-4-nextgen"
+        )
+        context_used, remaining_k = ac._telemetry("hermes-sess")
         self.assertIsNone(context_used)
         self.assertIsNone(remaining_k)
 
@@ -382,7 +583,7 @@ class FixtureParityTests(PluginTestCase):
         self.bind_call("München")
         ac.checkpoint("Done step label", "Next step label")
         text, records = self.read_records(".agent-checkpoints/M%C3%BCnchen.jsonl")
-        line = text.splitlines()[0]
+        line = next(line for line in text.splitlines() if '"done"' in line)
         self.assertNotIn('": ', line, "JSONL must use compact separators like the JS core")
         self.assertIn("München", line, "JSONL must carry UTF-8 literals like JSON.stringify")
         self.assertEqual(
@@ -396,7 +597,9 @@ class FixtureParityTests(PluginTestCase):
         self.start_session()
         self.bind_call()
         ac.checkpoint("Review pilot scope", "Create inspection command")
-        ac._on_pre_api_request(approx_input_tokens=84000, model="claude-sonnet-4-6")
+        ac._on_pre_api_request(
+            session_id="hermes-sess", approx_input_tokens=84000, model="claude-sonnet-4-6"
+        )
         self.bind_call()
         ac.checkpoint("Create inspection command", "Run focused tests", step_failed=True)
         log_path = self.workspace / ".agent-checkpoints" / "hermes-sess.jsonl"
@@ -419,7 +622,9 @@ class FixtureParityTests(PluginTestCase):
     def test_no_hook_or_telemetry_state_persisted(self):
         self.start_session()
         self.bind_call()
-        ac._on_pre_api_request(approx_input_tokens=84000, model="claude-sonnet-4-6")
+        ac._on_pre_api_request(
+            session_id="hermes-sess", approx_input_tokens=84000, model="claude-sonnet-4-6"
+        )
         ac.checkpoint("Done step label", "Next step label")
         text, records = self.read_records(".agent-checkpoints/hermes-sess.jsonl")
         self.assertEqual(sorted(records[0].keys()), sorted(ac.RECORD_FIELDS))
@@ -494,10 +699,53 @@ class InstallerTestCase(unittest.TestCase):
 
 class InstallerIsolationTests(InstallerTestCase):
     def test_plugin_files_installed(self):
-        self.run_installer()
+        output = self.run_installer()
         dest = self.hermes_home / "plugins" / "agent-checkpoint"
-        for name in ("plugin.yaml", "agent_checkpoint.py", "__init__.py", "README.md"):
+        for name in (
+            "plugin.yaml",
+            "agent_checkpoint.py",
+            "checkpoint-instruction.md",
+            "__init__.py",
+            "README.md",
+        ):
             self.assertTrue((dest / name).is_file(), f"missing {name}")
+        self.assertEqual(
+            (dest / "checkpoint-instruction.md").read_bytes(),
+            (REPO_ROOT / "hermes/agent-checkpoint/checkpoint-instruction.md").read_bytes(),
+        )
+        self.assertRegex(
+            output,
+            r"(?is)stop every live checkpoint-watch dashboard.*OpenCode.*codex.*Claude Code.*Hermes",
+        )
+        self.assertLess(output.index("Launch command:"), output.index("Start/restart Hermes"))
+
+    def test_shared_reader_symlink_stops_before_hermes_copy_or_enablement(self):
+        opencode_home = self.root / "opencode"
+        linked_bin = (
+            opencode_home
+            / "lib"
+            / "opencode-processing-skills"
+            / "checkpoint-watch"
+            / "bin"
+        )
+        linked_bin.parent.mkdir(parents=True)
+        protected = self.root / "protected-watcher-bin"
+        protected.mkdir()
+        protected_file = protected / "checkpoint-watch.js"
+        protected_file.write_text("stale protected watcher\n", encoding="utf-8")
+        linked_bin.symlink_to(protected, target_is_directory=True)
+
+        result = self.run_installer_result()
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn(str(linked_bin), result.stderr)
+        self.assertRegex(result.stderr, r"(?is)required checkpoint reader/core.*rerun")
+        self.assertNotIn("Step 1.", result.stdout)
+        self.assertEqual(
+            protected_file.read_text(encoding="utf-8"), "stale protected watcher\n"
+        )
+        self.assertTrue(linked_bin.is_symlink())
+        self.assertFalse((self.hermes_home / "plugins" / "agent-checkpoint").exists())
+        self.assertFalse((self.hermes_home / "config.yaml").exists())
 
     def test_config_created_when_absent(self):
         output = self.run_installer()
@@ -581,31 +829,50 @@ class InstallerIsolationTests(InstallerTestCase):
     def test_disabled_plugin_entry_stops_loudly(self):
         # Hermes' deny-list vetoes even enabled-listed plugins; only the
         # documented `hermes plugins enable` flow may remove the entry.
-        before = (
-            "_config_version: 33\n"
-            "plugins:\n"
-            "  enabled: []\n"
-            "  disabled:\n"
-            "    - agent-checkpoint\n"
-            "\n"
-            "# comment block\n"
-            "model: gpt-4\n"
-        )
-        config = self.write_config(before)
-        result = self.run_installer_result()
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("plugins.disabled", result.stderr)
-        self.assertIn("hermes plugins enable agent-checkpoint", result.stderr)
-        self.assertEqual(config.read_text(encoding="utf-8"), before)
+        for entry in ("agent-checkpoint", "'agent-checkpoint'", '"agent-checkpoint"'):
+            with self.subTest(entry=entry):
+                before = (
+                    "_config_version: 33\n"
+                    "plugins:\n"
+                    "  enabled: []\n"
+                    "  disabled:\n"
+                    f"    - {entry}\n"
+                    "\n"
+                    "# comment block\n"
+                    "model: gpt-4\n"
+                )
+                config = self.write_config(before)
+                result = self.run_installer_result()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("plugins.disabled", result.stderr)
+                self.assertIn("hermes plugins enable agent-checkpoint", result.stderr)
+                self.assertEqual(config.read_text(encoding="utf-8"), before)
 
     def test_inline_disabled_list_stops_loudly(self):
-        before = "_config_version: 33\nplugins:\n  disabled: [agent-checkpoint]\n"
-        config = self.write_config(before)
-        result = self.run_installer_result()
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("plugins.disabled", result.stderr)
-        self.assertIn("hermes plugins enable agent-checkpoint", result.stderr)
-        self.assertEqual(config.read_text(encoding="utf-8"), before)
+        for entry in ("agent-checkpoint", "'agent-checkpoint'", '"agent-checkpoint"'):
+            with self.subTest(entry=entry):
+                before = f"_config_version: 33\nplugins:\n  disabled: [{entry}]\n"
+                config = self.write_config(before)
+                result = self.run_installer_result()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("plugins.disabled", result.stderr)
+                self.assertIn("hermes plugins enable agent-checkpoint", result.stderr)
+                self.assertEqual(config.read_text(encoding="utf-8"), before)
+
+    def test_disabled_near_matches_do_not_stop_installation(self):
+        for disabled in (
+            "  disabled:\n    - agent-checkpoint-extra\n",
+            "  disabled:\n    - 'agent-checkpoint-extra'\n",
+            '  disabled: ["agent-checkpoint-extra"]\n',
+        ):
+            with self.subTest(disabled=disabled):
+                before = "plugins:\n" + disabled
+                config = self.write_config(before)
+                result = self.run_installer_result()
+                self.assertEqual(result.returncode, 0, result.stderr)
+                after = config.read_text(encoding="utf-8")
+                self.assertIn("    - agent-checkpoint\n", after)
+                self.assertIn("agent-checkpoint-extra", after)
 
     def test_inline_plugins_dict_stops_loudly(self):
         before = "plugins: {enabled: [other-plugin]}\nmodel: gpt-4\n"
@@ -720,10 +987,36 @@ class InspectionParityTests(PluginTestCase):
 
     NODE_DRIVER = """
 import * as checkpointCore from {core};
+import {{ createOpenCodeCheckpointPlugin }} from {opencode};
 import {{ createMcpRuntime as createCodex }} from {codex};
 import {{ createMcpRuntime as createClaude }} from {claude};
+import {{ handleSessionStart as codexStart }} from {codex_hook};
+import {{
+  handleSessionStart as claudeStart,
+  handleSubagentStart as claudeChildStart,
+  handleSessionEnd as claudeEnd,
+}} from {claude_hook};
 
 const workspace = process.env.PARITY_WORKSPACE;
+function schema() {{
+  return {{ optional() {{ return this; }}, default() {{ return this; }} }};
+}}
+function fakeTool(definition) {{ return definition; }}
+fakeTool.schema = {{ string: schema, boolean: schema }};
+
+const makeOpenCode = createOpenCodeCheckpointPlugin({{
+  tool: fakeTool,
+  checkpointCore,
+}});
+const opencode = await makeOpenCode({{ worktree: workspace }});
+await opencode.event({{ event: {{ type: "session.created", properties: {{ info: {{ id: "opencode-sess" }} }} }} }});
+await opencode.tool.checkpoint.execute(
+  {{ done: "OpenCode session checked", next: "OpenCode next step", step_failed: false }},
+  {{ worktree: workspace, sessionID: "opencode-sess", agent: "maintainer" }},
+);
+await opencode.event({{ event: {{ type: "session.created", properties: {{ info: {{ id: "opencode-status-only" }} }} }} }});
+
+await codexStart({{ hook_event_name: "SessionStart", session_id: "codex-sess", cwd: workspace }});
 const codex = createCodex({{ checkpointCore }});
 const codexResult = await codex.callTool("checkpoint", {{
   done: "Codex session checked",
@@ -733,6 +1026,14 @@ const codexResult = await codex.callTool("checkpoint", {{
 }});
 if (JSON.stringify(codexResult).includes("requires")) throw new Error("codex write failed");
 process.env.CLAUDE_PROJECT_DIR = workspace;
+await claudeStart({{ hook_event_name: "SessionStart", session_id: "claude-sess", cwd: workspace }});
+await claudeChildStart({{
+  hook_event_name: "SubagentStart",
+  session_id: "claude-sess",
+  agent_id: "child",
+  agent_type: "implementer",
+  cwd: workspace,
+}});
 const claude = createClaude({{ checkpointCore }});
 const claudeResult = await claude.callTool("checkpoint", {{
   done: "Claude session checked",
@@ -741,6 +1042,7 @@ const claudeResult = await claude.callTool("checkpoint", {{
   _telemetry_session_id: "claude-sess",
 }});
 if (JSON.stringify(claudeResult).includes("requires")) throw new Error("claude write failed");
+await claudeEnd({{ hook_event_name: "SessionEnd", session_id: "claude-sess", cwd: workspace }});
 """
 
     def run_node(self, script, cwd):
@@ -762,11 +1064,35 @@ if (JSON.stringify(claudeResult).includes("requires")) throw new Error("claude w
             FIXTURES / "pilot" / "successful.jsonl",
             checkpoint_dir / "pilot-successful.jsonl",
         )
-        # real Codex/Claude-format records via the adapters' own runtimes
+        # Stage the command hooks with their installed sibling core layout.
+        installed = Path(self._tmp.name) / "installed-adapters"
+        codex_installed = installed / "codex"
+        claude_installed = installed / "claude"
+        (claude_installed / "scripts").mkdir(parents=True)
+        (claude_installed / "instructions").mkdir()
+        (claude_installed / "server").mkdir()
+        codex_installed.mkdir(parents=True)
+        shutil.copy(CODEX_HOOK, codex_installed / "checkpoint-hook.mjs")
+        shutil.copy(CORE_SRC, codex_installed / "checkpoint-core.mjs")
+        shutil.copy(
+            REPO_ROOT / "codex" / "checkpoint-instruction.md",
+            codex_installed / "checkpoint-instruction.md",
+        )
+        shutil.copy(CLAUDE_HOOK, claude_installed / "scripts" / "checkpoint-hook.mjs")
+        shutil.copy(CORE_SRC, claude_installed / "server" / "checkpoint-core.mjs")
+        shutil.copy(
+            REPO_ROOT / "claude" / "agent-checkpoint" / "instructions" / "checkpoint.md",
+            claude_installed / "instructions" / "checkpoint.md",
+        )
+
+        # Real status/checkpoint records via all four adapters' own writers.
         driver = self.NODE_DRIVER.format(
             core=repr(CORE_SRC.as_uri()),
+            opencode=repr(OPENCODE_RUNTIME.as_uri()),
             codex=repr(CODEX_RUNTIME.as_uri()),
             claude=repr(CLAUDE_RUNTIME.as_uri()),
+            codex_hook=repr((codex_installed / "checkpoint-hook.mjs").as_uri()),
+            claude_hook=repr((claude_installed / "scripts" / "checkpoint-hook.mjs").as_uri()),
         )
         self.run_node(driver, self.workspace)
         # Hermes log via the plugin
@@ -774,16 +1100,28 @@ if (JSON.stringify(claudeResult).includes("requires")) throw new Error("claude w
         self.bind_call("hermes-sess")
         ac.checkpoint("Hermes session checked", "Hermes next step")
 
+        # Continued-session binding writes a checkpoint but no fabricated open.
+        self.bind_call("hermes-continued")
+        ac.checkpoint(
+            "Hermes continued check",
+            "Hermes unknown state",
+            _native_session_id="hermes-continued",
+        )
+
         logs = {
-            "pilot-successful.jsonl": "pilot-successful",
-            "codex-sess.jsonl": "codex-sess",
-            "claude-sess.jsonl": "claude-sess",
-            "hermes-sess.jsonl": "hermes-sess",
+            "pilot-successful.jsonl": ("pilot-successful", "UNKNOWN"),
+            "opencode-sess.jsonl": ("opencode-sess", "OPEN"),
+            "opencode-status-only.jsonl": ("opencode-status-only", "OPEN"),
+            "codex-sess.jsonl": ("codex-sess", "OPEN"),
+            "claude-sess.jsonl": ("claude-sess", "CLOSED"),
+            "claude-sess--child.jsonl": ("claude-sess--child", "OPEN"),
+            "hermes-sess.jsonl": ("hermes-sess", "OPEN"),
+            "hermes-continued.jsonl": ("hermes-continued", "UNKNOWN"),
         }
         self.assertEqual(
             sorted(path.name for path in checkpoint_dir.glob("*.jsonl")), sorted(logs)
         )
-        for filename, session in logs.items():
+        for filename, (session, state) in logs.items():
             with self.subTest(log=filename):
                 result = subprocess.run(
                     [NODE, str(INSPECT_BIN), f".agent-checkpoints/{filename}"],
@@ -791,7 +1129,12 @@ if (JSON.stringify(claudeResult).includes("requires")) throw new Error("claude w
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn(f"Session: {session}", result.stdout)
+                self.assertIn(f"Session state: {state}", result.stdout)
                 self.assertIn("Work status:", result.stdout)
+                if filename in {"opencode-status-only.jsonl", "claude-sess--child.jsonl"}:
+                    self.assertIn("Chain: 0/0 (n/a)", result.stdout)
+                    self.assertIn("Work: 0/0 (n/a)", result.stdout)
+                    self.assertIn("Three-word compliance: 0/0 (n/a)", result.stdout)
         # checkpoint-watch --once reads all four unchanged
         watch = subprocess.run(
             [NODE, str(WATCH_BIN), "--once"],
@@ -800,8 +1143,13 @@ if (JSON.stringify(claudeResult).includes("requires")) throw new Error("claude w
         self.assertEqual(watch.returncode, 0, watch.stderr)
         # The dashboard truncates the SESSION column; assert each harness row
         # via its unique session-id prefix.
-        for prefix in ("pilot-s", "codex-s", "claude-", "hermes-"):
-            self.assertIn(prefix, watch.stdout)
+        for filename, (session, state) in logs.items():
+            # The dashboard deterministically ellipsizes the fixed-width
+            # session column, so match only the visible stable prefix.
+            prefix = session[:7]
+            rows = [line for line in watch.stdout.splitlines() if prefix in line]
+            self.assertTrue(rows, filename)
+            self.assertTrue(any(state in row for row in rows), filename)
         # step-1 guard: inspection works through a symlinked bin path
         link_dir = Path(self._tmp.name) / "linked-bin"
         link_dir.mkdir()

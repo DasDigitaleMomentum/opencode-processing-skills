@@ -38,9 +38,11 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 
 ## Architecture Principles
 
+- **Maintainer-owned main loop**: The Maintainer owns the user conversation, decisions, scope, and final result. Subagents bound expensive context; durable artifacts and compact summaries carry context between sessions.
 - **File-based interface**: Subagents write skill-/workflow-defined artifacts to the defined file structure (templates). The file structure IS the interface, not return values. Every subagent that produces artifacts writes them to disk; the primary agent receives only a short status summary.
-- **Skill-driven delegate**: `agents/delegate.md` is the single canonical analysis/review persona. Generated `delegate-*` variants are model aliases; loaded skills own expertise, write boundaries, and output contracts. Delegates hand separable evidence collection to the leaf `retriever` by default while retaining synthesis and artifact ownership.
-- **Workflow-owned writers**: `doc-explorer` is docs-focused, the canonical delegate handles skill-governed analysis/reviews and explicit artifacts, `retriever` returns evidence without writing, and `implementer` performs gated code execution while retaining ownership of any retriever-assisted changes.
+- **Skill-driven delegate**: `agents/delegate.md` is the standard persona for normal delegation involving reasoning, synthesis, reviews, and skill-defined artifacts. Generated `delegate-*` variants are model aliases; loaded skills own expertise, write boundaries, and output contracts. Delegates hand separable evidence collection to the leaf `retriever` by default while retaining synthesis and artifact ownership.
+- **Workflow-owned writers**: `doc-explorer` is the documentation-specialized Delegate, the canonical delegate handles skill-governed analysis/reviews and explicit artifacts, `retriever` is a disposable non-writing worker for straightforward evidence gathering, and `implementer` performs one gated work package while retaining ownership of any retriever-assisted changes.
+- **Bounded expensive sessions**: Each phase implementation plan uses a fresh Delegate session in Maintainer-coordinated sequence, and each phase/work package uses a fresh Implementer. Only one package's BLUEPRINT -> EXECUTE pair reuses an Implementer session; it retires after the digest. Implementation-plan batch review remains a separate deliberate reuse case, and review-fix reuse remains conditional on retained reasoning value.
 - **Self-delegation for scale**: When a subagent's workload would exceed comfortable context limits (e.g., documenting a project with many modules), it spawns additional instances of itself, each scoped to a smaller unit of work.
 - **Agent extension over commands**: Skills extend the primary agent's behavior. Subagents handle expensive exploration.
 - **Stack-agnostic**: No assumptions about language or framework
@@ -61,7 +63,7 @@ Phases define scope and acceptance criteria independent of technical approach. T
 
 ### Why does the primary agent author plans, not doc-explorer?
 
-Plans are conversation-anchored: requirements emerge from user dialogue, trade-offs are negotiated, DoD is agreed upon. This context lives in the primary agent's conversation. Delegating plan creation to a subagent would require serializing all this context into a prompt, risking loss of intent and nuance. Documentation, by contrast, is codebase-anchored -- it can be derived from files without conversation context.
+Scope plans are conversation-anchored: requirements emerge from user dialogue, trade-offs are negotiated, and DoD is agreed upon. This context lives in the primary agent's conversation. Grounded per-phase implementation plans are different: one fresh Delegate per phase writes the explicit skill-governed artifact from gated scope and prior artifacts. Documentation, by contrast, is codebase-anchored and belongs to Doc Explorer.
 
 ### Why keep exploration and writing within workflow agents?
 
@@ -69,11 +71,11 @@ Earlier iterations had a separate `code-analyzer` (read-only analysis) and write
 
 ### Why one canonical delegate persona?
 
-Task expertise changes more often than generic delegate behavior. Keeping exploration, review, remediation, and artifact contracts in skills avoids persona drift and lets the same `task_id` move from review to remediation without rebuilding context. Model variants copy the canonical persona and differ only in configured model/options, so stronger models can be selected for independent reviews without duplicating workflow rules.
+Task expertise changes more often than generic delegate behavior. Keeping exploration, review, remediation, and artifact contracts in skills avoids persona drift and permits a review `task_id` to move to remediation when retained reasoning materially helps. Model variants copy the canonical persona and differ only in configured model/options, so capacity can change without duplicating workflow rules.
 
-### Why review fixes stay in the reviewer session?
+### Why may review fixes stay in the reviewer session?
 
-The reviewer already has the relevant code, findings, assumptions, and verification context. Starting a new implementer for every finding forces context reconstruction and can introduce a weaker or conflicting policy layer. Same-session remediation is therefore the default, including related multi-file fixes. A new work package is reserved for changed scope, unavailable context, an explicit fresh perspective, or a new primary decision. Review loops are never started automatically.
+The reviewer may already hold relevant code, findings, assumptions, and verification context. Resume it for accepted remediation only when that retained reasoning materially helps; a fully specified fix can use a fresh lean path. Review loops are never started automatically.
 
 ### Why does doc-explorer self-delegate instead of the primary spawning per-module instances?
 
@@ -92,7 +94,7 @@ The framework deliberately stops at the boundary between planning and coding. Im
 Instead of a generic "implementation" skill that tries to plan-and-code, this framework uses:
 
 - A dedicated **execution protocol** (`execute-work-package`) that is explicitly **gated** (step list -> primary approval -> execute -> digest)
-- A dedicated execution-only **subagent** (`implementer`) that reduces primary context bloat by returning compact digests
+- A dedicated execution-only **subagent** (`implementer`) that handles exactly one two-call work package and then retires after returning a compact digest
 
 This keeps planning and execution responsibilities separated while still standardizing implementation as a repeatable workflow.
 

@@ -45,10 +45,10 @@ Return only a **compact digest** to the primary session — not full file conten
   tests required to complete accepted findings.
 - `delegate-strong`: use for independent reviews and genuinely difficult or high-risk skill-defined artifacts. Implementation plans may use the canonical delegate and may be written directly because the skill provides an explicit path/template; do **not** add a Blueprint gate.
 - `delegate`: use for routine analysis with `delegate-analysis`; do not escalate to `delegate-strong` merely because work has multiple steps.
-- After an implementation or implementation-plan review, prefer resuming the same Task using `review-fix` for accepted related findings. Related fixes may span multiple files; do not start a context-cold fixer merely because runtime code is involved.
+- After an implementation or implementation-plan review, resume the same Task using `review-fix` only when retained reasoning materially helps; otherwise use a fresh lean path. Related fixes may span multiple files, but file count alone does not decide reuse.
 - `doc-explorer`: docs-focused; use for `generate-docs`/`update-docs` and selected skill-governed `plans/**` maintenance where applicable.
 - Larger ad-hoc writes with undefined shape/targets should start with an informal Blueprint before mutation.
-- A new `implementer` or authoring pass is needed only for a changed objective/scope, new primary decision, unavailable session, or explicit fresh-context request. `review-fix` is the normal same-session remediation path; do not create automatic review-fix loops.
+- Start one fresh authoring Task per phase implementation plan and one fresh `implementer` per phase/work package. Resume only that package's BLUEPRINT → EXECUTE pair; after its digest the Task retires. `review-fix` may reuse its reviewer Task when retained reasoning materially helps; do not create automatic review-fix loops.
 
 ## Gated implementation (blueprint → execute)
 

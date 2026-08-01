@@ -8,5 +8,7 @@ provides_tools:
   - checkpoint_path
 provides_hooks:
   - on_session_start
+  - subagent_start
   - pre_tool_call
   - pre_api_request
+  - pre_llm_call

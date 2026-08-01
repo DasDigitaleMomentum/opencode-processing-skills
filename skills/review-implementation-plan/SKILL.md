@@ -68,7 +68,7 @@ The primary passes the focus via `{{focus}}` in the delegation prompt. If no foc
 
 ### Why `delegate-strong` (not `doc-explorer`)
 
-Same rationale as `review-plan`: the reviewer must be independent from the authoring session. In batch mode that fresh reviewer keeps useful context between phases rather than repeatedly approaching each phase cold. `delegate-strong` provides the judgment depth needed to evaluate implementation feasibility and cross-reference plan claims against real code.
+Same rationale as `review-plan`: the reviewer must be independent from the authoring work. In batch mode that fresh reviewer keeps useful context between phases rather than repeatedly approaching each phase cold. `delegate-strong` provides the judgment depth needed to evaluate implementation feasibility and cross-reference plan claims against real code.
 
 ## Routing Matrix (Who does what)
 
@@ -99,7 +99,7 @@ Provide:
 - One review output path per phase: `plans/<name>/reviews/impl-plan-review-phase-N.md`
 - Review focus (freetext — what to prioritize)
 
-In batch mode, use one fresh reviewer session independent from the authoring session by default. The reviewer:
+In batch mode, use one fresh reviewer session independent from the authoring work by default. The reviewer:
 
 1. Reviews phases sequentially in dependency order.
 2. Collects shared or overlapping evidence once and reuses it across phase reviews.
@@ -123,7 +123,7 @@ For single-phase mode, the subagent returns the existing compact summary. For ba
 
 Primary decides:
 - **Ready**: Proceed to `execute-work-package`.
-- **Needs Revision**: Prefer accepting the findings and resuming the same reviewer `task_id` through `review-fix`. Related implementation-plan corrections may span multiple steps, symbols, and references; size alone does not require a new authoring session.
+- **Needs Revision**: After accepting findings, resume the same reviewer `task_id` through `review-fix` only when retained reasoning materially helps; otherwise use a fresh lean path. Related implementation-plan corrections may span multiple steps, symbols, and references; size alone does not decide reuse.
 - **New authoring pass**: Re-run `author-and-verify-implementation-plan` only when the objective/gated scope changes, a new primary decision or investigation is required, the reviewer session is unavailable, or the primary explicitly wants a fresh planning context.
 - **Major Gaps**: Discuss with user; potentially revise phase scope via `update-plan`.
 
@@ -153,7 +153,7 @@ In batch mode, exactly one per-phase artifact MUST also include the optional **C
 - Batch review is sequential in dependency order and produces one aggregate digest plus exactly one integrated cross-phase consistency assessment.
 - Automatic parallel reviewer-per-phase fan-out is prohibited by default. Apply only the explicit reviewer-separation and contiguous partitioning exceptions defined above, with a central consistency check limited to cross-partition interfaces.
 - Retriever delegation is evidence-oriented: collect shared evidence once and avoid nested phase-oriented fan-out by default.
-- Validate the authoring session's sequential plans and author-owned consistency QA proportionally; do not reconstruct the entire authoring pass.
+- Validate the sequential plans and their artifact-based cross-phase continuity proportionally; do not reconstruct every phase's authoring pass.
 - Findings are **advisory**. The primary decides whether and how to act.
 - Do not modify the implementation plan during review — only produce the review artifact.
 - Do not discard the reviewer `task_id` until the primary has decided whether remediation is needed.

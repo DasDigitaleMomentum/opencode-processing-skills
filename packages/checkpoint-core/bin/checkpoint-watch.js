@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 
-import { realpathSync, watch as watchDirectory } from "node:fs";
+import { watch as watchDirectory } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-import { analyzeCheckpoints, parseCheckpointJsonl } from "../src/index.js";
+import { analyzeCheckpointLog } from "../src/index.js";
 
 export const DEFAULT_REFRESH_MS = 1000;
 export const DEFAULT_STALE_MS = 120000;
@@ -13,18 +12,39 @@ export const DEFAULT_STALE_MS = 120000;
 const HELP = `Usage: checkpoint-watch [--once] [--refresh-ms <milliseconds>] [--stale-ms <milliseconds>]
 
 Watch direct .agent-checkpoints/*.jsonl files below the current workspace.
-ACTIVE/STALE describes only the age of the latest checkpoint; it does not prove process liveness.
+OPEN/CLOSED/UNKNOWN comes only from explicit session_status events; age never changes state.
+Age is informational and does not prove process liveness.
 
 Options:
   --once          Print one deterministic, non-ANSI dashboard and exit
   --refresh-ms    Live redraw interval (default: ${DEFAULT_REFRESH_MS})
-  --stale-ms      Latest-checkpoint age at which a session is STALE (default: ${DEFAULT_STALE_MS})
+  --stale-ms      Informational latest-event age reference (default: ${DEFAULT_STALE_MS})
   --help          Show this help
 
 Environment:
   CHECKPOINT_WATCH_REFRESH_MS
   CHECKPOINT_WATCH_STALE_MS
 `;
+
+/**
+ * Dependency-injection surface for tests and the CLI entry point. Every field
+ * is optional and defaults to a Node global. The explicit record shape also
+ * keeps scriptc's exact-struct checks happy when this file is compiled to a
+ * native binary.
+ * @typedef {object} WatchIO
+ * @property {(dir: string, options?: object) => Promise<Array<{ isFile: () => boolean, name: string }>>} [readdir]
+ * @property {(file: string, encoding: string) => Promise<string>} [readFile]
+ * @property {() => number} [now]
+ * @property {number} [columns]
+ * @property {(text: string) => void} [stdout]
+ * @property {(text: string) => void} [stderr]
+ * @property {string} [cwd]
+ * @property {{ CHECKPOINT_WATCH_REFRESH_MS?: string, CHECKPOINT_WATCH_STALE_MS?: string }} [env]
+ * @property {(callback: () => void, delay: number) => object} [setInterval]
+ * @property {(handle: object) => void} [clearInterval]
+ * @property {(dir: string, callback: () => void) => { close: () => void }} [watch]
+ * @property {(handlers: { refresh: () => Promise<void>, close: () => Promise<void> }) => Promise<void>} [waitForExit]
+ */
 
 function positiveInteger(value, label) {
   if (!/^\d+$/.test(String(value)) || Number(value) <= 0 || !Number.isSafeInteger(Number(value))) {
@@ -33,6 +53,10 @@ function positiveInteger(value, label) {
   return Number(value);
 }
 
+/**
+ * @param {string[]} args
+ * @param {{ CHECKPOINT_WATCH_REFRESH_MS?: string, CHECKPOINT_WATCH_STALE_MS?: string }} [env]
+ */
 export function parseArgs(args, env = process.env) {
   if (!Array.isArray(args)) throw new TypeError("arguments must be an array");
   const options = {
@@ -59,6 +83,10 @@ export function parseArgs(args, env = process.env) {
   return options;
 }
 
+/**
+ * @param {string} workspaceRoot
+ * @param {WatchIO} [io]
+ */
 export async function listSessionFiles(workspaceRoot, io = {}) {
   const loadDirectory = io.readdir ?? readdir;
   const checkpointRoot = path.join(workspaceRoot, ".agent-checkpoints");
@@ -86,31 +114,35 @@ function contextPercent(value) {
   return value === null ? "unknown" : `${Number((value * 100).toFixed(1))}%`;
 }
 
+/**
+ * @param {string} workspaceRoot
+ * @param {{ now?: number, staleMs?: number }} [options]
+ * @param {WatchIO} [io]
+ */
 export async function loadSessionRows(workspaceRoot, options = {}, io = {}) {
   const now = options.now ?? Date.now();
-  const staleMs = options.staleMs ?? DEFAULT_STALE_MS;
   const loadFile = io.readFile ?? readFile;
   const files = await listSessionFiles(workspaceRoot, io);
   const rows = await Promise.all(files.map(async ({ name, filePath }) => {
     try {
-      const records = parseCheckpointJsonl(await loadFile(filePath, "utf8"));
-      const analysis = analyzeCheckpoints(records);
-      const latest = records.at(-1);
-      const activityMs = Date.parse(latest.timestamp);
+      const log = analyzeCheckpointLog(await loadFile(filePath, "utf8"));
+      const latestEvent = log.latestEvent;
+      const latestCheckpoint = log.latestCheckpoint;
+      const activityMs = Date.parse(latestEvent.timestamp);
       const ageMs = Math.max(0, now - activityMs);
       return {
-        session: latest.session_id,
+        session: latestEvent.session_id,
         activityMs,
         ageMs,
-        state: ageMs >= staleMs ? "STALE" : "ACTIVE",
-        chain: metric(analysis.chain),
-        work: metric(analysis.work),
-        words: metric(analysis.threeWord),
-        context: contextPercent(latest.context_used),
-        agent: latest.agent ?? "-",
-        title: latest.session_title ?? "-",
-        done: latest.done,
-        next: latest.next,
+        state: log.state,
+        chain: metric(log.analysis.chain),
+        work: metric(log.analysis.work),
+        words: metric(log.analysis.threeWord),
+        context: contextPercent(latestCheckpoint?.context_used ?? null),
+        agent: latestCheckpoint?.agent ?? "-",
+        title: latestCheckpoint?.session_title ?? "-",
+        done: latestCheckpoint?.done ?? "-",
+        next: latestCheckpoint?.next ?? "-",
         error: null,
       };
     } catch (error) {
@@ -173,11 +205,12 @@ export function formatDashboard(rows, options = {}) {
     header.length,
     ...rows.map((row) => String(row[key] ?? "").length),
   );
+  /** @type {[string, number, string][]} */
   const fixed = [
     ["SESSION", 8, "session"],
     ["AGENT", 8, "agent"],
     ["AGE", 5, "age"],
-    ["STATE", 6, "state"],
+    ["STATE", 7, "state"],
     ["CHAIN", contentWidth("CHAIN", "chain"), "chain"],
     ["WORK", contentWidth("WORK", "work"), "work"],
     ["3-WORD", contentWidth("3-WORD", "words"), "words"],
@@ -198,7 +231,7 @@ export function formatDashboard(rows, options = {}) {
     columns,
   );
   const output = [
-    truncate(`Checkpoint sessions — stale after ${options.staleMs ?? DEFAULT_STALE_MS}ms (checkpoint age only)`, columns),
+    truncate(`Checkpoint sessions — age reference ${options.staleMs ?? DEFAULT_STALE_MS}ms (state from explicit status)`, columns),
     line(specs.map(([name]) => name)),
     truncate("-".repeat(columns), columns),
   ];
@@ -212,14 +245,25 @@ export function formatDashboard(rows, options = {}) {
   return output.join("\n");
 }
 
+/**
+ * @param {string} workspaceRoot
+ * @param {{ staleMs?: number }} options
+ * @param {WatchIO} io
+ * @param {boolean} ansi
+ */
 async function render(workspaceRoot, options, io, ansi) {
   const rows = await loadSessionRows(workspaceRoot, { staleMs: options.staleMs, now: io.now?.() ?? Date.now() }, io);
   const dashboard = formatDashboard(rows, { staleMs: options.staleMs, columns: io.columns ?? process.stdout.columns ?? 120 });
-  (io.stdout ?? ((text) => process.stdout.write(text)))(`${ansi ? "\x1b[H\x1b[2J" : ""}${dashboard}\n`);
+  (io.stdout ?? ((text) => { process.stdout.write(text); }))(`${ansi ? "\x1b[H\x1b[2J" : ""}${dashboard}\n`);
 }
 
+/**
+ * @param {string} workspaceRoot
+ * @param {{ refreshMs: number, staleMs: number }} options
+ * @param {WatchIO} [io]
+ */
 export async function runLiveDashboard(workspaceRoot, options, io = {}) {
-  const writeOut = io.stdout ?? ((text) => process.stdout.write(text));
+  const writeOut = io.stdout ?? ((text) => { process.stdout.write(text); });
   const setTimer = io.setInterval ?? setInterval;
   const clearTimer = io.clearInterval ?? clearInterval;
   const watch = io.watch ?? watchDirectory;
@@ -252,7 +296,7 @@ export async function runLiveDashboard(workspaceRoot, options, io = {}) {
     if (io.waitForExit) {
       await io.waitForExit({ refresh, close });
     } else {
-      await new Promise((resolve) => {
+      await new Promise(/** @param {(value?: void | PromiseLike<void>) => void} resolve */ (resolve) => {
         const finish = () => {
           process.off("SIGINT", finish);
           process.off("SIGTERM", finish);
@@ -267,9 +311,13 @@ export async function runLiveDashboard(workspaceRoot, options, io = {}) {
   }
 }
 
+/**
+ * @param {string[]} args
+ * @param {WatchIO} [io]
+ */
 export async function main(args, io = {}) {
-  const writeOut = io.stdout ?? ((text) => process.stdout.write(text));
-  const writeError = io.stderr ?? ((text) => process.stderr.write(text));
+  const writeOut = io.stdout ?? ((text) => { process.stdout.write(text); });
+  const writeError = io.stderr ?? ((text) => { process.stderr.write(text); });
   try {
     const options = parseArgs(args, io.env ?? process.env);
     if (options.help) {
@@ -286,12 +334,13 @@ export async function main(args, io = {}) {
   }
 }
 
-// Resolve symlinks on both sides: installed paths may sit below a symlinked
-// directory (e.g. /var -> /private/var on macOS), while import.meta.url is
-// always the fully resolved module URL.
-const isMain =
-  process.argv[1] &&
-  realpathSync(path.resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url));
+// scriptc compiles this JS to a native binary: import.meta is unavailable
+// there and argv[1] is the compiled binary path (basename without ".js").
+// The name-based check keeps direct invocation working under both Node and
+// scriptc while staying inert when this file is imported as a module.
+const executableName = path.basename(process.argv[1] ?? "");
+const isMain = executableName === "checkpoint-watch" || executableName === "checkpoint-watch.js";
 if (isMain) {
-  process.exitCode = await main(process.argv.slice(2));
+  const code = await main(process.argv.slice(2));
+  if (code !== 0) process.exit(code);
 }

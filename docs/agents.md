@@ -1,6 +1,6 @@
 # Agents Reference
 
-The agent architecture is designed around **delegation** and **file-based persistence**. The primary agent orchestrates; subagents do the heavy lifting.
+The agent architecture is designed around **delegation** and **file-based persistence**. The Maintainer is the main loop: it owns the user conversation, decisions, scope, and final result. Subagents keep expensive context bounded, with durable artifacts and compact summaries carrying context between sessions.
 
 ---
 
@@ -8,7 +8,7 @@ The agent architecture is designed around **delegation** and **file-based persis
 
 ### `maintainer`
 
-The orchestrator. Handles planning decisions, user interaction, and Git operations.
+The main-loop orchestrator. Handles user interaction, planning decisions, scope, the final result, and Git operations.
 
 **What it does:**
 - Loads skills automatically based on what you're asking for
@@ -33,7 +33,7 @@ Non-interactive variant of `maintainer`. It uses the same routing, safety, testi
 
 ### `delegate`
 
-The one canonical, skill-driven delegate persona. Skills provide task expertise, workflow, write boundaries, and output contracts.
+The one canonical, skill-driven persona and standard choice for normal delegation involving reasoning, synthesis, reviews, and skill-defined artifacts. Skills provide task expertise, workflow, write boundaries, and output contracts.
 
 **Typical tasks:**
 - Codebase exploration
@@ -43,11 +43,13 @@ The one canonical, skill-driven delegate persona. Skills provide task expertise,
 
 **Write boundary:** `delegate` is read/analyze/verify by default. It may write skill-defined artifacts with explicit output paths/templates, such as reviews and implementation plans. Larger ad-hoc writes with undefined shape/targets should start with an informal Blueprint for primary approval. Code changes normally route to `implementer`; delegates do not perform Git operations.
 
+Each phase implementation plan uses one fresh Delegate session. The Maintainer invokes phases sequentially, and each later phase delegate reads completed prior artifacts rather than inheriting an increasingly expensive authoring session.
+
 After an implementation or implementation-plan review, choose remediation-session reuse by retained context value versus context cost. Resume the reviewer through `review-fix` when its analysis, unresolved assumptions, or cross-file reasoning materially helps; prefer a fresh lean task, or a tiny primary check, for a fully specified fix, test, or command. File count and session age do not decide reuse. The review artifact remains unchanged, and no review/fix loop starts automatically.
 
-For multiple implementation-plan reviews, the maintainer defaults to one reviewer session that is fresh from the authoring session, not one reviewer per phase. The reviewer works sequentially in dependency order, reuses consolidated evidence, writes each per-phase review artifact, performs one integrated consistency assessment, and returns one aggregate digest. Parallel per-phase reviewers and nested phase-oriented retriever fan-out are not defaults; oversized review is divided only into contiguous dependency/domain groups with a central cross-partition interface check.
+For multiple implementation-plan reviews, the maintainer defaults to one reviewer session that is fresh from the authoring work, not one reviewer per phase. The reviewer works sequentially in dependency order, reuses consolidated evidence, writes each per-phase review artifact, performs one integrated consistency assessment, and returns one aggregate digest. Parallel per-phase reviewers and nested phase-oriented retriever fan-out are not defaults; oversized review is divided only into contiguous dependency/domain groups with a central cross-partition interface check.
 
-Delegates and reviewers send separable evidence collection to `retriever` by default, and may call `doc-explorer` only for genuinely documentation- or module-oriented child tasks. They may directly read scoped source, authoritative docs/plans, symbols, and compact targeted evidence, but route uncurated bulk evidence or coherent multi-file collection to `retriever`. The parent owns synthesis, verdicts, severity, scope interpretation, and final artifacts without repeating broad child retrieval.
+Delegates and reviewers send separable low-complexity evidence gathering and trivial task chains to `retriever` by default, even when raw input is large, and may call `doc-explorer` only for genuinely documentation- or module-oriented child tasks. They may directly read scoped source, authoritative docs/plans, symbols, and compact targeted evidence; after a Retriever summary they inspect only specific referenced gaps instead of repeating broad retrieval. The parent owns iterative analysis, source judgment, synthesis, verdicts, severity, scope interpretation, and final artifacts.
 
 **Model:** Configured via `config.yaml`. Defaults to provider's choice if not set.
 
@@ -55,17 +57,19 @@ Delegates and reviewers send separable evidence collection to `retriever` by def
 
 ### `retriever`
 
-A non-editing leaf evidence worker for focused questions from maintainers, delegates, or implementers. It may use Read, Grep, Glob, Bash, available web crawlers for known URLs, and logs or other tool output. Unlike the owning agent, it is explicitly allowed to consume complete large raw artifacts when needed. It can assemble coherent evidence across definitions, call sites, configuration, tests, and observed behavior, then returns synthesis with concrete paths, symbols, line references, and command evidence rather than concatenated contents. If an approach was not useful, it recommends a better route instead of padding the result.
+A disposable, non-editing intelligent evidence worker for scoped information-gathering instructions from maintainers, delegates, or implementers. It may perform trivial chains such as multi-file reads with dedicated extraction, search followed by Markdown extraction, grouped commands, and requested web/browser retrieval. Raw input size does not change this routing. It returns the concise requested information summary with concrete paths, symbols, line references, and command or source evidence rather than concatenated contents.
 
-`retriever` does not synthesize verdicts, assign severity, write artifacts, or delegate further. Concision is usefulness-driven; there is no universal hard numeric read or output cap. Numeric tool truncation remains a safety net, not the routing rule.
+`retriever` does not edit, create workflow artifacts, assign verdicts or severity, make caller-owned decisions, or delegate further. Concision is usefulness-driven; there is no universal hard numeric read or output cap. Numeric tool truncation remains a safety net, not the routing rule.
 
-Open-ended web search, source selection, and cross-source synthesis remain `delegate` work through `web-research`; a configured `delegate-fast` may handle the lighter cases.
+Bounded sessions requiring iterative analysis, source judgment, synthesis, or decisions beyond straightforward retrieval remain canonical Delegate work; a configured `delegate-fast` is the lighter choice.
 
 Maintainers and workers directly read scoped source, docs/plans, symbols, and compact targeted results. A reliable focused filter may reduce raw evidence when it preserves the needed facts; otherwise broad searches, large or verbose output, generated dumps, and coherent multi-file evidence go to `retriever` with a focused question.
 
 ### `doc-explorer`
 
 Docs-focused subagent for project documentation and selected template-governed planning artifacts.
+
+Doc Explorer is the documentation-specialized Delegate. It sends separable broad evidence and trivial task chains to `retriever`, retains documentation judgment and artifact ownership, and directly follows up only on specific referenced gaps.
 
 **Writes to:**
 - `docs/` — project documentation
@@ -77,14 +81,14 @@ Docs-focused subagent for project documentation and selected template-governed p
 
 ### `implementer`
 
-Executes code changes following the gated protocol.
+Executes exactly one phase/work package following the gated two-call protocol. Start a fresh Implementer for each package.
 
 The implementer directly reads scoped source, docs/plans, symbols, and compact targeted results, and uses `retriever` for separable bulk or coherent multi-file evidence while retaining ownership of its Blueprint, edits, and verification.
 In BLUEPRINT it uses native parallel reads for compact independent results and `retriever` for broad, large, or exploratory evidence. BLUEPRINT remains command-free; focused Bash/Python extraction is limited to EXECUTE mode. In EXECUTE, potentially verbose command and verification output is spooled under `/tmp/opencode/` rather than ingested directly.
 
 **Protocol:** BLUEPRINT → GATE → EXECUTE → DIGEST
 
-BLUEPRINT and EXECUTE always use the same compact `task_id`: the second turn depends on the inspection and approval context retained from the first. This gate-specific requirement overrides the general preference for fresh lean sessions when old context has little value.
+BLUEPRINT and EXECUTE for that package always use the same compact `task_id`: the second turn depends on the inspection and approval context retained from the first. Only those two calls reuse the session; it retires after the digest and is never carried into another phase, work package, or post-digest continuation.
 
 **Does:**
 - Proposes step lists (blueprint mode)
@@ -123,7 +127,7 @@ accepted work. Real defects must still be reported and fixed.
 
 **Cost predictability.** Subagents run on your configured model. The primary can use a frontier model for planning; subagents can use cheaper models for routine work.
 
-**Separation of concerns.** Subagents write according to workflow ownership: docs-focused artifacts, skill-defined review/implementation-plan artifacts, or gated code execution. The primary orchestrates and owns the conversation.
+**Separation of concerns.** Subagents write according to workflow ownership: docs-focused artifacts, skill-defined review/implementation-plan artifacts, or one gated code work package. The Maintainer orchestrates and owns the conversation, decisions, scope, and final result.
 
 ### Raw command-output spooling
 
@@ -133,13 +137,14 @@ Potentially verbose commands spool their complete output to a predictable path u
 
 | Agent | Model | Use when |
 |-------|-------|----------|
-| `retriever` | Your config | Scoped files, tool output, commands, or known-URL crawling |
-| `delegate` | Your config | Analysis, open-ended research, synthesis, and artifacts |
+| `retriever` | Your config | Low-complexity evidence gathering and trivial task chains, even over large raw input |
+| `delegate-fast` | Your config | Bounded iterative analysis, source judgment, synthesis, or decisions beyond retrieval |
+| `delegate` | Your config | Normal delegation for reasoning, synthesis, reviews, and skill-defined artifacts |
 | `general` (built-in) | Provider default | User explicitly asks, or you want a different perspective |
 
 ### Stateful delegate reuse
 
-Reuse a delegate `task_id` when retained reasoning materially reduces reconstruction cost: follow-up analysis, unresolved assumptions, cross-file reasoning, or review remediation that depends on the original findings. Prefer a fresh lean task—or the primary for a tiny focused check—when a test, command, verification, or fully specified fix is self-contained, or accumulated context costs more than it contributes. BLUEPRINT → EXECUTE is the exception: it must reuse the same compact implementer session because execution depends on the approved Blueprint context. Start fresh for changed scope, parallel work, model/variant changes, or an independent opinion. `task_id`s are session-local; durable continuity belongs in files when a persistent workflow exists.
+Reuse a delegate `task_id` when retained reasoning materially reduces reconstruction cost: follow-up analysis, unresolved assumptions, cross-file reasoning, or review remediation that depends on the original findings. Prefer a fresh lean task—or the primary for a tiny focused check—when a test, command, verification, or fully specified fix is self-contained, or accumulated context costs more than it contributes. Phase implementation-plan authoring is stricter: start one fresh Delegate per phase, keep phases sequential at the Maintainer, and have later agents read prior artifacts. Work-package execution is also strict: start one fresh Implementer per package, reuse it only for BLUEPRINT → EXECUTE, and retire it after the digest. Start fresh for changed scope, parallel work, model/variant changes, or an independent opinion. `task_id`s are session-local; durable continuity belongs in files when a persistent workflow exists.
 
 Batch implementation-plan review is another deliberate reuse case: the reviewer starts independently from the author, then keeps its session across the ordered phases because shared evidence and cross-phase reasoning are review inputs. Separate reviewers are exceptions for explicit independent perspectives, unrelated domains, specialist requirements, or impractical combined context—not an automatic phase fan-out.
 
@@ -173,14 +178,14 @@ You ──prompt──▸ @maintainer ──delegates──▸ subagents
                                          when you ask)
 
 Delegation targets:
-  retriever ........ focused read-only evidence collection
-  delegate ......... exploration, research, reviews, implementation plans
-  doc-explorer ..... docs/ and selected skill-governed plans/ artifacts
-  implementer ...... code changes (gated execution)
+  retriever ........ disposable straightforward evidence collection
+  delegate ......... reasoning, synthesis, reviews, implementation plans
+  doc-explorer ..... documentation-specialized Delegate
+  implementer ...... one code work package (gated execution)
   legacy-curator ... docs-legacy/ archive
   general (built-in) second opinion, user-requested
 ```
 
-Maintainers call `retriever` at delegation level 1. Delegates, reviewers, and implementers use it at level 2 for separable evidence; delegates may also call `doc-explorer` for documentation/module child tasks. OpenCode v1.18.2+ requires top-level `subagent_depth: 2`; older versions do not support that setting. See [Installation → Nested Delegation](installation.md#nested-delegation-opencode).
+Maintainers call `retriever` at delegation level 1. Delegates, reviewers, implementers, and Doc Explorer use it at level 2 for separable evidence; delegates may also call `doc-explorer` for documentation/module child tasks. OpenCode v1.18.2+ requires top-level `subagent_depth: 2`; older versions do not support that setting. See [Installation → Nested Delegation](installation.md#nested-delegation-opencode).
 
 The file structure IS the durable interface. Framework docs persist in `docs/`; work that needs multi-phase or multi-session coordination, explicit planning, or durable tracking persists in `plans/`. A bounded self-contained package may instead go directly to `execute-work-package` with an inline gated brief containing task, DoD, constraints, and final verification. No magic durable state—just explicit files or the approved compact execution session.

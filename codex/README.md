@@ -11,10 +11,15 @@ installed by `./install.sh` when the Codex target is enabled (global mode only).
 | `checkpoint-instruction.md` | `$CODEX_HOME/agent-checkpoint/` | Heartbeat instruction injected via `SessionStart` |
 | `checkpoint-mcp-runtime.mjs` | `$CODEX_HOME/agent-checkpoint/` | Tool/protocol runtime for the stdio MCP server |
 | `checkpoint-mcp-server.mjs` | `$CODEX_HOME/agent-checkpoint/` | Executable stdio MCP server (NDJSON JSON-RPC) |
-| `checkpoint-core.mjs` | `$CODEX_HOME/agent-checkpoint/` | Shared checkpoint-core (eight-field contract) |
+| `checkpoint-core.mjs` | `$CODEX_HOME/agent-checkpoint/` | Shared mixed-log checkpoint/status contract and append implementation |
 | generated profile | `$CODEX_HOME/agent-checkpoint.config.toml` | Additive profile-v2 file; base `config.toml` is never modified |
 
-Existing symlinks at any destination are preserved. Removing the
+Existing symlinks are never overwritten. Because the status-capable hook depends
+on a compatible bundled core, a symlinked `checkpoint-core.mjs` or whole
+`$CODEX_HOME/agent-checkpoint` directory stops installation before hook/profile
+activation. The diagnostic identifies the path and requires the operator to
+update the user-managed target to the compatible core, or deliberately
+remove/replace the link and rerun. Removing the
 `agent-checkpoint/` directory and `agent-checkpoint.config.toml` uninstalls the
 adapter; all other Codex configuration is untouched.
 
@@ -27,7 +32,8 @@ adapter; all other Codex configuration is untouched.
 
 ## Activation
 
-The adapter is opt-in per invocation through the additive profile file:
+The adapter is opt-in per invocation through the additive profile file. Start it
+only after the compatible `checkpoint-watch` dashboard is running:
 
 ```bash
 codex --profile-v2 agent-checkpoint
@@ -53,13 +59,16 @@ inside an isolated `CODEX_HOME`.
 
 ## How it works
 
-- `SessionStart` injects the checkpoint heartbeat instruction as
-  `additionalContext` and announces `Session checkpoint ID: <session_id>`.
+- `SessionStart` first appends one shared-contract `open` event using the native
+  `session_id` and hook `cwd`, then injects the checkpoint heartbeat instruction
+  as `additionalContext` and announces `Session checkpoint ID: <session_id>`.
+  The pinned `startup`, `resume`, `clear`, and `compact` sources all represent an
+  observed open/continuation; repeated `open` events are intentionally idempotent.
 - `PreToolUse` matching `mcp__agent_checkpoint__checkpoint` returns
   `permissionDecision: "allow"` paired with `updatedInput` (a mandatory pairing
   on the pinned build) that injects `_workspace_root` (hook `cwd`) and
   `_checkpoint_session_id` (hook `session_id`), replacing any caller-supplied
-  values. All other tools and events produce no output.
+  values. All other tools and events produce no output and no lifecycle write.
 - The MCP `checkpoint` tool requires the hook-injected fields and otherwise
   returns an error without writing. `checkpoint_path` returns the
   workspace-relative `.agent-checkpoints/<encoded-session-id>.jsonl` path
@@ -73,6 +82,12 @@ inside an isolated `CODEX_HOME`.
   checkpoints land in the same session log (documented build limit, not an
   adapter choice). A future build that documents subagent identity may restore
   per-subagent logs via a new gated phase.
+- **Open only on the pin.** codex-cli 0.131.0 has no `SessionEnd`. Its `Stop`
+  event carries a `turn_id` and is turn-scoped, so it is never mapped to
+  `closed`; process/MCP exit, age, deletion-like signals, crashes, and post-pin
+  upstream events are not substitutes. A log with `SessionStart` and no later
+  observed close therefore remains `OPEN`, which means only “opened without an
+  observed close,” not “currently running” or “completed successfully.”
 - **Honest telemetry.** `context_used` is always `null` and the tool reports
   `unknown`; no documented live-occupancy channel exists on the CLI/MCP path.
   `agent` and `session_title` are always `null` for Codex records.
@@ -82,12 +97,25 @@ inside an isolated `CODEX_HOME`.
   `node packages/checkpoint-core/bin/checkpoint-inspect.js <path>` (from this
   repository) or the `checkpoint-watch` dashboard from the OpenCode install.
 
+## Upgrade order
+
+1. Stop every live `checkpoint-watch`, OpenCode, and
+   `codex --profile-v2 agent-checkpoint` session.
+2. Run `./install.sh`; compatible reader/core assets are installed before the
+   hook and generated profile. Resolve any required-core symlink diagnostic and
+   rerun rather than continuing with an unverified target.
+3. Start the dashboard with the installer's exact `Launch command`.
+4. Restart OpenCode, then start/restart Codex with the profile command above.
+
+The installer prints this order but does not detect or stop processes.
+
 ## Tests
 
 ```bash
 node --test codex/test/checkpoint-codex.test.mjs
 ```
 
-Covers MCP protocol round-trips, hook input/output wires, installer isolation
+Includes all pinned `SessionStart` sources, turn-level `Stop` no-write behavior,
+mixed-log metrics, MCP protocol round-trips, hook input/output wires, installer isolation
 (byte-for-byte base `config.toml` preservation, symlink safety, disabled and
 project modes), and shared-contract record shape.

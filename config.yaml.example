@@ -37,7 +37,8 @@
 # Codex installs skills (no agents) plus, in global mode, the agent-checkpoint
 # adapter: hook/MCP bridge files under CODEX_HOME/agent-checkpoint/ and an
 # additive CODEX_HOME/agent-checkpoint.config.toml profile (activate with
-# `codex --profile-v2 agent-checkpoint`). The base config.toml is never modified.
+# `codex --profile-v2 agent-checkpoint`). The base config.toml is never modified;
+# a symlinked whole adapter directory is preserved and its copy is skipped.
 # Claude installs both skills and agents plus, in global mode, the agent-checkpoint
 # skills-directory plugin under CLAUDE_HOME/skills/agent-checkpoint/ and an opt-in
 # CLAUDE_HOME/agent-checkpoint.settings.json (statusLine command only; activate with
@@ -54,7 +55,9 @@
 # HERMES_HOME/plugins/agent-checkpoint/ and performs the documented opt-in
 # enablement as a single additive plugins.enabled entry in
 # HERMES_HOME/config.yaml (all other config content preserved byte-for-byte;
-# activate/remove via `hermes plugins enable|disable agent-checkpoint`).
+# exact quoted or unquoted plugins.disabled entries stop without edits; activate/
+# remove via `hermes plugins enable|disable agent-checkpoint`). The plugin injects
+# the complete heartbeat instruction and maps native children to parent-owned logs.
 # Hermes support covers installation, parsing, and discovery only; it does not port
 # OpenCode-specific delegate personas, Task calls, or task_id continuation contracts.
 

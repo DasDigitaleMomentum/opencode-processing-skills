@@ -66,9 +66,9 @@ Across analysis, review, and execution workflows, the owning maintainer, delegat
 
 **Key insight:** Phases define *what* and *why*. Implementation plans define *how*. This separation lets you change the technical approach without changing the scope.
 
-**Batch authoring:** You can author all implementation plans at once (e.g., "write all implementation plans for this plan"). The skill processes them sequentially (phase 1, then 2, etc.) and runs a consistency check at the end — shared interfaces, naming, data flow assumptions — fixing any issues before returning.
+**Multi-phase authoring:** The Maintainer processes implementation plans sequentially with one fresh Delegate session per phase. Each later delegate reads completed prior plans to preserve shared interfaces, naming, data-flow assumptions, and dependency order; durable artifacts, not a retained authoring session, carry context forward.
 
-**Batch review:** Multiple authored implementation plans default to one fresh reviewer session independent from the authoring session. It reviews phases sequentially in dependency order, reuses shared evidence, writes the existing per-phase review artifacts, performs one integrated cross-phase consistency assessment, and returns one aggregate digest. This validates the author's consistency work proportionally rather than reconstructing the complete authoring pass.
+**Batch review:** Multiple authored implementation plans default to one fresh reviewer session independent from the authoring work. It reviews phases sequentially in dependency order, reuses shared evidence, writes the existing per-phase review artifacts, performs one integrated cross-phase consistency assessment, and returns one aggregate digest. This validates artifact-based continuity proportionally rather than reconstructing the complete authoring work.
 
 ---
 
@@ -161,7 +161,7 @@ Creates session handover docs for context transfer. Captures progress, decisions
 
 ## Review Skills
 
-Independent quality gates. A fresh subagent reviews artifacts without authoring context — catching gaps you've stopped seeing. For an implementation-plan batch, freshness is relative to the authoring session, not each phase: one reviewer normally retains useful review context across the ordered batch.
+Independent quality gates. A fresh subagent reviews artifacts without authoring context — catching gaps you've stopped seeing. For an implementation-plan batch, freshness is relative to the authoring work, not each phase: one reviewer normally retains useful review context across the ordered batch.
 
 ### `review-plan`
 
