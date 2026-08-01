@@ -4,17 +4,17 @@ Mirrors the shared checkpoint contract implemented by
 ``packages/checkpoint-core/src/index.js`` so Hermes sessions append
 byte-compatible JSONL records without a Node dependency:
 
-* ``checkpoint(done, next, step_failed=False)`` validates inputs, resolves
+* ``checkpoint(done, next, step_failed=False, close_session=False)`` validates inputs, resolves
   the hook-bound native ``session_id`` and the agent process working
-  directory (workspace root), evaluates the telemetry slot, and appends an
-  eight-field record (``agent``/``session_title`` always ``null``) to
+  directory (workspace root), evaluates the telemetry slot, and appends exact
+  ``open`` → eight-field record (``agent``/``session_title`` always ``null``)
+  → optional ``closed`` lines to
   ``<workspace>/.agent-checkpoints/<encoded-session-id>.jsonl``.
 * ``checkpoint_path(session_id)`` returns the shared workspace-relative
   path without writing.
 * A verified new-parent ``on_session_start`` appends one exact four-field
-  ``session_status: open`` record to that parent-owned log. Continued-session
-  and child-mapping hooks append no lifecycle record, and no close hook is
-  registered on the pinned surface.
+  ``session_status: open`` record to that parent-owned log. Every checkpoint
+  lazily confirms open and may declare close; no host close hook is registered.
 
 Identity and telemetry are process-local state captured via lifecycle hooks
 (``on_session_start``, ``subagent_start``, ``pre_tool_call``,
@@ -436,10 +436,25 @@ def _resolve_invocation(native_session_id=None):
 # Agent-callable tools
 # ---------------------------------------------------------------------------
 
-def checkpoint(done, next, step_failed=False, *, _clock=_utc_now, _native_session_id=None) -> str:
+def checkpoint(
+    done,
+    next,
+    step_failed=False,
+    close_session=False,
+    *,
+    _clock=_utc_now,
+    _native_session_id=None,
+) -> str:
     """Append an eight-field checkpoint record for the hook-bound session."""
+    if not isinstance(close_session, bool):
+        raise TypeError("close_session must be a boolean")
     native_session_id, session_id, workspace_root = _resolve_invocation(_native_session_id)
     context_used, remaining_k = _telemetry(native_session_id)
+    timestamp = _timestamp_from_clock(_clock)
+
+    def record_clock():
+        return timestamp
+
     record = _create_record(
         session_id,
         done,
@@ -448,9 +463,19 @@ def checkpoint(done, next, step_failed=False, *, _clock=_utc_now, _native_sessio
         context_used=context_used,
         agent=None,
         session_title=None,
-        clock=_clock,
+        clock=record_clock,
     )
+    open_record = _create_status_record(session_id, "open", clock=record_clock)
+    closed_record = (
+        _create_status_record(session_id, "closed", clock=record_clock)
+        if close_session
+        else None
+    )
+    _resolve_checkpoint_file(workspace_root, session_id)
+    _append_record(workspace_root, session_id, open_record)
     _append_record(workspace_root, session_id, record)
+    if closed_record is not None:
+        _append_record(workspace_root, session_id, closed_record)
     context = "unknown" if context_used is None else f"~{round(context_used * 100)}%"
     remaining = "unknown" if remaining_k is None else f"~{remaining_k}k"
     return (
@@ -475,7 +500,8 @@ _CHECKPOINT_SCHEMA = {
         "Append a session-heartbeat checkpoint to the shared "
         ".agent-checkpoints/ JSONL log: the subtask just completed (done), "
         "the next announced subtask (next), and whether the step failed "
-        "(step_failed). Session identity, workspace, and telemetry come "
+        "(step_failed). close_session is true only on a subagent's final "
+        "checkpoint or intentional whole-session end. Session identity, workspace, and telemetry come "
         "from Hermes lifecycle hooks, never from model-carried arguments."
     ),
     "parameters": {
@@ -486,6 +512,11 @@ _CHECKPOINT_SCHEMA = {
             "step_failed": {
                 "type": "boolean",
                 "description": "True when the completed step failed (default false).",
+            },
+            "close_session": {
+                "type": "boolean",
+                "default": False,
+                "description": "True only for the final checkpoint that closes this persisted session.",
             },
         },
         "required": ["done", "next"],
@@ -515,6 +546,7 @@ def _handle_checkpoint(args, session_id="", **_) -> str:
         args.get("done"),
         args.get("next"),
         step_failed=args.get("step_failed", False),
+        close_session=args.get("close_session", False),
         _native_session_id=session_id,
     )
 

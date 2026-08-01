@@ -1039,7 +1039,37 @@ install_opencode_checkpoint_instruction() {
     local agents_dir="$target_home/agents"
     local fragment="$SCRIPT_DIR/opencode/checkpoint-instruction.md"
     local marker="<!-- opencode-checkpoint-instruction -->"
-    local agent_file
+    local legacy_fragment initial_legacy_fragment current_length
+    local agent_file marker_matches marker_count marker_offset replacement
+    local candidate candidate_length matched_legacy matched_length
+
+    legacy_fragment="$(mktemp "${TMPDIR:-/tmp}/opencode-checkpoint-legacy.XXXXXX")"
+    cat > "$legacy_fragment" <<'EOF'
+<!-- opencode-checkpoint-instruction -->
+
+## Checkpoint Heartbeat
+
+This instruction applies to parents and subagents. Segment work into meaningful subtasks and call `checkpoint` after each completed or failed subtask. Write `done` and `next` as exactly three words, and reuse the previous `next` text verbatim as the following `done`.
+
+Where possible, include `checkpoint` in the same parallel tool-call block as the next independent tool calls. Do not create an additional model round trip solely for checkpointing.
+
+When an attempted subtask fails, still checkpoint with that announced subtask as `done`, set `step_failed=true`, and make `next` the corrective step. This records work progress and is not itself a Canary failure.
+
+Treat unknown context telemetry as unknown; do not infer a stop threshold. If reported context pressure becomes high, complete the current subtask, write a final checkpoint, and return a compact handoff stating progress and the next announced step. Checkpointing records progress but does not prove work quality.
+EOF
+    initial_legacy_fragment="$(mktemp "${TMPDIR:-/tmp}/opencode-checkpoint-initial-legacy.XXXXXX")"
+    cat > "$initial_legacy_fragment" <<'EOF'
+<!-- opencode-checkpoint-instruction -->
+
+## Checkpoint Heartbeat
+
+This instruction applies to parents and subagents. Segment work into meaningful subtasks and call `checkpoint` after each completed or failed subtask. Write `done` and `next` as exactly three words, and reuse the previous `next` text verbatim as the following `done`.
+
+When an attempted subtask fails, still checkpoint with that announced subtask as `done`, set `step_failed=true`, and make `next` the corrective step. This records work progress and is not itself a Canary failure.
+
+Treat unknown context telemetry as unknown; do not infer a stop threshold. If reported context pressure becomes high, complete the current subtask, write a final checkpoint, and return a compact handoff stating progress and the next announced step. Checkpointing records progress but does not prove work quality.
+EOF
+    current_length="$(wc -c < "$fragment" | tr -d '[:space:]')"
 
     echo "Step 6: Installing OpenCode checkpoint instruction"
     for agent_file in "$agents_dir"/*.md; do
@@ -1048,14 +1078,58 @@ install_opencode_checkpoint_instruction() {
             echo "  Symlink (skipping): $(basename "$agent_file")"
             continue
         fi
-        if grep -Fq "$marker" "$agent_file"; then
+        if ! grep -Fq "$marker" "$agent_file"; then
+            printf '\n' >> "$agent_file"
+            cat "$fragment" >> "$agent_file"
+            echo "  Added: $(basename "$agent_file")"
+            continue
+        fi
+
+        marker_matches="$(LC_ALL=C grep -Fbo "$marker" "$agent_file")"
+        marker_count="$(printf '%s\n' "$marker_matches" | wc -l | tr -d '[:space:]')"
+        marker_offset="${marker_matches%%:*}"
+        if [ "$marker_count" -eq 1 ] &&
+            dd if="$agent_file" bs=1 skip="$marker_offset" count="$current_length" 2>/dev/null |
+                cmp -s - "$fragment"; then
             echo "  Present: $(basename "$agent_file")"
             continue
         fi
-        printf '\n' >> "$agent_file"
-        cat "$fragment" >> "$agent_file"
-        echo "  Added: $(basename "$agent_file")"
+        matched_legacy=""
+        matched_length=""
+        if [ "$marker_count" -eq 1 ]; then
+            for candidate in "$legacy_fragment" "$initial_legacy_fragment"; do
+                candidate_length="$(wc -c < "$candidate" | tr -d '[:space:]')"
+                if dd if="$agent_file" bs=1 skip="$marker_offset" count="$candidate_length" 2>/dev/null |
+                    cmp -s - "$candidate"; then
+                    matched_legacy="$candidate"
+                    matched_length="$candidate_length"
+                    break
+                fi
+            done
+        fi
+        if [ -n "$matched_legacy" ]; then
+            replacement="$(mktemp "${agent_file}.checkpoint.XXXXXX")"
+            if ! cp -p "$agent_file" "$replacement" ||
+                ! {
+                    dd if="$agent_file" bs=1 count="$marker_offset" 2>/dev/null
+                    cat "$fragment"
+                    dd if="$agent_file" bs=1 skip="$((marker_offset + matched_length))" 2>/dev/null
+                } > "$replacement" ||
+                ! mv -f "$replacement" "$agent_file"; then
+                rm -f "$replacement" "$legacy_fragment" "$initial_legacy_fragment"
+                echo "  ERROR: could not migrate checkpoint instruction in $agent_file" >&2
+                return 1
+            fi
+            echo "  Updated: $(basename "$agent_file")"
+            continue
+        fi
+
+        rm -f "$legacy_fragment" "$initial_legacy_fragment"
+        echo "  ERROR: unknown or customized checkpoint instruction in $agent_file" >&2
+        echo "  Restore the exact managed block or remove its marker, then rerun install.sh." >&2
+        return 1
     done
+    rm -f "$legacy_fragment" "$initial_legacy_fragment"
     echo ""
 }
 

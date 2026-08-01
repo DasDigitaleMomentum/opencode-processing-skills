@@ -16,13 +16,14 @@ function checkpointToolSchema() {
   return {
     name: CHECKPOINT_TOOL_NAME,
     description:
-      "Append a progress checkpoint. Use exactly three words for done and next, reuse the previous next verbatim as the following done, and set step_failed when announcing a correction step.",
+      "Append a progress checkpoint. Use exactly three words for done and next, reuse the previous next verbatim as the following done, set step_failed for correction, and set close_session only on a subagent's final checkpoint or intentional whole-session end.",
     inputSchema: {
       type: "object",
       properties: {
         done: { type: "string" },
         next: { type: "string" },
         step_failed: { type: "boolean", default: false },
+        close_session: { type: "boolean", default: false },
         _workspace_root: {
           type: "string",
           description: "hook injected; callers omit",
@@ -108,12 +109,18 @@ export function createMcpRuntime({
         isError: true,
       });
     }
+    if (args.close_session !== undefined && typeof args.close_session !== "boolean") {
+      return toolTextResult("checkpoint close_session must be a boolean.", {
+        isError: true,
+      });
+    }
     const feedback = await checkpointCore.checkpoint({
       workspaceRoot,
       sessionId,
       done: args.done,
       next: args.next,
       stepFailed: args.step_failed === true,
+      closeSession: args.close_session,
       contextUsed: telemetry.contextUsed,
       agent: null,
       sessionTitle: null,

@@ -63,9 +63,10 @@ test("rows sort by latest event and separate explicit state, age, metrics, statu
   assert.deepEqual(rows.map((row) => row.ageMs), [500, 19000]);
   assert.equal(rows[0].context, "unknown");
   assert.equal(rows[1].context, "50%");
-  assert.equal(rows[1].work, "1/2 (50%)");
-  assert.equal(rows[1].chain, "0/1 (0%)");
-  assert.equal(rows[1].words, "4/4 (100%)");
+  assert.equal(rows[1].checkpointCount, 2);
+  assert.equal(rows[1].metrics, "0/50/100%");
+  assert.equal(rows[0].checkpointCount, 1);
+  assert.equal(rows[0].metrics, "n/a/100/100%");
   assert.equal(rows[1].agent, "implementer");
   assert.equal(rows[1].title, "Checkpoint TUI refinement");
   assert.equal(rows[0].agent, "-");
@@ -94,6 +95,7 @@ test("age and stale thresholds never infer or change lifecycle state", async (t)
     "old-open": "OPEN",
   });
   assert.deepEqual(states(longReference), states(shortReference));
+  assert.deepEqual(longReference, shortReference);
 });
 
 test("status-only, duplicate, and reopened rows use neutral checkpoint details", async (t) => {
@@ -117,9 +119,8 @@ test("status-only, duplicate, and reopened rows use neutral checkpoint details",
     "status-only": "OPEN",
   });
   for (const row of rows) {
-    assert.equal(row.chain, "0/0 (n/a)");
-    assert.equal(row.work, "0/0 (n/a)");
-    assert.equal(row.words, "0/0 (n/a)");
+    assert.equal(row.checkpointCount, 0);
+    assert.equal(row.metrics, "n/a/n/a/n/a");
     assert.equal(row.context, "unknown");
     assert.equal(row.agent, "-");
     assert.equal(row.title, "-");
@@ -170,29 +171,27 @@ test("unreadable files become ERROR rows without hiding valid sessions", async (
 test("dashboard truncates deterministically within terminal width", () => {
   const row = {
     session: "session-name-that-is-much-too-long", ageMs: 2000, state: "UNKNOWN",
-    chain: "100%", words: "100%", work: "COMPLETED", context: "unknown",
+    checkpointCount: 1, metrics: "n/a/100/100%", context: "unknown",
     agent: "implementer", title: "A human-readable session title",
     done: "A deliberately oversized completed work description",
     next: "A deliberately oversized next work description",
   };
-  row.chain = "1/1 (100%)";
-  row.work = "1/1 (100%)";
-  row.words = "2/2 (100%)";
   const first = formatDashboard([row], { columns: 140, staleMs: 1000 });
   const second = formatDashboard([row], { columns: 140, staleMs: 1000 });
   assert.equal(first, second);
   assert.ok(first.split("\n").every((line) => line.length <= 140));
   assert.match(first, /…/);
-  assert.match(first, /SESSION.*AGENT.*NAME\/TITLE.*AGE.*STATE.*CHAIN.*WORK.*3-WORD.*CONTEXT.*DONE.*NEXT/);
-  assert.match(first, /1\/1 \(100%\).*1\/1 \(100%\).*2\/2 \(100%\)/);
+  assert.match(first, /AGENT.*NAME.*AGE.*STATE.*CP.*C\/W\/3 %.*CONTEXT.*DONE.*CURRENT/);
+  assert.match(first, /n\/a\/100\/100%/);
+  assert.doesNotMatch(first, /session-name-that-is-much-too-long|SESSION|NAME\/TITLE|CHAIN|3-WORD|NEXT/);
 });
 
 test("dashboard distributes added terminal width across title, done, and next", () => {
   const row = {
     session: "session-with-long-id", agent: "maintainer-direct",
     title: "A descriptive human readable checkpoint session title",
-    ageMs: 2000, state: "UNKNOWN", chain: "1/1 (100%)", work: "2/2 (100%)",
-    words: "4/4 (100%)", context: "50%",
+    ageMs: 2000, state: "UNKNOWN", checkpointCount: 2, metrics: "100/100/100%",
+    context: "50%",
     done: "A deliberately oversized completed work description",
     next: "A deliberately oversized next work description",
   };
@@ -221,7 +220,8 @@ test("once mode is deterministic and emits no terminal control sequences", async
     env: {}, stdout: (text) => { stdout += text; },
   });
   assert.equal(status, 0);
-  assert.match(stdout, /once.*1s.*UNKNOWN/);
+  assert.match(stdout, /1s.*UNKNOWN.*1.*n\/a\/100\/100%/);
+  assert.doesNotMatch(stdout, /\bonce\b/);
   assert.doesNotMatch(stdout, /\x1b/);
 });
 
@@ -235,8 +235,55 @@ test("options support environment defaults, CLI overrides, help, and concise val
   assert.equal(await main(["--help"], { env: {}, stdout: (text) => { stdout += text; } }), 0);
   assert.match(stdout, /does not prove process liveness/);
   assert.match(stdout, /explicit session_status events/);
-  assert.match(stdout, /Informational latest-event age reference/);
+  assert.match(stdout, /Compatibility-only validated no-op/);
   assert.match(stdout, /CHECKPOINT_WATCH_STALE_MS/);
+});
+
+test("dashboard groups lifecycle rows, hides IDs, and clears closed current work", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-groups-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, ".agent-checkpoints"));
+  await writeLog(root, "open-old.jsonl", [
+    record("secret-open-old", "2026-07-26T10:00:01.000Z", { next: "Continue open work" }),
+    status("secret-open-old", "2026-07-26T10:00:02.000Z", "open"),
+  ]);
+  await writeLog(root, "unknown-new.jsonl", [
+    record("secret-unknown-new", "2026-07-26T10:00:03.000Z", { next: "Continue unknown work" }),
+  ]);
+  await writeLog(root, "closed-new.jsonl", [
+    record("secret-closed-new", "2026-07-26T10:00:04.000Z", { next: "Must stay hidden" }),
+    status("secret-closed-new", "2026-07-26T10:00:05.000Z", "closed"),
+  ]);
+  await writeFile(path.join(root, ".agent-checkpoints", "broken-id.jsonl"), "{broken\n");
+
+  const rows = await loadSessionRows(root, { now: Date.parse("2026-07-26T10:00:06.000Z") });
+  assert.deepEqual(rows.map((row) => row.state), ["UNKNOWN", "OPEN", "CLOSED", "ERROR"]);
+  const output = formatDashboard(rows, { columns: 180 });
+  assert.doesNotMatch(output, /secret-|broken-id|Must stay hidden/);
+  assert.match(output, /UNKNOWN[\s\S]*OPEN[\s\S]*\n\n[\s\S]*CLOSED[\s\S]*—[\s\S]*\n\n[\s\S]*ERROR/);
+  assert.match(output, /Continue unknown work/);
+  assert.match(output, /Continue open work/);
+  assert.match(output, /read failed/);
+});
+
+test("stale compatibility inputs cannot change dashboard bytes", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-stale-noop-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, ".agent-checkpoints"));
+  await writeLog(root, "stable.jsonl", [record("hidden-stable-id", "2026-07-26T10:00:00.000Z")]);
+  const run = async (staleMs) => {
+    let stdout = "";
+    const code = await main(["--once", "--stale-ms", String(staleMs)], {
+      cwd: root,
+      columns: 120,
+      now: () => Date.parse("2026-07-26T10:00:01.000Z"),
+      env: {},
+      stdout: (text) => { stdout += text; },
+    });
+    assert.equal(code, 0);
+    return stdout;
+  };
+  assert.equal(await run(1), await run(999999));
 });
 
 test("live refresh disposes watcher and timer and restores cursor", async (t) => {
@@ -296,5 +343,6 @@ test("watcher main runs when invoked through a symlinked directory path", async 
   const viaLink = run(path.join(link, "checkpoint-watch.js"));
   assert.equal(viaLink.status, 0, viaLink.stderr);
   assert.match(viaLink.stdout, /Checkpoint sessions/);
-  assert.match(viaLink.stdout, /linked/);
+  assert.match(viaLink.stdout, /UNKNOWN.*1.*n\/a\/100\/100%/);
+  assert.doesNotMatch(viaLink.stdout, /\blinked\b/);
 });

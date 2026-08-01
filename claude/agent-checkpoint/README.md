@@ -81,6 +81,9 @@ Once loaded, the plugin-scoped MCP tools are callable as
 - The MCP `checkpoint` tool requires the hook-injected fields and otherwise
   returns an error without writing; identity is never invented. The workspace
   root comes from `CLAUDE_PROJECT_DIR`, never from caller input.
+  Optional `close_session=false` is strictly boolean at the hook and MCP
+  boundaries. Every successful call appends `open` → checkpoint → optional
+  `closed`; a later checkpoint reopens the same parent/composite identity.
   `checkpoint_path` returns the workspace-relative
   `.agent-checkpoints/<encoded-session-id>.jsonl` path without writing.
 - `SessionEnd` appends `closed` only for the native parent and removes only
@@ -90,9 +93,12 @@ Once loaded, the plugin-scoped MCP tools are callable as
 Parent checkpoints log under `.agent-checkpoints/<session_id>.jsonl`;
 subagent checkpoints log separately under
 `.agent-checkpoints/<session_id>--<agent_id>.jsonl` (URL-encoded filename).
-`OPEN` means only that a start was observed with no later close; `CLOSED`
-means only that parent `SessionEnd` was observed, not that work succeeded.
-Crashes and unsupported child endings cannot synthesize `closed`.
+`OPEN` means only that an open/start/checkpoint was observed with no later
+close. `CLOSED` means a parent `SessionEnd` or explicit final checkpoint close
+was observed, not that work succeeded. Subagents use `close_session=true` only
+on their final checkpoint immediately before their digest/summary/handoff;
+parents leave it false unless ending the whole session. Crashes and missing
+final calls cannot synthesize `closed`.
 
 ## Telemetry semantics and limits
 

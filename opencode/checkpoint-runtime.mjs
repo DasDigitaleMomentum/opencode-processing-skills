@@ -161,13 +161,17 @@ export function createOpenCodeCheckpointPlugin({
       tool: {
         checkpoint: tool({
           description:
-            "Append a progress checkpoint. Use exactly three words for done and next, reuse the previous next verbatim as the following done, and set step_failed when announcing a correction step.",
+            "Append a progress checkpoint. Use exactly three words for done and next, reuse the previous next verbatim as the following done, set step_failed for correction, and set close_session only on a subagent's final checkpoint or intentional whole-session end.",
           args: {
             done: tool.schema.string(),
             next: tool.schema.string(),
             step_failed: tool.schema.boolean().optional().default(false),
+            close_session: tool.schema.boolean().optional().default(false),
           },
           async execute(args, context) {
+            if (args.close_session !== undefined && typeof args.close_session !== "boolean") {
+              throw new TypeError("close_session must be a boolean");
+            }
             const [telemetryResult, titleResult] = await Promise.allSettled([
               getContextTelemetry(context),
               getSessionTitle(context),
@@ -199,6 +203,7 @@ export function createOpenCodeCheckpointPlugin({
               done: args.done,
               next: args.next,
               stepFailed: args.step_failed ?? false,
+              closeSession: args.close_session,
               contextUsed: telemetry.contextUsed,
               agent: nonEmptyString(context.agent),
               sessionTitle,

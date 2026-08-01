@@ -34,6 +34,8 @@ Known adapter defects are corrected, and each session log can contain strict `se
 - `ERROR` is reader failure presentation only. It is never persisted, never a `session_status` value, and never a valid lifecycle reduction result.
 - Reader-first rollout applies inside installation as well as between phases: compatible core/parser/inspector/watch assets are installed before status-capable hook/plugin assets. Operators must restart a running dashboard before starting/restarting status-writing harness sessions after an upgrade.
 - User decision (2026-08-01): leave the fully implemented plan active and explicitly blocked until the exact Claude Code 2.1.170 and Hermes v0.19.0 host gate can run in a suitable environment; do not claim final success before that gate passes.
+- User decision (2026-08-01): every successful checkpoint lazily confirms the session as `open`; optional `close_session=true` on the final checkpoint lets a subagent declare normal session closure. Closure is not proof of successful work.
+- User decision (2026-08-01): keep age and lifecycle distinct without a redundant recent/stale label. The dashboard drops session ID, compacts quality metrics, groups closed sessions after open/unknown sessions, and presents raw `next` as `CURRENT` only while work remains unclosed.
 
 ### Scope-Bounding Assumptions
 
@@ -54,6 +56,10 @@ Known adapter defects are corrected, and each session log can contain strict `se
 - [x] The Codex installer preserves a symlinked whole adapter destination directory.
 - [x] Hermes remaining context-window headroom never reports below zero.
 - [x] Superseded checkpoint-plan status, todo, phase checkbox, and completion wording is reconciled with actual completed work and the remaining PydanticAI phase.
+- [x] Every checkpoint lazily confirms observed `open` state so resumed or pre-plugin sessions no longer remain `UNKNOWN` after checkpointing.
+- [x] `checkpoint` accepts optional `close_session=false`; subagents set it on their final checkpoint and adapters append `closed` after that checkpoint without treating closure as work success.
+- [x] The dashboard presents `AGENT`, `NAME`, `AGE`, `STATE`, checkpoint count, compact `C/W/3 %`, `CONTEXT`, `DONE`, and `CURRENT`, with no session-ID or recent/stale column.
+- [x] Open/unknown rows sort newest-first, closed rows are visually separated and sort newest-first, errors remain last, and `CURRENT` is `—` for closed rows.
 
 ### Non-Functional
 
@@ -81,6 +87,7 @@ Known adapter defects are corrected, and each session log can contain strict `se
 - Detailed `running`, `waiting`, `completed`, `failed`, or `interrupted` lifecycle vocabulary.
 - PydanticAI adapter implementation, Hermes start-time subagent attribution beyond what is required to fix session binding, and unrelated harness adapters.
 - Changing checkpoint cadence, the three-word rule, or Canary/work-quality semantics.
+- Persisting parent/child relationship metadata or nesting dashboard rows by session hierarchy.
 
 ## Definition of Done
 
@@ -92,6 +99,8 @@ Known adapter defects are corrected, and each session log can contain strict `se
 - [x] Existing metrics exclude status events and existing checkpoint-only consumers retain their API behavior.
 - [x] Relevant docs and plans match the final code and honest lifecycle limitations.
 - [ ] Targeted suites and the approved broad gate pass, with any unavailable pinned-host smoke explicitly recorded rather than silently skipped.
+- [ ] Resumed sessions become `OPEN` on their next checkpoint; normally completed subagents become `CLOSED` when their final checkpoint declares closure; interrupted sessions remain honestly unclosed.
+- [ ] Compact dashboard output removes redundant columns without losing agent, title, age, lifecycle, context, last completed work, or announced current work.
 
 ## Testing Strategy
 
@@ -102,6 +111,8 @@ Known adapter defects are corrected, and each session log can contain strict `se
 - [x] Add isolated installation-order assertions and document/test the upgrade sequence: install reader assets first, restart live readers, then start/restart status-writing harness sessions.
 - [ ] Run focused tests during implementation, then once ready run `node --test packages/checkpoint-core/test/*.test.js opencode/test/*.test.mjs codex/test/*.test.mjs claude/test/*.test.mjs`, `python3 -m unittest discover -s hermes/test`, and `bash -n install.sh` as the final gate.
 - [ ] Run pinned Claude Code and Hermes CLI smokes in an environment containing the required binaries, or record the explicit environment blocker before completion.
+- [x] Add cross-adapter tests for lazy open, final declared close, default compatibility, and close-after-checkpoint physical ordering.
+- [x] Add deterministic dashboard tests for compact columns, slash-separated percentages, closed grouping, age sorting, hidden session IDs, and closed `CURRENT` display.
 
 ## Phases
 
@@ -111,6 +122,7 @@ Known adapter defects are corrected, and each session log can contain strict `se
 | 2 | Status Contract and Readers | Adds the strict mixed-event contract and replaces age-inferred dashboard state with explicit status reduction. | [Phase](phases/phase-2.md) | completed |
 | 3 | OpenCode and Codex Status Writers | Adds only lifecycle events supported by verified OpenCode and Codex hooks after readers are compatible. | [Phase](phases/phase-3.md) | completed |
 | 4 | Claude, Hermes, and Rollout Closure | Adds supported Claude/Hermes events, verifies cross-harness behavior, updates docs, and reconciles stale plan state. | [Phase](phases/phase-4.md) | completed |
+| 5 | Declared Closure and Compact Dashboard | Removes resumed-session `UNKNOWN`, lets subagents declare normal closure, and compacts the dashboard around lifecycle and current work. | [Phase](phases/phase-5.md) | completed |
 
 ## Risks & Open Questions
 
@@ -148,3 +160,7 @@ Known adapter defects are corrected, and each session log can contain strict `se
 - Phase 4 verification passed for focused Claude 3/3, the current Node gate 81/82 with only the exact Claude Code 2.1.170 binary check unavailable, and the separate Hermes gate 53/54 with only the exact Hermes v0.19.0 binary check unavailable. `bash -n install.sh`, scoped diff checks, and source-anchor checks also passed.
 - Phase 4 moved to completed. The overall plan remains active and blocked pending exact pinned-host verification; the full gate has not passed and plan completion is not claimed.
 - User confirmed that the fully implemented plan must remain active and explicitly blocked until a suitable environment can run the exact Claude Code 2.1.170 and Hermes v0.19.0 host gate.
+- Added Phase 5 after live dashboard feedback: lazy checkpoint-open, optional final `close_session`, compact columns, age ordering without recent/stale duplication, and closed-session separation. Parent/child hierarchy metadata remains out of scope.
+- Phase 5 implementation completed and its independent implementation review returned Accepted with no findings.
+- Local verification recorded Node 87/88 with only the exact Claude Code 2.1.170 binary unavailable, Hermes 54/55 with only the exact Hermes v0.19.0 binary unavailable, reviewer-focused Node 40/40 and Hermes 22/22, plus passing `bash -n` and diff checks.
+- Phase 5 moved to completed. The plan remains active and blocked solely on the existing exact pinned-host gate; the broad gate has not passed and plan completion is not claimed.

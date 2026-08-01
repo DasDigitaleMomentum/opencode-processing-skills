@@ -211,7 +211,10 @@ test("appends checkpoint and status records in either order without rewriting pr
   const checkpointThenStatus = await readFile(checkpointFirstPath, "utf8");
   assert.equal(checkpointThenStatus.slice(0, checkpointPrefix.length), checkpointPrefix);
   assert.deepEqual(appended, validStatusRecord("closed", { session_id: "checkpoint-first" }));
-  assert.equal(parseCheckpointLogJsonl(checkpointThenStatus).length, 2);
+  assert.deepEqual(
+    parseCheckpointLogJsonl(checkpointThenStatus).map((record) => record.status ?? "checkpoint"),
+    ["open", "checkpoint", "closed"],
+  );
 
   const statusFirstSession = "../status-first";
   await appendSessionStatus({
@@ -234,8 +237,90 @@ test("appends checkpoint and status records in either order without rewriting pr
   assert.equal(statusThenCheckpoint.slice(0, statusPrefix.length), statusPrefix);
   assert.deepEqual(
     parseCheckpointLogJsonl(statusThenCheckpoint).map((record) => record.event ?? "checkpoint"),
-    ["session_status", "checkpoint"],
+    ["session_status", "session_status", "checkpoint"],
   );
+});
+
+test("checkpoint lazily opens, optionally closes, and reopens in physical order", async (context) => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "checkpoint-declared-close-"));
+  context.after(() => rm(workspaceRoot, { recursive: true, force: true }));
+  const sessionId = "declared/session";
+  let clockCalls = 0;
+  const closeClock = () => {
+    clockCalls += 1;
+    return new Date(FIXED_TIME);
+  };
+
+  await checkpoint({
+    workspaceRoot,
+    sessionId,
+    done: "Final work attempted",
+    next: "Return compact digest",
+    stepFailed: true,
+    closeSession: true,
+    clock: closeClock,
+  });
+  const filePath = path.join(workspaceRoot, checkpointPath(sessionId));
+  const closedBytes = await readFile(filePath, "utf8");
+  const closedRecords = parseCheckpointLogJsonl(closedBytes);
+  assert.equal(clockCalls, 1);
+  assert.deepEqual(
+    closedRecords.map((record) => record.status ?? "checkpoint"),
+    ["open", "checkpoint", "closed"],
+  );
+  assert.deepEqual(closedRecords.map((record) => record.timestamp), [FIXED_TIME, FIXED_TIME, FIXED_TIME]);
+  assert.deepEqual(Object.keys(closedRecords[0]), ["timestamp", "session_id", "event", "status"]);
+  assert.deepEqual(Object.keys(closedRecords[1]), Object.keys(validRecord()));
+  assert.equal(closedRecords[1].step_failed, true);
+  assert.equal(analyzeCheckpointLog(closedBytes).state, "CLOSED");
+  assert.equal(parseCheckpointJsonl(closedBytes).length, 1);
+
+  await checkpoint({
+    workspaceRoot,
+    sessionId,
+    done: "Return compact digest",
+    next: "Continue resumed session",
+    closeSession: false,
+    clock: () => new Date("2026-07-26T14:31:00.000Z"),
+  });
+  const reopenedBytes = await readFile(filePath, "utf8");
+  assert.equal(reopenedBytes.slice(0, closedBytes.length), closedBytes);
+  assert.deepEqual(
+    parseCheckpointLogJsonl(reopenedBytes).map((record) => record.status ?? "checkpoint"),
+    ["open", "checkpoint", "closed", "open", "checkpoint"],
+  );
+  const reopened = analyzeCheckpointLog(reopenedBytes);
+  assert.equal(reopened.state, "OPEN");
+  assert.equal(reopened.analysis.checkedRecords, 2);
+  assert.equal(reopened.analysis.work.success, 1);
+});
+
+test("checkpoint rejects invalid closeSession values before any append", async (context) => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "checkpoint-close-invalid-"));
+  context.after(() => rm(workspaceRoot, { recursive: true, force: true }));
+  for (const [index, closeSession] of [null, "true", 1, [], {}].entries()) {
+    const sessionId = `invalid-${index}`;
+    await assert.rejects(
+      checkpoint({
+        workspaceRoot,
+        sessionId,
+        done: "Reject invalid closure",
+        next: "Preserve empty log",
+        closeSession,
+        clock,
+      }),
+      /closeSession must be a boolean/,
+    );
+    await assert.rejects(readFile(path.join(workspaceRoot, checkpointPath(sessionId)), "utf8"), /ENOENT/);
+  }
+  await assert.doesNotReject(checkpoint({
+    workspaceRoot,
+    sessionId: "undefined-default",
+    done: "Use default closure",
+    next: "Remain session open",
+    closeSession: undefined,
+    clock,
+  }));
 });
 
 test("strictly parses JSONL and rejects empty, blank, malformed, or invalid records", () => {

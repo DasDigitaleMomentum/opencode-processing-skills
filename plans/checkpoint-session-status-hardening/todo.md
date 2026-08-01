@@ -9,12 +9,12 @@ updated: "2026-08-01"
 
 > Tracking [checkpoint-session-status-hardening](plan.md)
 
-## Active Phase: None - Implementation Complete, Host Gate Blocked
+## Active Phase: None - Exact Pinned-Host Gate Blocked
 
 ### Phase Context
 
-- **Scope**: [Phase 4](phases/phase-4.md)
-- **Implementation**: [Phase 4 Plan](implementation/phase-4-impl.md)
+- **Scope**: [Phase 5](phases/phase-5.md)
+- **Implementation**: [Phase 5 Plan](implementation/phase-5-impl.md)
 - **Latest Handover**: Not created
 - **Relevant Docs**:
   - [Agent Checkpoint / Heartbeat](../../docs/agent-checkpoint-heartbeat.md)
@@ -24,7 +24,7 @@ updated: "2026-08-01"
 
 ### Pending
 
-None. No implementation work remains.
+None.
 
 ### In Progress
 
@@ -70,6 +70,12 @@ None.
 - [x] Resolve initial Phase 4 implementation-review F-1 Major and F-2/F-3 Minor in the same review-fix session; none remain unresolved. <!-- completed: 2026-08-01 -->
 - [x] Pass focused Claude verification 3/3, current Node verification 81/82 except the missing exact Claude binary check, separate Hermes verification 53/54 except the missing exact Hermes binary check, `bash -n`, scoped diff checks, and source-anchor checks. <!-- completed: 2026-08-01 -->
 - [x] Complete Phase 4 Claude, Hermes, and Rollout Closure implementation after review remediation. <!-- completed: 2026-08-01 -->
+- [x] Author and independently review the Phase 5 implementation plan. <!-- completed: 2026-08-01 -->
+- [x] Implement lazy open and optional final `close_session` across adapters. <!-- completed: 2026-08-01 -->
+- [x] Update subagent checkpoint instructions for declared final closure. <!-- completed: 2026-08-01 -->
+- [x] Implement compact dashboard columns, grouping, and age sorting. <!-- completed: 2026-08-01 -->
+- [x] Add cross-adapter lifecycle and deterministic dashboard regressions. <!-- completed: 2026-08-01 -->
+- [x] Complete independent Phase 5 review with verdict Accepted and no findings. <!-- completed: 2026-08-01 -->
 
 ### Blocked
 
@@ -100,3 +106,7 @@ None.
 - Recorded focused Claude 3/3, current Node 81/82 with only the exact Claude Code 2.1.170 binary check unavailable, separate Hermes 53/54 with only the exact Hermes v0.19.0 binary check unavailable, plus passing `bash -n`, scoped diff checks, and source-anchor checks.
 - Marked Phase 4 completed and cleared pending/in-progress implementation work. Overall plan completion remains blocked solely on the exact pinned-host gate; the full gate is not claimed as passed.
 - Recorded the user's decision to keep the fully implemented plan active and blocked until a suitable environment can run the exact Claude Code 2.1.170 and Hermes v0.19.0 host gate; final success remains unclaimed.
+- Added and activated Phase 5 for lazy checkpoint-open, explicit final subagent closure, and a compact dashboard after live usage feedback. The exact pinned-host gate remains independently blocked.
+- Completed Phase 5 implementation and cleared all Phase 5 implementation todos; the independent implementation review returned Accepted with no findings.
+- Recorded local evidence: Node 87/88 with only the exact Claude Code 2.1.170 binary unavailable, Hermes 54/55 with only the exact Hermes v0.19.0 binary unavailable, reviewer-focused Node 40/40 and Hermes 22/22, plus passing `bash -n` and diff checks.
+- Returned the plan to active/blocked solely on the existing exact pinned-host gate. The broad gate is not claimed as passed.

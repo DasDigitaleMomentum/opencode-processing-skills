@@ -44,12 +44,19 @@ dashboard with its exact printed `Launch command`, then start/restart Hermes.
 
 Inside a Hermes session the agent can call:
 
-- `checkpoint(done, next, step_failed=false)` — appends an eight-field record
+- `checkpoint(done, next, step_failed=false, close_session=false)` — strictly
+  validates both booleans and appends exact `open`, the eight-field record, and
+  exact `closed` only when requested
   (`timestamp`, `session_id`, `done`, `next`, `step_failed`, `context_used`,
   `agent`, `session_title`) to
   `<workspace>/.agent-checkpoints/<encoded-session-id>.jsonl`.
 - `checkpoint_path(session_id)` — returns the shared workspace-relative path
   without writing.
+
+Every later checkpoint reopens a previously closed row. Subagents request close
+only on their final checkpoint before returning a digest, summary, or handoff;
+parents keep the default unless intentionally ending the persisted session.
+Closure is not work success and remains independent of `step_failed`.
 
 The installed `checkpoint-instruction.md` is injected through Hermes'
 `pre_llm_call` hook for normal parent and delegated child turns, so both receive
@@ -65,17 +72,18 @@ Inspect logs with the shared tooling from this repository:
 
 - **Session-level persisted logging.** `on_session_start`/`pre_tool_call` bind
   native session IDs (`on_session_start` fires only for brand-new sessions on
-  the pinned build and is the only hook that persists `open`; continued
-  sessions bind via `pre_tool_call` without fabricating a lifecycle event). The verified
+  the pinned build; continued sessions bind via `pre_tool_call`). Every
+  successful checkpoint lazily confirms `open`. The verified
   `subagent_start` relation maps each native child internally to its transitive
   parent-owned log. Parent and child invocation/telemetry slots remain isolated,
   but child identity or attribution is never persisted; every child checkpoint
   still carries the parent session ID and appends to the parent log.
-- **No fabricated close.** The pinned v0.19.0 surface has no adopted trustworthy
+- **No fabricated host close.** The pinned v0.19.0 surface has no adopted trustworthy
   graceful main-session end hook. `subagent_start`, child stop information,
-  tool completion, process exit, age, and checkpoints emit no `closed` event.
-  A newly observed parent therefore reduces to `OPEN`; a checkpoint-only
-  continued session remains `UNKNOWN`. Neither value proves process liveness.
+  tool completion, process exit, and age emit no event. `close_session=true`
+  declares closure after its checkpoint. Because children append to the root
+  parent log, a child declaration closes that shared row until the next parent
+  or child checkpoint reopens it; no child/parent relationship is persisted.
 - **Telemetry is an estimate or `null`.** `pre_api_request` records the
   latest `approx_input_tokens` and model in the addressed native session's
   process-local slot;
