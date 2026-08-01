@@ -31,5 +31,12 @@
       ],
       "expected": { "chainPercent": 0, "threeWordPercent": 50 }
     }
+  ],
+  "statusReductionCases": [
+    { "name": "no status", "statuses": [], "expected": "UNKNOWN" },
+    { "name": "open", "statuses": ["open"], "expected": "OPEN" },
+    { "name": "closed", "statuses": ["open", "closed"], "expected": "CLOSED" },
+    { "name": "duplicate open", "statuses": ["open", "open"], "expected": "OPEN" },
+    { "name": "reopened", "statuses": ["open", "closed", "open"], "expected": "OPEN" }
   ]
 }

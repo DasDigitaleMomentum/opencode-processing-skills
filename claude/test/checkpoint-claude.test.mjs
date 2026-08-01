@@ -1,8 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
 import {
   access,
   copyFile,
+  lstat,
   mkdir,
   mkdtemp,
   readdir,
@@ -27,7 +35,7 @@ import {
 
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, "../..");
 const PLUGIN_ROOT = path.join(REPOSITORY_ROOT, "claude/agent-checkpoint");
-const HOOK_PATH = path.join(PLUGIN_ROOT, "scripts/checkpoint-hook.mjs");
+const SOURCE_HOOK_PATH = path.join(PLUGIN_ROOT, "scripts/checkpoint-hook.mjs");
 const STATUSLINE_PATH = path.join(PLUGIN_ROOT, "scripts/checkpoint-statusline.mjs");
 const INSPECT_PATH = path.join(REPOSITORY_ROOT, "packages/checkpoint-core/bin/checkpoint-inspect.js");
 const INSTRUCTION_MARKER = "<!-- claude-checkpoint-instruction -->";
@@ -44,10 +52,38 @@ const RECORD_KEYS = [
   "session_title",
 ];
 
-function runHook(input, hookPath = HOOK_PATH) {
+const HOOK_TEST_ROOT = mkdtempSync(path.join(os.tmpdir(), "checkpoint-claude-hook-layout-"));
+const HOOK_WORKSPACE = path.join(HOOK_TEST_ROOT, "workspace");
+const HOOK_PATH = path.join(HOOK_TEST_ROOT, "plugin/scripts/checkpoint-hook.mjs");
+mkdirSync(path.dirname(HOOK_PATH), { recursive: true });
+mkdirSync(path.join(HOOK_TEST_ROOT, "plugin/instructions"), { recursive: true });
+mkdirSync(path.join(HOOK_TEST_ROOT, "plugin/server"), { recursive: true });
+mkdirSync(HOOK_WORKSPACE, { recursive: true });
+copyFileSync(SOURCE_HOOK_PATH, HOOK_PATH);
+copyFileSync(
+  path.join(PLUGIN_ROOT, "instructions/checkpoint.md"),
+  path.join(HOOK_TEST_ROOT, "plugin/instructions/checkpoint.md"),
+);
+copyFileSync(
+  path.join(REPOSITORY_ROOT, "packages/checkpoint-core/src/index.js"),
+  path.join(HOOK_TEST_ROOT, "plugin/server/checkpoint-core.mjs"),
+);
+test.after(() => rmSync(HOOK_TEST_ROOT, { recursive: true, force: true }));
+
+function runHook(input, hookPath = HOOK_PATH, { workspaceRoot, env = {} } = {}) {
+  const inputWorkspace =
+    input !== null && typeof input === "object" && existsSync(input.cwd ?? "")
+      ? input.cwd
+      : HOOK_WORKSPACE;
+  const selectedWorkspace = workspaceRoot === undefined ? inputWorkspace : workspaceRoot;
   return spawnSync("node", [hookPath], {
     input: typeof input === "string" ? input : JSON.stringify(input),
     encoding: "utf8",
+    env: {
+      ...process.env,
+      ...(selectedWorkspace === null ? { CLAUDE_PROJECT_DIR: "" } : { CLAUDE_PROJECT_DIR: selectedWorkspace }),
+      ...env,
+    },
   });
 }
 
@@ -96,8 +132,8 @@ async function writeClaudeInstallerConfig(root) {
   return configFile;
 }
 
-function runClaudeInstaller(args, { cwd, configFile, opencodeHome, claudeHome, syncClaude }) {
-  const result = spawnSync("bash", [path.join(REPOSITORY_ROOT, "install.sh"), ...args], {
+function runClaudeInstallerResult(args, { cwd, configFile, opencodeHome, claudeHome, syncClaude }) {
+  return spawnSync("bash", [path.join(REPOSITORY_ROOT, "install.sh"), ...args], {
     cwd,
     encoding: "utf8",
     env: {
@@ -113,6 +149,10 @@ function runClaudeInstaller(args, { cwd, configFile, opencodeHome, claudeHome, s
       ...(syncClaude === undefined ? {} : { OPS_SYNC_CLAUDE: syncClaude }),
     },
   });
+}
+
+function runClaudeInstaller(args, options) {
+  const result = runClaudeInstallerResult(args, options);
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   return result.stdout;
 }
@@ -177,9 +217,10 @@ test("claude plugin passes strict validation on the pinned CLI", async (t) => {
   const match = version.stdout.match(/(\d+)\.(\d+)\.(\d+)/);
   assert.ok(match, `could not parse claude version from: ${version.stdout}`);
   const [major, minor, patch] = match.slice(1).map(Number);
-  assert.ok(
-    major > 2 || (major === 2 && minor > 1) || (major === 2 && minor === 1 && patch >= 170),
-    `claude ${major}.${minor}.${patch} is too old for the checkpoint plugin (pinned 2.1.170)`,
+  assert.deepEqual(
+    [major, minor, patch],
+    [2, 1, 170],
+    `claude ${major}.${minor}.${patch} does not match the required pinned version 2.1.170`,
   );
 
   const disposableHome = await mkdtemp(path.join(os.tmpdir(), "checkpoint-claude-validate-"));
@@ -607,6 +648,109 @@ test("claude hook injects the checkpoint instruction on SessionStart and Subagen
   );
 });
 
+test("claude lifecycle hooks append observed parent and subagent status only", async (t) => {
+  const worktree = await mkdtemp(path.join(os.tmpdir(), "checkpoint-claude-lifecycle-"));
+  t.after(() => rm(worktree, { recursive: true, force: true }));
+
+  const parentStart = runHook({
+    hook_event_name: "SessionStart",
+    session_id: "parent-status",
+    cwd: worktree,
+    source: "startup",
+  });
+  assert.equal(parentStart.status, 0, parentStart.stderr);
+  assert.equal(JSON.parse(parentStart.stdout).hookSpecificOutput.hookEventName, "SessionStart");
+
+  const childStart = runHook({
+    hook_event_name: "SubagentStart",
+    session_id: "parent-status",
+    agent_id: "child-1",
+    agent_type: "implementer",
+    cwd: worktree,
+  });
+  assert.equal(childStart.status, 0, childStart.stderr);
+  assert.equal(JSON.parse(childStart.stdout).hookSpecificOutput.hookEventName, "SubagentStart");
+
+  const parentEnd = runHook({
+    hook_event_name: "SessionEnd",
+    session_id: "parent-status",
+    cwd: worktree,
+    reason: "logout",
+  });
+  assert.equal(parentEnd.status, 0, parentEnd.stderr);
+  assert.equal(parentEnd.stdout, "");
+
+  const parentRecords = (await readFile(
+    path.join(worktree, ".agent-checkpoints/parent-status.jsonl"),
+    "utf8",
+  )).trim().split("\n").map(JSON.parse);
+  assert.deepEqual(parentRecords.map(({ event, status, session_id }) => ({ event, status, session_id })), [
+    { event: "session_status", status: "open", session_id: "parent-status" },
+    { event: "session_status", status: "closed", session_id: "parent-status" },
+  ]);
+  for (const record of parentRecords) {
+    assert.deepEqual(Object.keys(record).sort(), ["event", "session_id", "status", "timestamp"]);
+  }
+
+  const childRecords = (await readFile(
+    path.join(worktree, ".agent-checkpoints/parent-status--child-1.jsonl"),
+    "utf8",
+  )).trim().split("\n").map(JSON.parse);
+  assert.equal(childRecords.length, 1);
+  assert.deepEqual(
+    { event: childRecords[0].event, status: childRecords[0].status, session_id: childRecords[0].session_id },
+    { event: "session_status", status: "open", session_id: "parent-status--child-1" },
+  );
+
+  const missingIdentity = runHook(
+    { hook_event_name: "SessionStart", cwd: worktree },
+    HOOK_PATH,
+    { workspaceRoot: worktree },
+  );
+  assert.equal(missingIdentity.status, 1);
+  assert.match(missingIdentity.stderr, /non-empty session_id/);
+
+  const missingWorkspace = runHook(
+    { hook_event_name: "SessionStart", session_id: "no-workspace" },
+    HOOK_PATH,
+    { workspaceRoot: null },
+  );
+  assert.equal(missingWorkspace.status, 1);
+  assert.match(missingWorkspace.stderr, /CLAUDE_PROJECT_DIR or hook cwd/);
+});
+
+test("claude SubagentStart requires native parent and child identity before writing", async (t) => {
+  const worktree = await mkdtemp(path.join(os.tmpdir(), "checkpoint-claude-subagent-identity-"));
+  t.after(() => rm(worktree, { recursive: true, force: true }));
+
+  for (const { input, error } of [
+    {
+      input: {
+        hook_event_name: "SubagentStart",
+        agent_id: "child-1",
+        agent_type: "implementer",
+        cwd: worktree,
+      },
+      error: /non-empty session_id/,
+    },
+    {
+      input: {
+        hook_event_name: "SubagentStart",
+        session_id: "parent-status",
+        agent_type: "implementer",
+        cwd: worktree,
+      },
+      error: /non-empty agent_id/,
+    },
+  ]) {
+    const result = runHook(input);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, error);
+    await assert.rejects(access(path.join(worktree, ".agent-checkpoints")), /ENOENT/);
+  }
+});
+
 test("claude hook rewrites checkpoint PreToolUse inputs for parent and subagent", () => {
   const parent = runHook({
     hook_event_name: "PreToolUse",
@@ -717,7 +861,7 @@ test("claude hook allows checkpoint_path unchanged and ignores other tools and e
   assert.match(invalid.stderr, /invalid JSON/);
 });
 
-test("claude hook removes only the matching telemetry sidecar on SessionEnd", async (t) => {
+test("claude SessionEnd closes the parent and removes only its telemetry sidecar", async (t) => {
   const worktree = await mkdtemp(path.join(os.tmpdir(), "checkpoint-claude-sessionend-"));
   t.after(() => rm(worktree, { recursive: true, force: true }));
   writeAtomicSnapshot({
@@ -748,6 +892,12 @@ test("claude hook removes only the matching telemetry sidecar on SessionEnd", as
   assert.equal(result.stdout, "");
   await assert.rejects(access(sidecarPathFor(worktree, "sess-end")), /ENOENT/);
   await access(sidecarPathFor(worktree, "sess-keep"));
+  const statusRecord = JSON.parse(
+    (await readFile(path.join(worktree, ".agent-checkpoints/sess-end.jsonl"), "utf8")).trim(),
+  );
+  assert.equal(statusRecord.session_id, "sess-end");
+  assert.equal(statusRecord.event, "session_status");
+  assert.equal(statusRecord.status, "closed");
 });
 
 test("claude hook runs when invoked through a symlinked install path", async (t) => {
@@ -755,10 +905,15 @@ test("claude hook runs when invoked through a symlinked install path", async (t)
   t.after(() => rm(dir, { recursive: true, force: true }));
   await mkdir(path.join(dir, "scripts"));
   await mkdir(path.join(dir, "instructions"));
-  await copyFile(HOOK_PATH, path.join(dir, "scripts", "checkpoint-hook.mjs"));
+  await mkdir(path.join(dir, "server"));
+  await copyFile(SOURCE_HOOK_PATH, path.join(dir, "scripts", "checkpoint-hook.mjs"));
   await copyFile(
     path.join(PLUGIN_ROOT, "instructions/checkpoint.md"),
     path.join(dir, "instructions", "checkpoint.md"),
+  );
+  await copyFile(
+    path.join(REPOSITORY_ROOT, "packages/checkpoint-core/src/index.js"),
+    path.join(dir, "server", "checkpoint-core.mjs"),
   );
   const result = runHook(
     {
@@ -867,6 +1022,16 @@ test("claude installer deploys the plugin and preserves base configuration", asy
   assert.match(output, /Claude Code checkpoint plugin/);
   assert.match(output, /agent-checkpoint\.settings\.json/);
   assert.match(output, /--settings/);
+  assert.match(output, /stop every live checkpoint-watch dashboard.*OpenCode.*codex.*Claude Code.*Hermes/is);
+  assert.ok(
+    output.indexOf("skills/agent-checkpoint/server/checkpoint-core.mjs") <
+      output.indexOf("skills/agent-checkpoint/scripts/checkpoint-hook.mjs"),
+    "Claude bundled core must install before the status-capable hook",
+  );
+  assert.ok(
+    output.indexOf("Launch command:") < output.indexOf("Start/restart Claude Code"),
+    "the compatible dashboard launch must precede Claude restart",
+  );
 
   assert.equal(await readFile(baseSettings, "utf8"), baseSettingsContent);
   assert.equal(await readFile(claudeJson, "utf8"), claudeJsonContent);
@@ -943,6 +1108,62 @@ test("claude installer deploys the plugin and preserves base configuration", asy
   );
   assert.equal(await readFile(baseSettings, "utf8"), baseSettingsContent);
   assert.equal(await readFile(claudeJson, "utf8"), claudeJsonContent);
+});
+
+test("claude required-core symlink preflight stops before any installation mutation", async (t) => {
+  for (const relativeLink of [
+    "skills/agent-checkpoint/server/checkpoint-core.mjs",
+    "skills/agent-checkpoint/server",
+    "skills/agent-checkpoint",
+  ]) {
+    await t.test(relativeLink, async (t) => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-claude-reader-link-"));
+      t.after(() => rm(root, { recursive: true, force: true }));
+      const opencodeHome = path.join(root, "opencode-home");
+      const claudeHome = path.join(root, "claude-home");
+      await mkdir(claudeHome, { recursive: true });
+      const configFile = await writeClaudeInstallerConfig(root);
+      const linkPath = path.join(claudeHome, relativeLink);
+      const protectedPath = path.join(root, `protected-${relativeLink.replaceAll("/", "-")}`);
+      const isLeaf = relativeLink.endsWith("checkpoint-core.mjs");
+      if (isLeaf) {
+        await mkdir(path.dirname(linkPath), { recursive: true });
+        await writeFile(protectedPath, "stale protected core\n");
+      } else {
+        await mkdir(path.dirname(linkPath), { recursive: true });
+        await mkdir(protectedPath, { recursive: true });
+        const protectedCore = relativeLink.endsWith("server")
+          ? path.join(protectedPath, "checkpoint-core.mjs")
+          : path.join(protectedPath, "server/checkpoint-core.mjs");
+        await mkdir(path.dirname(protectedCore), { recursive: true });
+        await writeFile(protectedCore, "stale protected core\n");
+      }
+      await symlink(protectedPath, linkPath);
+
+      const result = runClaudeInstallerResult([], {
+        cwd: root,
+        configFile,
+        opencodeHome,
+        claudeHome,
+      });
+      assert.notEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      assert.match(result.stderr, /required checkpoint reader\/core is a symlink/);
+      assert.ok(result.stderr.includes(linkPath), result.stderr);
+      assert.match(result.stderr, /update.*target.*remove\/replace.*rerun/is);
+      assert.equal(result.stdout.includes("Step 1."), false, result.stdout);
+      assert.equal((await readFile(
+        isLeaf
+          ? protectedPath
+          : relativeLink.endsWith("server")
+            ? path.join(protectedPath, "checkpoint-core.mjs")
+            : path.join(protectedPath, "server/checkpoint-core.mjs"),
+        "utf8",
+      )), "stale protected core\n");
+      assert.equal((await lstat(linkPath)).isSymbolicLink(), true);
+      await assert.rejects(access(path.join(claudeHome, "agent-checkpoint.settings.json")), /ENOENT/);
+      await assert.rejects(access(path.join(opencodeHome, "plugins/checkpoint.ts")), /ENOENT/);
+    });
+  }
 });
 
 test("claude installer skips all plugin artifacts when the target is disabled", async (t) => {

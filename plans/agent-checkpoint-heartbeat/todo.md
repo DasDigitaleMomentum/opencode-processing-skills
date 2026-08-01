@@ -2,19 +2,19 @@
 type: planning
 entity: todo
 plan: "agent-checkpoint-heartbeat"
-updated: "2026-07-26"
+updated: "2026-08-01"
 ---
 
 # Todo: agent-checkpoint-heartbeat
 
 > Tracking [agent-checkpoint-heartbeat](plan.md)
 
-## Active Phase: None - OpenCode Pilot Complete
+## Active Phase: 6 - PydanticAI Adapter
 
 ### Phase Context
 
-- **Scope**: [Phase 4](phases/phase-4.md) (next, not started)
-- **Implementation**: [Phase 4 Plan](implementation/phase-4-impl.md)
+- **Scope**: [Phase 6](phases/phase-6.md) (pending)
+- **Implementation**: [Phase 6 Plan](implementation/phase-6-impl.md)
 - **Latest Handover**: Not created
 - **Relevant Docs**:
   - [Project Overview](../../docs/overview.md)
@@ -23,7 +23,7 @@ updated: "2026-07-26"
 
 ### Pending
 
-- [ ] Revalidate Codex APIs on the colleague's macOS environment before starting Phase 4. <!-- added: 2026-07-26 -->
+- [ ] Revalidate current PydanticAI APIs and execute Phase 6 without changing the completed adapter contract. <!-- added: 2026-08-01 -->
 
 ### In Progress
 
@@ -51,6 +51,9 @@ None.
 - [x] Replace unconditional-null OpenCode telemetry with the SDK-backed TUI-equivalent estimate and update plans/docs. <!-- completed: 2026-07-26 -->
 - [x] Add and document the live `checkpoint-watch` terminal dashboard with global/project installation. <!-- completed: 2026-07-26 -->
 - [x] Add agent/session-title identity, count-based metrics, and adaptive wide-terminal layout. <!-- completed: 2026-07-26 -->
+- [x] Revalidate and deliver the Codex adapter through `checkpoint-harness-integration` Phase 2 with isolated host/configuration evidence. <!-- completed: 2026-07-27 -->
+- [x] Revalidate and deliver the Claude Code adapter through `checkpoint-harness-integration` Phase 3 with pinned-host evidence. <!-- completed: 2026-07-27 -->
+- [x] Reconcile completed Phase 1–5 prerequisites, deliverables, and acceptance criteria while retaining Phase 6 as pending. <!-- completed: 2026-08-01 -->
 
 ### Blocked
 
@@ -68,3 +71,8 @@ None.
 - Corrected OpenCode telemetry after source-level SDK review; 18/18 tests and installer syntax verification passed.
 - Added the live checkpoint dashboard; 24/24 tests passed and Phase 4 remains pending.
 - Refined checkpoint identity and dashboard presentation with legacy compatibility; 29/29 tests passed.
+
+### 2026-08-01
+
+- Reconciled the stale Phase 4 next-step and Codex revalidation entries with completed Codex/Claude integration evidence.
+- Selected Phase 6 PydanticAI as the sole pending phase; the plan remains active and no aggregate all-adapter item was marked complete.

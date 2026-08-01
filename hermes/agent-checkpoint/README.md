@@ -29,8 +29,16 @@ Full removal: `hermes plugins disable agent-checkpoint`, then delete
 `~/.hermes/plugins/agent-checkpoint/`. The installer performs the same
 documented enablement as one additive `plugins.enabled` text edit and leaves
 all other `config.yaml` content byte-for-byte intact; `hermes plugins
-disable` is the documented way back. A restart starts a session with the
+disable` is the documented way back. If an exact quoted or unquoted
+`agent-checkpoint` entry is present under `plugins.disabled`, installation
+stops without changing the config and directs the user to
+`hermes plugins enable agent-checkpoint`. A restart starts a session with the
 changed plugin set.
+
+For upgrades, stop the live dashboard and all writer-enabled OpenCode, Codex,
+Claude Code, and Hermes sessions before installation. The installer validates
+the shared core/watcher reader paths before any mutation. Start the compatible
+dashboard with its exact printed `Launch command`, then start/restart Hermes.
 
 ## Usage
 
@@ -43,26 +51,39 @@ Inside a Hermes session the agent can call:
 - `checkpoint_path(session_id)` — returns the shared workspace-relative path
   without writing.
 
+The installed `checkpoint-instruction.md` is injected through Hermes'
+`pre_llm_call` hook for normal parent and delegated child turns, so both receive
+the complete cadence, chaining, failed-step, and context-pressure guidance.
+An observed `on_session_start` also appends one exact four-field
+`session_status: open` record to the parent-owned log.
+
 Inspect logs with the shared tooling from this repository:
 `node packages/checkpoint-core/bin/checkpoint-inspect.js <path>` or the
 `checkpoint-watch` dashboard.
 
 ## Limits (honest, pinned build)
 
-- **Session-level logging only.** `on_session_start`/`pre_tool_call` bind the
-  native `session_id` (`on_session_start` fires only for brand-new sessions
-  on the pinned build; continued sessions bind via `pre_tool_call`);
-  subagent checkpoints share the parent session log.
-  The `subagent_start` hook exists on the pinned build (fired on
-  `delegate_task` child construction with parent/child identity payloads) but
-  start-time subagent identity is **deliberately not adopted** — adoption is
-  a documented follow-up option. `subagent_stop` remains post-hoc only.
+- **Session-level persisted logging.** `on_session_start`/`pre_tool_call` bind
+  native session IDs (`on_session_start` fires only for brand-new sessions on
+  the pinned build and is the only hook that persists `open`; continued
+  sessions bind via `pre_tool_call` without fabricating a lifecycle event). The verified
+  `subagent_start` relation maps each native child internally to its transitive
+  parent-owned log. Parent and child invocation/telemetry slots remain isolated,
+  but child identity or attribution is never persisted; every child checkpoint
+  still carries the parent session ID and appends to the parent log.
+- **No fabricated close.** The pinned v0.19.0 surface has no adopted trustworthy
+  graceful main-session end hook. `subagent_start`, child stop information,
+  tool completion, process exit, age, and checkpoints emit no `closed` event.
+  A newly observed parent therefore reduces to `OPEN`; a checkpoint-only
+  continued session remains `UNKNOWN`. Neither value proves process liveness.
 - **Telemetry is an estimate or `null`.** `pre_api_request` records the
-  latest `approx_input_tokens` and model into a process-local slot;
+  latest `approx_input_tokens` and model in the addressed native session's
+  process-local slot;
   `context_used` is the approximate share only when a defensible model
   context limit is known (small built-in table, overridable via
   `AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS`); otherwise the record honestly
-  carries `null` and the tool reports `unknown`.
+  carries `null` and the tool reports `unknown`. Reported remaining headroom
+  floors at `~0k` when the estimate reaches or exceeds the known limit.
 - **`agent`/`session_title` are always `null`.** No documented surface
   exposes persona identity or the current session title at checkpoint time
   (titles live in the SQLite store via `hermes sessions rename`;

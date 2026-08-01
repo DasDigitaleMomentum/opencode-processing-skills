@@ -5,7 +5,7 @@ plan: "agent-checkpoint-heartbeat"
 phase: 2
 status: completed
 created: "2026-07-26"
-updated: "2026-07-26"
+updated: "2026-08-01"
 ---
 
 # Phase 2: OpenCode Pilot
@@ -39,26 +39,26 @@ OpenCode provides the first real harness evidence for whether agent-driven segme
 
 ## Prerequisites
 
-- [ ] Phase 1 is complete and its contract is stable.
-- [ ] Current OpenCode plugin/custom-tool APIs have been verified from primary sources and installed dependency versions.
+- [x] Phase 1 is complete and its contract is stable.
+- [x] Current OpenCode plugin/custom-tool APIs have been verified from primary sources and installed dependency versions.
 
 ## Deliverables
 
-- [ ] Installable OpenCode checkpoint plugin/tools.
-- [ ] Updated parent and subagent checkpoint instruction.
-- [ ] OpenCode context telemetry behavior with documented fallback.
-- [ ] OpenCode agent/session-title metadata behavior with documented null fallback.
-- [ ] Focused integration tests and isolated installer smoke test.
+- [x] Installable OpenCode checkpoint plugin/tools.
+- [x] Updated parent and subagent checkpoint instruction.
+- [x] OpenCode context telemetry behavior with documented fallback.
+- [x] OpenCode agent/session-title metadata behavior with documented null fallback.
+- [x] Focused integration tests and isolated installer smoke test.
 
 ## Acceptance Criteria
 
-- [ ] A parent and a subagent can each create separate session logs under the project-root `.agent-checkpoints/` directory.
-- [ ] `checkpoint` writes the authorized fields and returns context utilization plus remaining K-tokens or honest unknown values.
-- [ ] `checkpoint_path` returns the correct relative path for an OpenCode session.
-- [ ] `step_failed=true` is recorded when instructed without being treated as Canary failure.
-- [ ] Parent and subagent records expose their active persona and current session title when OpenCode provides them.
-- [ ] Existing global and `--project` installation behavior remains backward compatible.
-- [ ] OpenCode restart/configuration requirements are documented.
+- [x] A parent and a subagent can each create separate session logs under the project-root `.agent-checkpoints/` directory.
+- [x] `checkpoint` writes the authorized fields and returns context utilization plus remaining K-tokens or honest unknown values.
+- [x] `checkpoint_path` returns the correct relative path for an OpenCode session.
+- [x] `step_failed=true` is recorded when instructed without being treated as Canary failure.
+- [x] Parent and subagent records expose their active persona and current session title when OpenCode provides them.
+- [x] Existing global and `--project` installation behavior remains backward compatible.
+- [x] OpenCode restart/configuration requirements are documented.
 
 ## Dependencies on Other Phases
 
@@ -71,3 +71,5 @@ OpenCode provides the first real harness evidence for whether agent-driven segme
 ## Notes
 
 The pilot should favor an OpenCode-native wrapper. Portability is achieved through the contract, not by forcing MCP into the pilot when native tools provide better session context.
+
+Reconciled 2026-08-01 against the completed and reviewed OpenCode pilot; no Phase 6 PydanticAI claim is implied.

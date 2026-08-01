@@ -1,5 +1,17 @@
 import assert from "node:assert/strict";
-import { access, copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  access,
+  copyFile,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  readlink,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -22,11 +34,29 @@ const RECORD_KEYS = [
   "session_title",
 ];
 
-function runHook(input) {
-  return spawnSync("node", [HOOK_PATH], {
+function runHook(input, hookPath) {
+  return spawnSync("node", [hookPath], {
     input: typeof input === "string" ? input : JSON.stringify(input),
     encoding: "utf8",
   });
+}
+
+async function stageHookAdapter(t, prefix = "checkpoint-codex-hook-") {
+  const adapterDir = await mkdtemp(path.join(os.tmpdir(), prefix));
+  t.after(() => rm(adapterDir, { recursive: true, force: true }));
+  await copyFile(HOOK_PATH, path.join(adapterDir, "checkpoint-hook.mjs"));
+  await copyFile(
+    path.join(REPOSITORY_ROOT, "codex/checkpoint-instruction.md"),
+    path.join(adapterDir, "checkpoint-instruction.md"),
+  );
+  await copyFile(
+    path.join(REPOSITORY_ROOT, "packages/checkpoint-core/src/index.js"),
+    path.join(adapterDir, "checkpoint-core.mjs"),
+  );
+  return {
+    adapterDir,
+    hookPath: path.join(adapterDir, "checkpoint-hook.mjs"),
+  };
 }
 
 async function writeCodexInstallerConfig(root) {
@@ -52,8 +82,11 @@ async function writeCodexInstallerConfig(root) {
   return configFile;
 }
 
-function runCodexInstaller(args, { cwd, configFile, opencodeHome, codexHome, syncCodex }) {
-  const result = spawnSync("bash", [path.join(REPOSITORY_ROOT, "install.sh"), ...args], {
+function runCodexInstallerResult(
+  args,
+  { cwd, configFile, opencodeHome, codexHome, syncCodex },
+) {
+  return spawnSync("bash", [path.join(REPOSITORY_ROOT, "install.sh"), ...args], {
     cwd,
     encoding: "utf8",
     env: {
@@ -69,8 +102,22 @@ function runCodexInstaller(args, { cwd, configFile, opencodeHome, codexHome, syn
       ...(syncCodex === undefined ? {} : { OPS_SYNC_CODEX: syncCodex }),
     },
   });
+}
+
+function runCodexInstaller(args, options) {
+  const result = runCodexInstallerResult(args, options);
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   return result.stdout;
+}
+
+function assertOutputOrder(output, labels) {
+  let previous = -1;
+  for (const label of labels) {
+    const index = output.indexOf(label);
+    assert.ok(index >= 0, `missing installer output label: ${label}`);
+    assert.ok(index > previous, `installer output is out of order at: ${label}`);
+    previous = index;
+  }
 }
 
 test("codex MCP runtime handles the protocol and appends shared-contract records", async (t) => {
@@ -280,30 +327,105 @@ test("codex MCP writes stay eight-field while legacy six-field logs remain reada
   assert.equal(legacyRecord.session_title, null);
 });
 
-test("codex hook injects the checkpoint instruction and session ID on SessionStart", () => {
-  const result = runHook({
+test("codex SessionStart sources append open and preserve exact instruction output", async (t) => {
+  const { adapterDir, hookPath } = await stageHookAdapter(t);
+  for (const source of ["startup", "resume", "clear", "compact"]) {
+    const sessionId = `sess-${source}`;
+    const result = runHook({
+      hook_event_name: "SessionStart",
+      session_id: sessionId,
+      transcript_path: null,
+      cwd: adapterDir,
+      model: "gpt-x",
+      permission_mode: "default",
+      source,
+    }, hookPath);
+    assert.equal(result.status, 0, result.stderr);
+    const output = JSON.parse(result.stdout);
+    assert.deepEqual(Object.keys(output), ["hookSpecificOutput"]);
+    assert.deepEqual(Object.keys(output.hookSpecificOutput).sort(), [
+      "additionalContext",
+      "hookEventName",
+    ]);
+    assert.equal(output.hookSpecificOutput.hookEventName, "SessionStart");
+    const context = output.hookSpecificOutput.additionalContext;
+    assert.ok(context.includes(INSTRUCTION_MARKER));
+    assert.ok(context.includes(`Session checkpoint ID: ${sessionId}`));
+
+    const raw = await readFile(
+      path.join(adapterDir, ...checkpointCore.checkpointPath(sessionId).split("/")),
+      "utf8",
+    );
+    const [record] = checkpointCore.parseCheckpointLogJsonl(raw);
+    assert.deepEqual(Object.keys(record), ["timestamp", "session_id", "event", "status"]);
+    assert.equal(record.session_id, sessionId);
+    assert.equal(record.event, "session_status");
+    assert.equal(record.status, "open");
+    assert.doesNotMatch(raw, /"(?:source|model|transcript_path|turn_id)"/);
+  }
+
+  const duplicate = runHook({
     hook_event_name: "SessionStart",
-    session_id: "sess-123",
+    session_id: "sess-startup",
     transcript_path: null,
-    cwd: "/workspace",
+    cwd: adapterDir,
     model: "gpt-x",
     permission_mode: "default",
-    source: "startup",
+    source: "resume",
+  }, hookPath);
+  assert.equal(duplicate.status, 0, duplicate.stderr);
+  const runtime = createMcpRuntime({ checkpointCore });
+  const checkpoint = await runtime.handleMessage({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "tools/call",
+    params: {
+      name: "checkpoint",
+      arguments: {
+        done: "Codex session opened",
+        next: "Mixed log inspected",
+        _workspace_root: adapterDir,
+        _checkpoint_session_id: "sess-startup",
+      },
+    },
   });
-  assert.equal(result.status, 0, result.stderr);
-  const output = JSON.parse(result.stdout);
-  assert.deepEqual(Object.keys(output), ["hookSpecificOutput"]);
-  assert.deepEqual(Object.keys(output.hookSpecificOutput).sort(), [
-    "additionalContext",
-    "hookEventName",
-  ]);
-  assert.equal(output.hookSpecificOutput.hookEventName, "SessionStart");
-  const context = output.hookSpecificOutput.additionalContext;
-  assert.ok(context.includes(INSTRUCTION_MARKER));
-  assert.ok(context.includes("Session checkpoint ID: sess-123"));
+  assert.equal(checkpoint.result.isError, undefined);
+  const mixedRaw = await readFile(
+    path.join(adapterDir, ...checkpointCore.checkpointPath("sess-startup").split("/")),
+    "utf8",
+  );
+  const mixed = checkpointCore.analyzeCheckpointLog(mixedRaw);
+  assert.equal(mixed.state, "OPEN");
+  assert.equal(mixed.records.length, 3);
+  assert.equal(mixed.checkpoints.length, 1);
+  assert.deepEqual(mixed.analysis.work, { success: 1, count: 1, percent: 100 });
+
+  for (const input of [
+    { hook_event_name: "SessionStart", session_id: "", cwd: adapterDir },
+    { hook_event_name: "SessionStart", session_id: "missing-cwd", cwd: "" },
+  ]) {
+    const invalid = runHook(input, hookPath);
+    assert.equal(invalid.status, 1);
+    assert.equal(invalid.stdout, "");
+    assert.match(invalid.stderr, /SessionStart requires a non-empty/);
+  }
+
+  const notDirectory = path.join(adapterDir, "not-a-workspace");
+  await writeFile(notDirectory, "ordinary file\n");
+  const writeFailure = runHook({
+    hook_event_name: "SessionStart",
+    session_id: "write-failure",
+    cwd: notDirectory,
+    source: "startup",
+  }, hookPath);
+  assert.equal(writeFailure.status, 1);
+  assert.equal(writeFailure.stdout, "");
+  assert.match(writeFailure.stderr, /^agent-checkpoint hook: /);
+  assert.match(writeFailure.stderr, /ENOTDIR|not a directory/i);
 });
 
-test("codex hook pairs allow with updatedInput for the checkpoint PreToolUse", () => {
+test("codex hook pairs allow with updatedInput for the checkpoint PreToolUse", async (t) => {
+  const { hookPath } = await stageHookAdapter(t);
   const result = runHook({
     hook_event_name: "PreToolUse",
     session_id: "sess-xyz",
@@ -321,7 +443,7 @@ test("codex hook pairs allow with updatedInput for the checkpoint PreToolUse", (
       _checkpoint_session_id: "stale-id",
     },
     tool_use_id: "toolu_1",
-  });
+  }, hookPath);
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout);
   const specific = output.hookSpecificOutput;
@@ -349,12 +471,16 @@ test("codex hook runs when invoked through a symlinked install path", async (t) 
     path.join(REPOSITORY_ROOT, "codex/checkpoint-instruction.md"),
     path.join(dir, "checkpoint-instruction.md"),
   );
+  await copyFile(
+    path.join(REPOSITORY_ROOT, "packages/checkpoint-core/src/index.js"),
+    path.join(dir, "checkpoint-core.mjs"),
+  );
   const result = spawnSync("node", [path.join(dir, "checkpoint-hook.mjs")], {
     input: JSON.stringify({
       hook_event_name: "SessionStart",
       session_id: "linked-session",
       transcript_path: null,
-      cwd: "/w",
+      cwd: dir,
       model: "m",
       permission_mode: "p",
       source: "startup",
@@ -367,7 +493,21 @@ test("codex hook runs when invoked through a symlinked install path", async (t) 
   assert.ok(output.hookSpecificOutput.additionalContext.includes("Session checkpoint ID: linked-session"));
 });
 
-test("codex hook ignores other tools and events and rejects invalid JSON", () => {
+test("codex hook ignores Stop, other tools, and unknown events", async (t) => {
+  const { adapterDir, hookPath } = await stageHookAdapter(t);
+  const opened = runHook({
+    hook_event_name: "SessionStart",
+    session_id: "s",
+    transcript_path: null,
+    cwd: adapterDir,
+    model: "m",
+    permission_mode: "p",
+    source: "startup",
+  }, hookPath);
+  assert.equal(opened.status, 0, opened.stderr);
+  const logFile = path.join(adapterDir, ...checkpointCore.checkpointPath("s").split("/"));
+  const before = await readFile(logFile, "utf8");
+
   const otherTool = runHook({
     hook_event_name: "PreToolUse",
     session_id: "s",
@@ -379,27 +519,43 @@ test("codex hook ignores other tools and events and rejects invalid JSON", () =>
     tool_name: "mcp__other__ping",
     tool_input: {},
     tool_use_id: "u",
-  });
+  }, hookPath);
   assert.equal(otherTool.status, 0, otherTool.stderr);
   assert.equal(otherTool.stdout, "");
 
-  const otherEvent = runHook({
-    hook_event_name: "PostToolUse",
-    session_id: "s",
-    turn_id: "t",
-    transcript_path: null,
-    cwd: "/w",
-    model: "m",
-    permission_mode: "p",
-    tool_name: "mcp__agent_checkpoint__checkpoint",
-    tool_input: {},
-    tool_response: {},
-    tool_use_id: "u",
-  });
-  assert.equal(otherEvent.status, 0, otherEvent.stderr);
-  assert.equal(otherEvent.stdout, "");
+  for (const otherEvent of [
+    {
+      hook_event_name: "Stop",
+      session_id: "s",
+      turn_id: "turn-1",
+      stop_hook_active: false,
+      cwd: adapterDir,
+    },
+    { hook_event_name: "SessionEnd", session_id: "s", cwd: adapterDir },
+    {
+      hook_event_name: "PostToolUse",
+      session_id: "s",
+      turn_id: "t",
+      transcript_path: null,
+      cwd: adapterDir,
+      model: "m",
+      permission_mode: "p",
+      tool_name: "mcp__agent_checkpoint__checkpoint",
+      tool_input: {},
+      tool_response: {},
+      tool_use_id: "u",
+    },
+  ]) {
+    const result = runHook(otherEvent, hookPath);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, "");
+  }
+  const after = await readFile(logFile, "utf8");
+  assert.equal(after, before);
+  assert.equal(checkpointCore.analyzeCheckpointLog(after).state, "OPEN");
+  assert.equal(after.includes('"status":"closed"'), false);
 
-  const invalid = runHook("not json");
+  const invalid = runHook("not json", hookPath);
   assert.equal(invalid.status, 1);
   assert.match(invalid.stderr, /invalid JSON/);
 });
@@ -419,6 +575,25 @@ test("codex installer deploys adapter/profile and preserves the base config", as
   assert.match(output, /Codex checkpoint adapter/);
   assert.match(output, /agent-checkpoint\.config\.toml/);
   assert.match(output, /codex --profile-v2 agent-checkpoint/);
+  assertOutputOrder(output, [
+    "Checkpoint adapter upgrade prerequisite:",
+    "Step 1.1:",
+    "Installed: lib/opencode-processing-skills/checkpoint-core.mjs",
+    "Installed: lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js",
+    "Installed: lib/opencode-processing-skills/checkpoint-watch/src/index.js",
+    "Installed: lib/opencode-processing-skills/checkpoint-runtime.mjs",
+    "Installed: plugins/checkpoint.ts",
+    "Step 7: Installing Codex checkpoint adapter",
+    "Installed: agent-checkpoint/checkpoint-core.mjs",
+    "Installed: agent-checkpoint/checkpoint-mcp-runtime.mjs",
+    "Installed: agent-checkpoint/checkpoint-mcp-server.mjs",
+    "Installed: agent-checkpoint/checkpoint-hook.mjs",
+    "Installed: agent-checkpoint.config.toml",
+    "Launch command:",
+    "Restart OpenCode",
+    "Start/restart Codex only after the dashboard",
+    "Activate with:",
+  ]);
 
   assert.equal(await readFile(baseConfig, "utf8"), baseContent);
   assert.match(await readFile(path.join(opencodeHome, "plugins/checkpoint.ts"), "utf8"), /CheckpointPlugin/);
@@ -454,6 +629,7 @@ test("codex installer deploys adapter/profile and preserves the base config", as
   assert.match(profile, /default_tools_approval_mode = "auto"/);
   assert.match(profile, /\[\[hooks\.SessionStart\]\]/);
   assert.match(profile, /\[\[hooks\.PreToolUse\]\]/);
+  assert.doesNotMatch(profile, /hooks\.(?:Stop|SessionEnd)/);
   assert.match(profile, /matcher = "mcp__agent_checkpoint__checkpoint"/);
   assert.ok(
     profile.includes(`args = ["${adapterDir}/checkpoint-mcp-server.mjs"]`),
@@ -488,6 +664,82 @@ test("codex installer deploys adapter/profile and preserves the base config", as
     /createMcpRuntime/,
   );
   assert.equal(await readFile(baseConfig, "utf8"), baseContent);
+});
+
+test("codex installer preserves a symlinked whole adapter directory and stops before activation", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-codex-dir-link-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const opencodeHome = path.join(root, "opencode-home");
+  const codexHome = path.join(root, "codex-home");
+  const protectedDir = path.join(root, "protected-adapter");
+  await mkdir(codexHome, { recursive: true });
+  await mkdir(protectedDir);
+  const sentinel = path.join(protectedDir, "sentinel.txt");
+  await writeFile(sentinel, "keep every byte\n");
+  const adapterLink = path.join(codexHome, "agent-checkpoint");
+  await symlink(protectedDir, adapterLink);
+  const configFile = await writeCodexInstallerConfig(root);
+  const beforeEntries = await readdir(protectedDir);
+  const beforeSentinel = await readFile(sentinel);
+
+  const result = runCodexInstallerResult([], {
+    cwd: root,
+    configFile,
+    opencodeHome,
+    codexHome,
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.equal((await lstat(adapterLink)).isSymbolicLink(), true);
+  assert.equal(await readlink(adapterLink), protectedDir);
+  assert.deepEqual(await readdir(protectedDir), beforeEntries);
+  assert.deepEqual(await readFile(sentinel), beforeSentinel);
+  assert.doesNotMatch(result.stdout, /Step 1\.1:/);
+  assert.match(result.stderr, /required checkpoint reader\/core is a symlink/);
+  assert.ok(result.stderr.includes(adapterLink), result.stderr);
+  assert.match(result.stderr, /Update the user-managed symlink target/);
+  assert.match(result.stderr, /rerun install\.sh/);
+  await assert.rejects(access(path.join(codexHome, "agent-checkpoint.config.toml")), /ENOENT/);
+  await assert.rejects(access(path.join(opencodeHome, "plugins/checkpoint.ts")), /ENOENT/);
+});
+
+test("codex installer stops before hook and profile changes for a bundled-core symlink", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-codex-core-link-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const opencodeHome = path.join(root, "opencode-home");
+  const codexHome = path.join(root, "codex-home");
+  const adapterDir = path.join(codexHome, "agent-checkpoint");
+  await mkdir(adapterDir, { recursive: true });
+  const protectedCore = path.join(root, "protected-core.mjs");
+  await writeFile(protectedCore, "protected core\n");
+  const coreLink = path.join(adapterDir, "checkpoint-core.mjs");
+  await symlink(protectedCore, coreLink);
+  const staleHook = path.join(adapterDir, "checkpoint-hook.mjs");
+  await writeFile(staleHook, "stale hook remains\n");
+  const profile = path.join(codexHome, "agent-checkpoint.config.toml");
+  await writeFile(profile, "stale profile remains\n");
+  const baseConfig = path.join(codexHome, "config.toml");
+  await writeFile(baseConfig, 'model = "unchanged"\n');
+  const configFile = await writeCodexInstallerConfig(root);
+
+  const result = runCodexInstallerResult([], {
+    cwd: root,
+    configFile,
+    opencodeHome,
+    codexHome,
+  });
+  assert.notEqual(result.status, 0);
+  assert.doesNotMatch(result.stdout, /Step 1\.1:/);
+  assert.match(result.stderr, /required checkpoint reader\/core is a symlink/);
+  assert.ok(result.stderr.includes(coreLink), result.stderr);
+  assert.match(result.stderr, /rerun install\.sh/);
+  assert.equal((await lstat(coreLink)).isSymbolicLink(), true);
+  assert.equal(await readlink(coreLink), protectedCore);
+  assert.equal(await readFile(protectedCore, "utf8"), "protected core\n");
+  assert.equal(await readFile(staleHook, "utf8"), "stale hook remains\n");
+  assert.equal(await readFile(profile, "utf8"), "stale profile remains\n");
+  assert.equal(await readFile(baseConfig, "utf8"), 'model = "unchanged"\n');
+  await assert.rejects(access(path.join(opencodeHome, "plugins/checkpoint.ts")), /ENOENT/);
 });
 
 test("codex installer skips all adapter artifacts when the target is disabled", async (t) => {

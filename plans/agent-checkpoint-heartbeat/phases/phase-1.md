@@ -5,7 +5,7 @@ plan: "agent-checkpoint-heartbeat"
 phase: 1
 status: completed
 created: "2026-07-26"
-updated: "2026-07-26"
+updated: "2026-08-01"
 ---
 
 # Phase 1: Shared Contract and Monorepo Foundation
@@ -39,24 +39,24 @@ Every harness depends on identical raw semantics. Fixing the contract and fixtur
 
 ## Prerequisites
 
-- [ ] The concept document and plan decisions are accepted.
-- [ ] The implementation plan is verified against the current monorepo and installer structure.
+- [x] The concept document and plan decisions are accepted.
+- [x] The implementation plan is verified against the current monorepo and installer structure.
 
 ## Deliverables
 
-- [ ] Shared contract implementation and fixtures.
-- [ ] Safe per-session append and path lookup behavior.
-- [ ] External Chain/Work/Three-word calculation behavior that uses `step_failed` only for Work quality.
-- [ ] Focused automated tests.
+- [x] Shared contract implementation and fixtures.
+- [x] Safe per-session append and path lookup behavior.
+- [x] External Chain/Work/Three-word calculation behavior that uses `step_failed` only for Work quality.
+- [x] Focused automated tests.
 
 ## Acceptance Criteria
 
-- [ ] New writes contain exactly the eight current fields with nullable agent/title metadata, while strict legacy six-field records remain readable without rewriting.
-- [ ] Repeated appends produce independently parseable JSONL lines without rewriting history.
-- [ ] Unsafe session IDs cannot escape the root checkpoint directory.
-- [ ] `checkpoint_path` resolves a workspace-relative path for a stable session ID.
-- [ ] A failed step remains visible while chain and three-word calculations remain independent.
-- [ ] Tests cover legacy/current/mixed records, nullable metadata, first/matching/broken chains, count metrics, compliant/non-compliant labels, failed steps, missing context, and unsafe IDs.
+- [x] New writes contain exactly the eight current fields with nullable agent/title metadata, while strict legacy six-field records remain readable without rewriting.
+- [x] Repeated appends produce independently parseable JSONL lines without rewriting history.
+- [x] Unsafe session IDs cannot escape the root checkpoint directory.
+- [x] `checkpoint_path` resolves a workspace-relative path for a stable session ID.
+- [x] A failed step remains visible while chain and three-word calculations remain independent.
+- [x] Tests cover legacy/current/mixed records, nullable metadata, first/matching/broken chains, count metrics, compliant/non-compliant labels, failed steps, missing context, and unsafe IDs.
 
 ## Dependencies on Other Phases
 
@@ -64,8 +64,10 @@ Every harness depends on identical raw semantics. Fixing the contract and fixtur
 |-------|-------------|-------|
 | 2 | blocks | OpenCode wraps this contract. |
 | 3 | blocks | Inspection uses these raw records and calculations. |
-| 4–6 | blocks | Future harness adapters must preserve this contract. |
+| 4–6 | blocks | Completed Codex/Claude adapters preserve this contract; pending PydanticAI must do the same. |
 
 ## Notes
 
 The implementation plan must choose the smallest structure compatible with this repository rather than introducing a general service or daemon.
+
+Reconciled 2026-08-01 against the completed and reviewed shared-core rollout; no Phase 6 PydanticAI claim is implied.

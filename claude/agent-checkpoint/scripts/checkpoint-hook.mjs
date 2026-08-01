@@ -19,6 +19,8 @@ import { readFileSync, realpathSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { appendSessionStatus } from "../server/checkpoint-core.mjs";
+
 const CHECKPOINT_TOOL_NAME = "mcp__plugin_agent-checkpoint_checkpoint__checkpoint";
 const CHECKPOINT_PATH_TOOL_NAME = "mcp__plugin_agent-checkpoint_checkpoint__checkpoint_path";
 const INTERNAL_FIELDS = ["_checkpoint_session_id", "_telemetry_session_id", "_agent_type"];
@@ -38,6 +40,25 @@ function readInstruction() {
   return readFileSync(instructionPath, "utf8").trim();
 }
 
+function statusWorkspaceRoot(input) {
+  const workspaceRoot = nonEmptyString(process.env.CLAUDE_PROJECT_DIR) ?? nonEmptyString(input?.cwd);
+  if (workspaceRoot === null) {
+    throw new TypeError("lifecycle status requires CLAUDE_PROJECT_DIR or hook cwd");
+  }
+  return workspaceRoot;
+}
+
+async function appendObservedStatus(input, sessionId, status) {
+  if (sessionId === null) {
+    throw new TypeError("lifecycle status requires a non-empty session_id");
+  }
+  await appendSessionStatus({
+    sessionId,
+    status,
+    workspaceRoot: statusWorkspaceRoot(input),
+  });
+}
+
 // Native session_id for the parent, composite <session_id>--<agent_id> when
 // the hook fires inside a subagent. Never invented: null when the pinned
 // build supplies no session_id.
@@ -50,10 +71,12 @@ function compositeCheckpointId(input) {
   return agentId === null ? sessionId : `${sessionId}--${agentId}`;
 }
 
-// SessionStart injects the heartbeat instruction as additionalContext and
-// tells the agent which session ID its checkpoints are logged under.
-export function handleSessionStart(input) {
+// SessionStart records the observed parent open, injects the heartbeat
+// instruction as additionalContext, and tells the agent which session ID owns
+// its log.
+export async function handleSessionStart(input) {
   const sessionId = nonEmptyString(input?.session_id);
+  await appendObservedStatus(input, sessionId, "open");
   const lines = [readInstruction()];
   if (sessionId !== null) {
     lines.push("", `Session checkpoint ID: ${sessionId}`);
@@ -66,10 +89,19 @@ export function handleSessionStart(input) {
   };
 }
 
-// SubagentStart delivers the same instruction plus the composite subagent
-// checkpoint ID, so subagent checkpoints land in their own log file.
-export function handleSubagentStart(input) {
-  const checkpointId = compositeCheckpointId(input);
+// SubagentStart records the observed composite subagent open, then delivers
+// the same instruction plus the composite checkpoint ID.
+export async function handleSubagentStart(input) {
+  const sessionId = nonEmptyString(input?.session_id);
+  if (sessionId === null) {
+    throw new TypeError("SubagentStart lifecycle status requires a non-empty session_id");
+  }
+  const agentId = nonEmptyString(input?.agent_id);
+  if (agentId === null) {
+    throw new TypeError("SubagentStart lifecycle status requires a non-empty agent_id");
+  }
+  const checkpointId = `${sessionId}--${agentId}`;
+  await appendObservedStatus(input, checkpointId, "open");
   const lines = [readInstruction()];
   if (checkpointId !== null) {
     lines.push("", `Session checkpoint ID: ${checkpointId}`);
@@ -127,15 +159,22 @@ export function handleCheckpointPreToolUse(input) {
   };
 }
 
-// SessionEnd removes only this session's telemetry sidecar. Raw JSONL logs
-// and other sessions' sidecars are never touched; removal failure degrades
-// to a stderr diagnostic without blocking session teardown.
-export function handleSessionEnd(input) {
+// SessionEnd records only the native parent's observed graceful close and
+// removes only that session's telemetry sidecar. Raw JSONL logs and other
+// sessions' sidecars are never touched; removal failure degrades to a stderr
+// diagnostic without blocking session teardown.
+export async function handleSessionEnd(input) {
   const sessionId = nonEmptyString(input?.session_id);
   if (sessionId === null) {
-    return null;
+    throw new TypeError("lifecycle status requires a non-empty session_id");
   }
-  const workspaceRoot = nonEmptyString(input?.cwd) ?? process.cwd();
+  const workspaceRoot = statusWorkspaceRoot(input);
+  let appendError = null;
+  try {
+    await appendObservedStatus(input, sessionId, "closed");
+  } catch (error) {
+    appendError = error;
+  }
   const sidecarPath = path.join(
     workspaceRoot,
     ".agent-checkpoints",
@@ -150,19 +189,22 @@ export function handleSessionEnd(input) {
       `agent-checkpoint hook: could not remove telemetry sidecar: ${error.message}\n`,
     );
   }
+  if (appendError !== null) {
+    throw appendError;
+  }
   return null;
 }
 
-export function handleHookInput(input) {
+export async function handleHookInput(input) {
   switch (input?.hook_event_name) {
     case "SessionStart":
-      return handleSessionStart(input);
+      return await handleSessionStart(input);
     case "SubagentStart":
-      return handleSubagentStart(input);
+      return await handleSubagentStart(input);
     case "PreToolUse":
       return handleCheckpointPreToolUse(input);
     case "SessionEnd":
-      return handleSessionEnd(input);
+      return await handleSessionEnd(input);
     default:
       return null;
   }
@@ -174,7 +216,7 @@ function main() {
   process.stdin.on("data", (chunk) => {
     raw += chunk;
   });
-  process.stdin.on("end", () => {
+  process.stdin.on("end", async () => {
     let input;
     try {
       input = JSON.parse(raw);
@@ -183,7 +225,7 @@ function main() {
       process.exit(1);
     }
     try {
-      const output = handleHookInput(input);
+      const output = await handleHookInput(input);
       if (output !== null) {
         process.stdout.write(`${JSON.stringify(output)}\n`);
       }

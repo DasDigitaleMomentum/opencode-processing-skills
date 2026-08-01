@@ -55,12 +55,13 @@ Do **not** use this skill to:
   - Updates plan/todo via `update-plan` as needed when a persistent plan exists.
 
 - **Subagent (implementer)**
-  - Does execution only.
+  - Does execution only for exactly one phase/work package in a fresh session.
   - First returns a **step list**.
   - After approval, executes those steps and returns a **digest**.
   - Uses `retriever` by default for separable evidence collection while retaining ownership of the Blueprint, edits, and verification.
   - Directly reads scoped source and compact targeted evidence, but keeps uncurated bulk evidence out of its context. It uses reliable focused filtering when sufficient and `retriever` for complete raw or coherent multi-file evidence.
   - BLUEPRINT remains command-free. In EXECUTE, potentially verbose output is spooled to a predictable path under `/tmp/opencode/`; the immediate context receives only path, command, exit status, and compact metadata/evidence.
+  - Retires after the digest; another phase/work package starts with a fresh implementer.
   - Does not do Git operations.
 
 ## Routing Matrix (Who does what)
@@ -69,6 +70,7 @@ Do **not** use this skill to:
 - **Does NOT write**: `plans/**` or `docs/**` artifacts.
 - **Primary**: owns gating/approval, Git operations, and, when a persistent plan exists, updates to `plans/**` (typically via `update-plan`).
 - **implementer**: execution only (blueprint → execute → digest), no Git.
+- **Session boundary**: one fresh implementer per phase/work package; only that package's BLUEPRINT and EXECUTE calls share a session.
 - **retriever**: default leaf for separable evidence collection by the implementer; no edits, decisions, or artifact ownership.
 - **doc-explorer**: not used for this skill (unless you explicitly want docs/plan artifacts, in which case use the appropriate planning/doc skills).
 
@@ -87,6 +89,8 @@ The protocol relies on continuing the subagent in the **same** session via **the
 - **Call 2** (`task` with same `task_id`): request "Execute approved steps" → receive Digest
 
 This reuse remains mandatory even when a fresh lean session would normally be preferred: EXECUTE depends on the retained Blueprint inspection and explicit approval context.
+
+The statefulness ends with that package's digest. The Implementer retires after the digest; never reuse its `task_id` for another phase, work package, or post-digest continuation.
 
 > **CRITICAL: Two separate `task` calls required.**
 >
@@ -175,12 +179,14 @@ Subagent responds with a compact digest:
 
 Owning verification does not imply consuming raw verbose output directly. The implementer spools complete potentially verbose output under `/tmp/opencode/`, then uses a reliable focused filter or asks `retriever` to analyze the raw path with a focused question. Spools support same-machine continuation after an agent or process interruption, not reboot durability. Numeric tool truncation is a safety net, not the routing rule.
 
+The digest closes and retires this Implementer session.
+
 ### 4) Primary post-processing
 
 Read the digest carefully. The subagent's verification result determines next steps:
 
 - **Verification passed:** Spot-check with `git diff --stat` to confirm expected changes. Do not re-run the full test suite yourself – the subagent already did.
-- **Verification failed or incomplete:** If additional testing is needed, delegate it to the subagent (resume the same `task_id` with specific test instructions and relevant references). Do not run large test suites in the primary session.
+- **Verification failed or incomplete:** Decide the remaining bounded scope, then start a fresh Implementer work package rather than resuming the retired `task_id`. Do not run large test suites in the primary session.
 - **BLOCKED / no verification ran:** Decide whether to provide missing input and re-delegate, or run a targeted check yourself.
 
 Then:
@@ -233,6 +239,7 @@ In EXECUTE mode, the subagent must:
 ## Rules
 
 - Subagent must not run Git operations (commit, rebase, push).
+- Start a fresh Implementer for each phase/work package. Reuse its `task_id` only for that package's BLUEPRINT → EXECUTE pair, then retire it after the digest.
 - Skill-first: when this skill is invoked, follow its MODE + output contracts before doing anything else.
 - Keep the Blueprint to **one** explicit approved broad/full verify command unless the work package DoD requires more. It must exercise the changed behavior (for example, run relevant tests, hit the affected endpoint, or trigger the modified flow), not just compile, lint, or type-check.
 - During implementation and fixing, run the smallest targeted tests that exercise or reproduce the changed or problematic behavior. Do not run the approved broad/full command after every change or use it as the first iterative diagnostic step when a targeted test is known or can be identified.

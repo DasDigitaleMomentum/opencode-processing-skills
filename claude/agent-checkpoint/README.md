@@ -18,15 +18,18 @@ when the Claude target is enabled (global mode only).
 | `.claude-plugin/plugin.json` | `$CLAUDE_HOME/skills/agent-checkpoint/` | Plugin manifest (name `agent-checkpoint`; loads as `agent-checkpoint@skills-dir`) |
 | `.mcp.json` | `$CLAUDE_HOME/skills/agent-checkpoint/` | Bundled stdio MCP server registration (`${CLAUDE_PLUGIN_ROOT}`-relative) |
 | `hooks/hooks.json` | `$CLAUDE_HOME/skills/agent-checkpoint/` | `SessionStart`/`SubagentStart`/`PreToolUse`/`SessionEnd` command hooks |
-| `scripts/checkpoint-hook.mjs` | `$CLAUDE_HOME/skills/agent-checkpoint/` | Lifecycle hook bridge (identity injection, instruction, sidecar cleanup) |
+| `scripts/checkpoint-hook.mjs` | `$CLAUDE_HOME/skills/agent-checkpoint/` | Lifecycle hook bridge (status writes, identity injection, instruction, sidecar cleanup) |
 | `scripts/checkpoint-statusline.mjs` | `$CLAUDE_HOME/skills/agent-checkpoint/` | Statusline wrapper (atomic telemetry sidecar) |
 | `instructions/checkpoint.md` | `$CLAUDE_HOME/skills/agent-checkpoint/` | Heartbeat instruction injected via `SessionStart`/`SubagentStart` |
 | `server/checkpoint-mcp-runtime.mjs` | `$CLAUDE_HOME/skills/agent-checkpoint/` | Tool/protocol runtime for the stdio MCP server |
 | `server/checkpoint-mcp-server.mjs` | `$CLAUDE_HOME/skills/agent-checkpoint/` | Executable stdio MCP server (NDJSON JSON-RPC) |
-| `server/checkpoint-core.mjs` | `$CLAUDE_HOME/skills/agent-checkpoint/` | Shared checkpoint-core (eight-field contract) |
+| `server/checkpoint-core.mjs` | `$CLAUDE_HOME/skills/agent-checkpoint/` | Shared checkpoint core for mixed checkpoint/status logs |
 | generated settings | `$CLAUDE_HOME/agent-checkpoint.settings.json` | Opt-in `statusLine` command only; base `settings.json` and `~/.claude.json` are never modified |
 
-Existing symlinks at any destination are preserved. Removing
+Existing symlinks are preserved. Because the bundled core must understand
+status events before the hook can emit them, a symlink at that core or any of
+its destination path components stops installation before any target mutation
+and prints update-or-replace-and-rerun guidance. Removing
 `$CLAUDE_HOME/skills/agent-checkpoint/` and
 `$CLAUDE_HOME/agent-checkpoint.settings.json` uninstalls the plugin; all other
 Claude configuration is untouched.
@@ -48,7 +51,9 @@ never replaces it):
 CLAUDE_CONFIG_DIR=<claude-home> claude --settings <claude-home>/agent-checkpoint.settings.json
 ```
 
-Restart Claude Code (or run `/reload-plugins`) after installation. New or
+For upgrades, stop the live dashboard and every writer-enabled harness before
+installation. Start the compatible dashboard with the installer's exact
+`Launch command`, then restart Claude Code (or run `/reload-plugins`). New or
 changed hooks require Claude Code's hook trust approval on first use.
 
 Once loaded, the plugin-scoped MCP tools are callable as
@@ -57,10 +62,12 @@ Once loaded, the plugin-scoped MCP tools are callable as
 
 ## How it works
 
-- `SessionStart` injects the checkpoint heartbeat instruction as
-  `additionalContext` and announces `Session checkpoint ID: <session_id>`.
-- `SubagentStart` injects the same instruction with the composite ID
-  `Session checkpoint ID: <session_id>--<agent_id>`.
+- `SessionStart` appends exact `session_status: open` for the native parent,
+  then injects the checkpoint heartbeat instruction as `additionalContext`
+  and announces `Session checkpoint ID: <session_id>`.
+- `SubagentStart` appends exact `open` for the composite subagent ID, then
+  injects the same instruction with `Session checkpoint ID:
+  <session_id>--<agent_id>`.
 - `PreToolUse` matching either scoped tool returns
   `permissionDecision: "allow"` paired with a full-input `updatedInput`:
   - `checkpoint` receives `_checkpoint_session_id` (native `session_id` for the
@@ -76,11 +83,16 @@ Once loaded, the plugin-scoped MCP tools are callable as
   root comes from `CLAUDE_PROJECT_DIR`, never from caller input.
   `checkpoint_path` returns the workspace-relative
   `.agent-checkpoints/<encoded-session-id>.jsonl` path without writing.
-- `SessionEnd` removes only the matching telemetry sidecar.
+- `SessionEnd` appends `closed` only for the native parent and removes only
+  that parent's telemetry sidecar. The pinned surface has no adopted graceful
+  subagent-end event, so a subagent start remains unclosed.
 
 Parent checkpoints log under `.agent-checkpoints/<session_id>.jsonl`;
 subagent checkpoints log separately under
 `.agent-checkpoints/<session_id>--<agent_id>.jsonl` (URL-encoded filename).
+`OPEN` means only that a start was observed with no later close; `CLOSED`
+means only that parent `SessionEnd` was observed, not that work succeeded.
+Crashes and unsupported child endings cannot synthesize `closed`.
 
 ## Telemetry semantics and limits
 
@@ -117,7 +129,9 @@ node --test claude/test/checkpoint-claude.test.mjs
 ```
 
 Covers plugin manifest/config shape, strict validation on the pinned CLI, MCP
-protocol round-trips, parent/subagent hook rewriting, statusline
+protocol round-trips, exact parent/subagent lifecycle writes, parent-only
+graceful close, parent/subagent hook rewriting, statusline
 valid/null/compaction/mismatch cases, atomic replacement, eight-field records
 with sourcing rules, installer isolation (byte-for-byte base-config
-preservation, symlink safety, disabled and project modes).
+preservation, required-core preflight, symlink safety, disabled and project
+modes), and mixed-log inspection parity.

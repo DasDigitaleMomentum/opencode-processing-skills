@@ -5,12 +5,19 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  analyzeCheckpointLog,
   analyzeCheckpoints,
+  appendSessionStatus,
   checkpoint,
   checkpointPath,
   createCheckpointRecord,
+  createSessionStatusRecord,
+  filterCheckpointRecords,
+  parseCheckpointLogJsonl,
   parseCheckpointJsonl,
+  reduceSessionStatus,
   validateCheckpointRecord,
+  validateSessionStatusRecord,
 } from "../src/index.js";
 
 const FIXED_TIME = "2026-07-26T14:30:00.000Z";
@@ -32,6 +39,13 @@ const legacyRecord = () => {
   delete record.session_title;
   return record;
 };
+const validStatusRecord = (status = "open", overrides = {}) => ({
+  timestamp: FIXED_TIME,
+  session_id: "ses_123",
+  event: "session_status",
+  status,
+  ...overrides,
+});
 
 const fixtures = JSON.parse(
   await readFile(new URL("../fixtures/checkpoint-cases.json", import.meta.url), "utf8"),
@@ -98,6 +112,31 @@ test("rejects missing, extra, and invalid record fields", () => {
   assert.throws(() => validateCheckpointRecord(partial), /legacy fields.*current fields/);
 });
 
+test("creates and validates only the exact session status schema", () => {
+  const record = createSessionStatusRecord({ sessionId: "ses_123", status: "open", clock });
+  assert.deepEqual(record, validStatusRecord());
+  assert.deepEqual(Object.keys(record), ["timestamp", "session_id", "event", "status"]);
+  assert.equal(validateSessionStatusRecord(record), record);
+  assert.doesNotThrow(() => validateSessionStatusRecord(validStatusRecord("closed")));
+  assert.throws(() => validateCheckpointRecord(record), /checkpoint record.*exactly|exactly.*legacy fields/);
+  assert.throws(() => validateSessionStatusRecord(validRecord()), /exactly/);
+
+  for (const invalid of [
+    null,
+    [],
+    { ...validStatusRecord(), extra: true },
+    { timestamp: FIXED_TIME, session_id: "ses_123", event: "session_status" },
+    validStatusRecord("OPEN"),
+    validStatusRecord("running"),
+    validStatusRecord("open", { event: "other" }),
+    validStatusRecord("open", { timestamp: "2026-07-26" }),
+    validStatusRecord("open", { session_id: "" }),
+  ]) {
+    assert.throws(() => validateSessionStatusRecord(invalid));
+  }
+  assert.throws(() => createSessionStatusRecord({ sessionId: "ses_123", status: "OPEN", clock }));
+});
+
 test("maps all shared session identifiers to stable relative paths", () => {
   for (const fixture of fixtures.pathCases) {
     assert.equal(checkpointPath(fixture.sessionId), fixture.path);
@@ -150,6 +189,55 @@ test("appends independently parseable records without rewriting prior bytes", as
   assert.deepEqual(Object.keys(records[1]), Object.keys(validRecord()));
 });
 
+test("appends checkpoint and status records in either order without rewriting prior bytes", async (context) => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "checkpoint-status-append-"));
+  context.after(() => rm(workspaceRoot, { recursive: true, force: true }));
+
+  await checkpoint({
+    workspaceRoot,
+    sessionId: "checkpoint-first",
+    done: "Initial work completed",
+    next: "Append status event",
+    clock,
+  });
+  const checkpointFirstPath = path.join(workspaceRoot, checkpointPath("checkpoint-first"));
+  const checkpointPrefix = await readFile(checkpointFirstPath, "utf8");
+  const appended = await appendSessionStatus({
+    workspaceRoot,
+    sessionId: "checkpoint-first",
+    status: "closed",
+    clock,
+  });
+  const checkpointThenStatus = await readFile(checkpointFirstPath, "utf8");
+  assert.equal(checkpointThenStatus.slice(0, checkpointPrefix.length), checkpointPrefix);
+  assert.deepEqual(appended, validStatusRecord("closed", { session_id: "checkpoint-first" }));
+  assert.equal(parseCheckpointLogJsonl(checkpointThenStatus).length, 2);
+
+  const statusFirstSession = "../status-first";
+  await appendSessionStatus({
+    workspaceRoot,
+    sessionId: statusFirstSession,
+    status: "open",
+    clock,
+  });
+  const statusFirstPath = path.join(workspaceRoot, checkpointPath(statusFirstSession));
+  assert.equal(path.dirname(statusFirstPath), path.join(workspaceRoot, ".agent-checkpoints"));
+  const statusPrefix = await readFile(statusFirstPath, "utf8");
+  await checkpoint({
+    workspaceRoot,
+    sessionId: statusFirstSession,
+    done: "Status event appended",
+    next: "Verify mixed parser",
+    clock,
+  });
+  const statusThenCheckpoint = await readFile(statusFirstPath, "utf8");
+  assert.equal(statusThenCheckpoint.slice(0, statusPrefix.length), statusPrefix);
+  assert.deepEqual(
+    parseCheckpointLogJsonl(statusThenCheckpoint).map((record) => record.event ?? "checkpoint"),
+    ["session_status", "checkpoint"],
+  );
+});
+
 test("strictly parses JSONL and rejects empty, blank, malformed, or invalid records", () => {
   const line = JSON.stringify(validRecord());
   assert.deepEqual(parseCheckpointJsonl(`${line}\n`), [validRecord()]);
@@ -169,6 +257,35 @@ test("parses legacy and mixed JSONL with null metadata without rewriting source 
   assert.equal(records[1].agent, "retriever");
   assert.equal(records[1].session_title, "Evidence lookup");
   assert.equal(jsonl.split("\n")[0], JSON.stringify(legacy));
+});
+
+test("strict mixed parsing preserves physical order and checkpoint-only compatibility", async () => {
+  const jsonl = await readFile(new URL("../fixtures/status/mixed.jsonl", import.meta.url), "utf8");
+  const mixed = parseCheckpointLogJsonl(jsonl);
+  assert.deepEqual(mixed.map((record) => record.event ?? "checkpoint"), [
+    "checkpoint", "session_status", "checkpoint", "session_status",
+  ]);
+  assert.equal(mixed[0].agent, null);
+  assert.equal(mixed[0].session_title, null);
+
+  const before = structuredClone(mixed);
+  const filtered = filterCheckpointRecords(mixed);
+  assert.equal(filtered.length, 2);
+  assert.deepEqual(parseCheckpointJsonl(jsonl), filtered);
+  assert.deepEqual(mixed, before);
+  assert.notEqual(filtered[0], mixed[0]);
+  assert.deepEqual(parseCheckpointJsonl(await readFile(
+    new URL("../fixtures/status/status-only.jsonl", import.meta.url),
+    "utf8",
+  )), []);
+
+  const malformed = await readFile(
+    new URL("../fixtures/status/malformed-status.jsonl", import.meta.url),
+    "utf8",
+  );
+  assert.throws(() => parseCheckpointLogJsonl(malformed), /exactly/);
+  assert.throws(() => parseCheckpointLogJsonl(`${JSON.stringify(validStatusRecord("open", { event: "other" }))}\n`), /event/);
+  assert.throws(() => parseCheckpointLogJsonl(`${JSON.stringify({ ...validStatusRecord(), status: undefined })}\n`), /exactly/);
 });
 
 test("matches every shared analysis fixture without mutating its records", () => {
@@ -214,4 +331,53 @@ test("analysis accepts raw JSONL and rejects absent session records", () => {
   assert.deepEqual(result.threeWord, { success: 2, count: 2, percent: 100 });
   assert.equal(result.threeWordPercent, 100);
   assert.throws(() => analyzeCheckpoints([]), /at least one/);
+});
+
+test("mixed analysis excludes statuses from checkpoint metrics and adjacency", async () => {
+  const jsonl = await readFile(new URL("../fixtures/status/mixed.jsonl", import.meta.url), "utf8");
+  const result = analyzeCheckpointLog(jsonl);
+  assert.equal(result.records.length, 4);
+  assert.equal(result.checkpoints.length, 2);
+  assert.equal(result.latestEvent.status, "closed");
+  assert.equal(result.latestStatusEvent.status, "closed");
+  assert.equal(result.latestCheckpoint.done, "Continue planned work");
+  assert.equal(result.state, "CLOSED");
+  assert.deepEqual(result.analysis.chain, { success: 1, count: 1, percent: 100 });
+  assert.deepEqual(result.analysis.work, { success: 2, count: 2, percent: 100 });
+  assert.deepEqual(result.analysis.threeWord, { success: 4, count: 4, percent: 100 });
+  assert.deepEqual(analyzeCheckpoints(result.records).chain, result.analysis.chain);
+});
+
+test("status-only analysis has neutral checkpoint metrics", async () => {
+  const jsonl = await readFile(new URL("../fixtures/status/status-only.jsonl", import.meta.url), "utf8");
+  const result = analyzeCheckpointLog(jsonl);
+  assert.equal(result.state, "OPEN");
+  assert.equal(result.latestCheckpoint, null);
+  assert.equal(result.latestStatusEvent.status, "open");
+  assert.deepEqual(result.analysis.chain, { success: 0, count: 0, percent: null });
+  assert.deepEqual(result.analysis.work, { success: 0, count: 0, percent: null });
+  assert.deepEqual(result.analysis.threeWord, { success: 0, count: 0, percent: null });
+  assert.throws(() => analyzeCheckpoints(result.records), /at least one/);
+});
+
+test("lifecycle reduction is idempotent and follows physical rather than timestamp order", async () => {
+  for (const fixture of fixtures.statusReductionCases) {
+    const records = fixture.statuses.map((status, index) => validStatusRecord(status, {
+      timestamp: `2026-07-26T14:30:0${index}.000Z`,
+    }));
+    assert.equal(reduceSessionStatus(records), fixture.expected, fixture.name);
+  }
+
+  const duplicate = await readFile(
+    new URL("../fixtures/status/duplicate-status.jsonl", import.meta.url),
+    "utf8",
+  );
+  assert.equal(reduceSessionStatus(duplicate), "OPEN");
+  const reopened = await readFile(
+    new URL("../fixtures/status/reopened-physical-order.jsonl", import.meta.url),
+    "utf8",
+  );
+  const analysis = analyzeCheckpointLog(reopened);
+  assert.equal(analysis.state, "OPEN");
+  assert.equal(analysis.latestEvent.timestamp, "2026-07-26T10:00:01.000Z");
 });

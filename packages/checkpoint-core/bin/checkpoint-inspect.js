@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { analyzeCheckpoints, parseCheckpointJsonl } from "../src/index.js";
+import { analyzeCheckpointLog } from "../src/index.js";
 
 export function formatContext(contextUsed) {
   return contextUsed === null ? "unknown" : `${Number((contextUsed * 100).toFixed(2))}%`;
@@ -19,21 +19,36 @@ export function formatMetric({ success, count, percent }) {
   return `${success}/${count} (${formatPercent(percent)})`;
 }
 
-export function formatCheckpointSummary(selectedPath, records, analysis) {
-  const latest = records.at(-1);
+export function formatCheckpointSummary(selectedPath, input, legacyAnalysis) {
+  const log = Array.isArray(input)
+    ? {
+        latestEvent: input.at(-1),
+        latestStatusEvent: null,
+        latestCheckpoint: input.at(-1),
+        state: "UNKNOWN",
+        analysis: legacyAnalysis,
+      }
+    : input;
+  const latestEvent = log.latestEvent;
+  const latestStatus = log.latestStatusEvent;
+  const latestCheckpoint = log.latestCheckpoint;
   return [
     `File: ${selectedPath}`,
-    `Session: ${latest.session_id}`,
-    `Agent: ${latest.agent ?? "-"}`,
-    `Name/title: ${latest.session_title ?? "-"}`,
-    `Latest timestamp: ${latest.timestamp}`,
-    `Last attempted: ${latest.done}`,
-    `Next announced: ${latest.next}`,
-    `Work status: ${latest.step_failed ? "FAILED" : "COMPLETED"}`,
-    `Context used: ${formatContext(latest.context_used)}`,
-    `Chain: ${formatMetric(analysis.chain)}`,
-    `Work: ${formatMetric(analysis.work)}`,
-    `Three-word compliance: ${formatMetric(analysis.threeWord)}`,
+    `Session: ${latestEvent.session_id}`,
+    `Session state: ${log.state}`,
+    `Latest event timestamp: ${latestEvent.timestamp}`,
+    `Latest status timestamp: ${latestStatus?.timestamp ?? "-"}`,
+    `Latest raw status: ${latestStatus?.status ?? "-"}`,
+    `Agent: ${latestCheckpoint?.agent ?? "-"}`,
+    `Name/title: ${latestCheckpoint?.session_title ?? "-"}`,
+    `Latest checkpoint timestamp: ${latestCheckpoint?.timestamp ?? "-"}`,
+    `Last attempted: ${latestCheckpoint?.done ?? "-"}`,
+    `Next announced: ${latestCheckpoint?.next ?? "-"}`,
+    `Work status: ${latestCheckpoint ? (latestCheckpoint.step_failed ? "FAILED" : "COMPLETED") : "-"}`,
+    `Context used: ${formatContext(latestCheckpoint?.context_used ?? null)}`,
+    `Chain: ${formatMetric(log.analysis.chain)}`,
+    `Work: ${formatMetric(log.analysis.work)}`,
+    `Three-word compliance: ${formatMetric(log.analysis.threeWord)}`,
   ].join("\n");
 }
 
@@ -51,9 +66,8 @@ export async function main(args, io = {}) {
     const selectedPath = args[0];
     const filePath = path.resolve(cwd, selectedPath);
     const jsonl = await loadFile(filePath, "utf8");
-    const records = parseCheckpointJsonl(jsonl);
-    const analysis = analyzeCheckpoints(records);
-    writeOut(`${formatCheckpointSummary(selectedPath, records, analysis)}\n`);
+    const analysis = analyzeCheckpointLog(jsonl);
+    writeOut(`${formatCheckpointSummary(selectedPath, analysis)}\n`);
     return 0;
   } catch (error) {
     writeError(`checkpoint-inspect: ${error.message}\n`);

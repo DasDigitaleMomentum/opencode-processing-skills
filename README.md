@@ -42,11 +42,16 @@ cp config.yaml.example config.yaml   # optional: set models
 # OR: ./install.sh --project         # local install into ./.opencode/
 ```
 
-Then restart OpenCode and select `@maintainer`.
-The installer also prints the exact command for the live `checkpoint-watch` dashboard. Run that command from the project you want to observe.
+For an upgrade, first stop the live checkpoint dashboard and every running
+OpenCode, Codex, Claude Code, or Hermes session using the checkpoint adapter.
+After installation, run the exact `checkpoint-watch` command printed by the
+installer, then restart the enabled harnesses and select `@maintainer` in
+OpenCode.
 On OpenCode v1.18.2+, set `"subagent_depth": 2` for worker-to-retriever handoffs. Older versions do not support this setting and generally allow nested tasks through permissions alone.
 If Codex, Claude Code, Cursor, or Hermes are installed locally, skills are synced to their config directories during install.
-Hermes support covers installation, parsing, and discovery only; it does not port OpenCode-specific delegate personas, `Task` calls, or `task_id` continuation contracts.
+Hermes support includes the native checkpoint plugin and conservative
+parent-session `open` events; it does not port OpenCode-specific delegate
+personas, `Task` calls, or `task_id` continuation contracts.
 
 → [Full installation guide](docs/installation.md)
 
@@ -83,7 +88,9 @@ Everything persists to files. New session? Read the plan and continue.
 
 ## Live agent checkpoints
 
-The OpenCode installer adds native `checkpoint` and `checkpoint_path` tools to parents and subagents. Each session appends six-field JSONL records below the active project:
+The adapters add `checkpoint` and `checkpoint_path` tools to parents and
+subagents. Logs below the active project accept exact legacy six-field and
+current eight-field checkpoints plus four-field `session_status` events:
 
 ```text
 .agent-checkpoints/<session-id>.jsonl
@@ -101,7 +108,12 @@ node packages/checkpoint-core/bin/checkpoint-watch.js
 node packages/checkpoint-core/bin/checkpoint-watch.js --once
 ```
 
-For global or project-local installations, use the exact `Launch command:` printed by `./install.sh` or `./install.sh --project`. The dashboard refreshes live and shows session age, ACTIVE/STALE state, chain and three-word compliance, work status, context, done, and next. ACTIVE/STALE is based only on checkpoint age, not process liveness.
+For global or project-local installations, use the exact `Launch command:`
+printed by `./install.sh` or `./install.sh --project`. The dashboard refreshes
+live and shows informational age, explicit `OPEN`/`CLOSED`/`UNKNOWN` state,
+chain and three-word compliance, work status, context, done, and next. State
+comes only from observed lifecycle events; it never infers process liveness
+from age.
 
 → [Checkpoint installation and dashboard quickstart](docs/installation.md#checkpoint-dashboard-quickstart)
 
@@ -117,7 +129,7 @@ For global or project-local installations, use the exact `Launch command:` print
 
 **Gated execution.** Subagents propose a blueprint (step list) before writing any code. The primary reviews and approves. Then execution happens. The blueprint acts as Chain-of-Thought — it forces structured thinking before implementation.
 
-**Reuse review context.** Accepted related findings return to the same reviewer session through `review-fix`, including multi-file runtime fixes. A new implementation or authoring session is reserved for changed scope/objective, missing context, new primary decisions, or an explicit fresh perspective. Further reviews are optional and never loop automatically.
+**Reuse review context conditionally.** Accepted related findings may return to the same reviewer through `review-fix` when retained reasoning materially helps, including multi-file runtime fixes. This does not carry authoring or implementation sessions across phases/work packages; further reviews are optional and never loop automatically.
 
 **Keep reviews disciplined.** No Gold-Plating. No Adversarial Reviewing. No Scope Creep. Report evidence-backed defects and required related changes, not gotchas or invented work.
 

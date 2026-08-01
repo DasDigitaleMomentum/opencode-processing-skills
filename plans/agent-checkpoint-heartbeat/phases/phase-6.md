@@ -38,7 +38,7 @@ PydanticAI validates that the simple contract is usable outside CLI coding harne
 
 ## Prerequisites
 
-- [ ] Phase 3 authorizes later harness execution.
+- [x] Phase 3 authorizes later harness execution.
 - [ ] PydanticAI primary tool and usage APIs are revalidated before implementation.
 
 ## Deliverables

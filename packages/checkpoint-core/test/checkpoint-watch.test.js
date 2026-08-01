@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { mkdtemp, mkdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -27,11 +27,20 @@ function record(session, timestamp, overrides = {}) {
   };
 }
 
+function status(session, timestamp, value) {
+  return {
+    timestamp,
+    session_id: session,
+    event: "session_status",
+    status: value,
+  };
+}
+
 async function writeLog(root, name, records) {
   await writeFile(path.join(root, ".agent-checkpoints", name), `${records.map(JSON.stringify).join("\n")}\n`);
 }
 
-test("rows sort by latest activity and separate age, state, metrics, status, and context", async (t) => {
+test("rows sort by latest event and separate explicit state, age, metrics, status, and context", async (t) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-rows-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, ".agent-checkpoints"));
@@ -41,12 +50,17 @@ test("rows sort by latest activity and separate age, state, metrics, status, and
       done: "broken chain here", next: "Correct failed work", step_failed: true, context_used: 0.5,
       agent: "implementer", session_title: "Checkpoint TUI refinement",
     }),
+    status("older", "2026-07-26T10:00:11.000Z", "closed"),
   ]);
-  await writeLog(root, "newer.jsonl", [record("newer", "2026-07-26T10:00:29.500Z")]);
+  await writeLog(root, "newer.jsonl", [
+    record("newer", "2026-07-26T10:00:29.000Z"),
+    status("newer", "2026-07-26T10:00:29.500Z", "open"),
+  ]);
 
   const rows = await loadSessionRows(root, { now: Date.parse("2026-07-26T10:00:30.000Z"), staleMs: 10000 });
   assert.deepEqual(rows.map((row) => row.session), ["newer", "older"]);
-  assert.deepEqual(rows.map((row) => row.state), ["ACTIVE", "STALE"]);
+  assert.deepEqual(rows.map((row) => row.state), ["OPEN", "CLOSED"]);
+  assert.deepEqual(rows.map((row) => row.ageMs), [500, 19000]);
   assert.equal(rows[0].context, "unknown");
   assert.equal(rows[1].context, "50%");
   assert.equal(rows[1].work, "1/2 (50%)");
@@ -56,6 +70,62 @@ test("rows sort by latest activity and separate age, state, metrics, status, and
   assert.equal(rows[1].title, "Checkpoint TUI refinement");
   assert.equal(rows[0].agent, "-");
   assert.equal(rows[0].title, "-");
+});
+
+test("age and stale thresholds never infer or change lifecycle state", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-state-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, ".agent-checkpoints"));
+  await writeLog(root, "old-open.jsonl", [
+    status("old-open", "2026-07-26T09:00:00.000Z", "open"),
+  ]);
+  await writeLog(root, "fresh-closed.jsonl", [
+    status("fresh-closed", "2026-07-26T10:00:29.999Z", "closed"),
+  ]);
+  await writeLog(root, "legacy.jsonl", [record("legacy", "2026-07-26T10:00:29.999Z")]);
+
+  const now = Date.parse("2026-07-26T10:00:30.000Z");
+  const shortReference = await loadSessionRows(root, { now, staleMs: 1 });
+  const longReference = await loadSessionRows(root, { now, staleMs: 10000000 });
+  const states = (rows) => Object.fromEntries(rows.map((row) => [row.session, row.state]));
+  assert.deepEqual(states(shortReference), {
+    "fresh-closed": "CLOSED",
+    legacy: "UNKNOWN",
+    "old-open": "OPEN",
+  });
+  assert.deepEqual(states(longReference), states(shortReference));
+});
+
+test("status-only, duplicate, and reopened rows use neutral checkpoint details", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-status-only-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, ".agent-checkpoints"));
+  await writeLog(root, "status-only.jsonl", [status("status-only", "2026-07-26T10:00:00.000Z", "open")]);
+  await writeLog(root, "duplicate.jsonl", [
+    status("duplicate", "2026-07-26T10:00:01.000Z", "open"),
+    status("duplicate", "2026-07-26T10:00:02.000Z", "open"),
+  ]);
+  await writeLog(root, "reopened.jsonl", [
+    status("reopened", "2026-07-26T10:00:05.000Z", "closed"),
+    status("reopened", "2026-07-26T10:00:03.000Z", "open"),
+  ]);
+
+  const rows = await loadSessionRows(root, { now: Date.parse("2026-07-26T10:00:10.000Z") });
+  assert.deepEqual(Object.fromEntries(rows.map((row) => [row.session, row.state])), {
+    reopened: "OPEN",
+    duplicate: "OPEN",
+    "status-only": "OPEN",
+  });
+  for (const row of rows) {
+    assert.equal(row.chain, "0/0 (n/a)");
+    assert.equal(row.work, "0/0 (n/a)");
+    assert.equal(row.words, "0/0 (n/a)");
+    assert.equal(row.context, "unknown");
+    assert.equal(row.agent, "-");
+    assert.equal(row.title, "-");
+    assert.equal(row.done, "-");
+    assert.equal(row.next, "-");
+  }
 });
 
 test("malformed files become concise error rows and only direct regular JSONL files are read", async (t) => {
@@ -74,9 +144,32 @@ test("malformed files become concise error rows and only direct regular JSONL fi
   assert.match(rows[1].next, /line 1/);
 });
 
+test("unreadable files become ERROR rows without hiding valid sessions", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-unreadable-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const checkpointRoot = path.join(root, ".agent-checkpoints");
+  await mkdir(checkpointRoot);
+  await writeLog(root, "good.jsonl", [status("good", "2026-07-26T10:00:00.000Z", "open")]);
+  await writeFile(path.join(checkpointRoot, "unreadable.jsonl"), "sentinel");
+  const rows = await loadSessionRows(root, { now: Date.parse("2026-07-26T10:00:01.000Z") }, {
+    readFile: async (filePath, encoding) => {
+      if (filePath.endsWith("unreadable.jsonl")) {
+        const error = new Error("permission denied");
+        error.code = "EACCES";
+        throw error;
+      }
+      return readFile(filePath, encoding);
+    },
+  });
+  assert.deepEqual(rows.map((row) => row.session), ["good", "unreadable"]);
+  assert.equal(rows[0].state, "OPEN");
+  assert.equal(rows[1].state, "ERROR");
+  assert.match(rows[1].next, /permission denied/);
+});
+
 test("dashboard truncates deterministically within terminal width", () => {
   const row = {
-    session: "session-name-that-is-much-too-long", ageMs: 2000, state: "ACTIVE",
+    session: "session-name-that-is-much-too-long", ageMs: 2000, state: "UNKNOWN",
     chain: "100%", words: "100%", work: "COMPLETED", context: "unknown",
     agent: "implementer", title: "A human-readable session title",
     done: "A deliberately oversized completed work description",
@@ -98,7 +191,7 @@ test("dashboard distributes added terminal width across title, done, and next", 
   const row = {
     session: "session-with-long-id", agent: "maintainer-direct",
     title: "A descriptive human readable checkpoint session title",
-    ageMs: 2000, state: "ACTIVE", chain: "1/1 (100%)", work: "2/2 (100%)",
+    ageMs: 2000, state: "UNKNOWN", chain: "1/1 (100%)", work: "2/2 (100%)",
     words: "4/4 (100%)", context: "50%",
     done: "A deliberately oversized completed work description",
     next: "A deliberately oversized next work description",
@@ -128,7 +221,7 @@ test("once mode is deterministic and emits no terminal control sequences", async
     env: {}, stdout: (text) => { stdout += text; },
   });
   assert.equal(status, 0);
-  assert.match(stdout, /once.*1s.*ACTIVE/);
+  assert.match(stdout, /once.*1s.*UNKNOWN/);
   assert.doesNotMatch(stdout, /\x1b/);
 });
 
@@ -141,6 +234,8 @@ test("options support environment defaults, CLI overrides, help, and concise val
   let stdout = "";
   assert.equal(await main(["--help"], { env: {}, stdout: (text) => { stdout += text; } }), 0);
   assert.match(stdout, /does not prove process liveness/);
+  assert.match(stdout, /explicit session_status events/);
+  assert.match(stdout, /Informational latest-event age reference/);
   assert.match(stdout, /CHECKPOINT_WATCH_STALE_MS/);
 });
 

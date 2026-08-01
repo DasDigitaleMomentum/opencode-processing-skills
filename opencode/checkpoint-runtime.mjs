@@ -132,9 +132,12 @@ export function createOpenCodeCheckpointPlugin({
     checkpointCore === null ||
     typeof checkpointCore !== "object" ||
     typeof checkpointCore.checkpoint !== "function" ||
-    typeof checkpointCore.checkpointPath !== "function"
+    typeof checkpointCore.checkpointPath !== "function" ||
+    typeof checkpointCore.appendSessionStatus !== "function"
   ) {
-    throw new TypeError("checkpointCore must provide checkpoint and checkpointPath");
+    throw new TypeError(
+      "checkpointCore must provide checkpoint, checkpointPath, and appendSessionStatus",
+    );
   }
   if (typeof getContextTelemetry !== "function") {
     throw new TypeError("getContextTelemetry must be a function");
@@ -145,6 +148,16 @@ export function createOpenCodeCheckpointPlugin({
 
   return async function OpenCodeCheckpointPlugin(pluginContext = {}) {
     return {
+      async event({ event } = {}) {
+        if (event?.type !== "session.created") return;
+        const sessionId = nonEmptyString(event?.properties?.info?.id);
+        if (sessionId === null) return;
+        await checkpointCore.appendSessionStatus({
+          workspaceRoot: pluginContext.worktree,
+          sessionId,
+          status: "open",
+        });
+      },
       tool: {
         checkpoint: tool({
           description:

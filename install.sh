@@ -926,6 +926,78 @@ install_opencode_checkpoint_file() {
     echo "  Installed: $label"
 }
 
+required_checkpoint_reader_symlink_error() {
+    local dest="$1"
+    local label="$2"
+
+    echo "ERROR: required checkpoint reader/core is a symlink: $dest ($label)" >&2
+    echo "Update the user-managed symlink target to the compatible checkpoint reader/core, or deliberately remove/replace the symlink, then rerun install.sh." >&2
+    return 1
+}
+
+preflight_required_checkpoint_reader() {
+    local dest="$1"
+    local label="$2"
+
+    if [ -L "$dest" ]; then
+        required_checkpoint_reader_symlink_error "$dest" "$label"
+    fi
+}
+
+preflight_required_checkpoint_reader_components() {
+    local base="$1"
+    local relative_path="$2"
+    local label="$3"
+    local component
+    local candidate="$base"
+    local -a components
+
+    IFS='/' read -r -a components <<< "$relative_path"
+    for component in "${components[@]}"; do
+        [ -n "$component" ] || continue
+        candidate="${candidate%/}/$component"
+        preflight_required_checkpoint_reader "$candidate" "$label"
+    done
+}
+
+preflight_checkpoint_reader_dependencies() {
+    local target_home="$1"
+
+    preflight_required_checkpoint_reader_components \
+        "$target_home" \
+        "lib/opencode-processing-skills/checkpoint-core.mjs" \
+        "OpenCode shared checkpoint core"
+    preflight_required_checkpoint_reader_components \
+        "$target_home" \
+        "lib/opencode-processing-skills/checkpoint-watch" \
+        "OpenCode checkpoint watcher tree"
+    preflight_required_checkpoint_reader_components \
+        "$target_home" \
+        "lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js" \
+        "OpenCode checkpoint watcher executable"
+    preflight_required_checkpoint_reader_components \
+        "$target_home" \
+        "lib/opencode-processing-skills/checkpoint-watch/src/index.js" \
+        "OpenCode checkpoint watcher core"
+
+    if [ "$PROJECT_MODE" = false ] && [ "$codex_enabled" = "1" ]; then
+        local adapter_dir="$CODEX_HOME/agent-checkpoint"
+        preflight_required_checkpoint_reader \
+            "$adapter_dir" \
+            "Codex user-managed adapter directory with bundled core"
+        preflight_required_checkpoint_reader \
+            "$adapter_dir/checkpoint-core.mjs" \
+            "Codex bundled checkpoint core"
+    fi
+
+    if [ "$PROJECT_MODE" = false ] && [ "$claude_enabled" = "1" ]; then
+        preflight_required_checkpoint_reader_components \
+            "$CLAUDE_HOME" \
+            "skills/agent-checkpoint/server/checkpoint-core.mjs" \
+            "Claude bundled checkpoint core"
+    fi
+}
+
 install_opencode_checkpoint() {
     local target_home="$1"
     local support_dir="$target_home/lib/opencode-processing-skills"
@@ -934,14 +1006,6 @@ install_opencode_checkpoint() {
     echo "Step 5: Installing OpenCode checkpoint plugin to $target_home"
     mkdir -p "$target_home/plugins" "$support_dir"
 
-    install_opencode_checkpoint_file \
-        "$SCRIPT_DIR/opencode/checkpoint-plugin.ts" \
-        "$target_home/plugins/checkpoint.ts" \
-        "plugins/checkpoint.ts"
-    install_opencode_checkpoint_file \
-        "$SCRIPT_DIR/opencode/checkpoint-runtime.mjs" \
-        "$support_dir/checkpoint-runtime.mjs" \
-        "lib/opencode-processing-skills/checkpoint-runtime.mjs"
     install_opencode_checkpoint_file \
         "$SCRIPT_DIR/packages/checkpoint-core/src/index.js" \
         "$support_dir/checkpoint-core.mjs" \
@@ -959,6 +1023,14 @@ install_opencode_checkpoint() {
             "$watch_dir/src/index.js" \
             "lib/opencode-processing-skills/checkpoint-watch/src/index.js"
     fi
+    install_opencode_checkpoint_file \
+        "$SCRIPT_DIR/opencode/checkpoint-runtime.mjs" \
+        "$support_dir/checkpoint-runtime.mjs" \
+        "lib/opencode-processing-skills/checkpoint-runtime.mjs"
+    install_opencode_checkpoint_file \
+        "$SCRIPT_DIR/opencode/checkpoint-plugin.ts" \
+        "$target_home/plugins/checkpoint.ts" \
+        "plugins/checkpoint.ts"
     echo ""
 }
 
@@ -1011,28 +1083,34 @@ install_codex_checkpoint() {
         echo "  ERROR: node not found on PATH; cannot configure the Codex checkpoint MCP server." >&2
         return 1
     fi
-    mkdir -p "$adapter_dir"
+    if [ -L "$adapter_dir" ]; then
+        required_checkpoint_reader_symlink_error \
+            "$adapter_dir" \
+            "Codex user-managed adapter directory with bundled core"
+    else
+        mkdir -p "$adapter_dir"
 
-    install_opencode_checkpoint_file \
-        "$SCRIPT_DIR/codex/checkpoint-hook.mjs" \
-        "$adapter_dir/checkpoint-hook.mjs" \
-        "agent-checkpoint/checkpoint-hook.mjs"
-    install_opencode_checkpoint_file \
-        "$SCRIPT_DIR/codex/checkpoint-instruction.md" \
-        "$adapter_dir/checkpoint-instruction.md" \
-        "agent-checkpoint/checkpoint-instruction.md"
-    install_opencode_checkpoint_file \
-        "$SCRIPT_DIR/codex/checkpoint-mcp-runtime.mjs" \
-        "$adapter_dir/checkpoint-mcp-runtime.mjs" \
-        "agent-checkpoint/checkpoint-mcp-runtime.mjs"
-    install_opencode_checkpoint_file \
-        "$SCRIPT_DIR/codex/checkpoint-mcp-server.mjs" \
-        "$adapter_dir/checkpoint-mcp-server.mjs" \
-        "agent-checkpoint/checkpoint-mcp-server.mjs"
-    install_opencode_checkpoint_file \
-        "$SCRIPT_DIR/packages/checkpoint-core/src/index.js" \
-        "$adapter_dir/checkpoint-core.mjs" \
-        "agent-checkpoint/checkpoint-core.mjs"
+        install_opencode_checkpoint_file \
+            "$SCRIPT_DIR/packages/checkpoint-core/src/index.js" \
+            "$adapter_dir/checkpoint-core.mjs" \
+            "agent-checkpoint/checkpoint-core.mjs"
+        install_opencode_checkpoint_file \
+            "$SCRIPT_DIR/codex/checkpoint-instruction.md" \
+            "$adapter_dir/checkpoint-instruction.md" \
+            "agent-checkpoint/checkpoint-instruction.md"
+        install_opencode_checkpoint_file \
+            "$SCRIPT_DIR/codex/checkpoint-mcp-runtime.mjs" \
+            "$adapter_dir/checkpoint-mcp-runtime.mjs" \
+            "agent-checkpoint/checkpoint-mcp-runtime.mjs"
+        install_opencode_checkpoint_file \
+            "$SCRIPT_DIR/codex/checkpoint-mcp-server.mjs" \
+            "$adapter_dir/checkpoint-mcp-server.mjs" \
+            "agent-checkpoint/checkpoint-mcp-server.mjs"
+        install_opencode_checkpoint_file \
+            "$SCRIPT_DIR/codex/checkpoint-hook.mjs" \
+            "$adapter_dir/checkpoint-hook.mjs" \
+            "agent-checkpoint/checkpoint-hook.mjs"
+    fi
 
     if [ -L "$profile_file" ]; then
         echo "  Symlink (skipping): agent-checkpoint.config.toml"
@@ -1091,6 +1169,12 @@ install_claude_checkpoint() {
     else
         mkdir -p "$plugin_dest/.claude-plugin" "$plugin_dest/hooks" \
             "$plugin_dest/instructions" "$plugin_dest/scripts" "$plugin_dest/server"
+        # Install the required mixed-log core before any hook, manifest, or
+        # settings asset can make this adapter status-capable.
+        install_opencode_checkpoint_file \
+            "$SCRIPT_DIR/packages/checkpoint-core/src/index.js" \
+            "$plugin_dest/server/checkpoint-core.mjs" \
+            "skills/agent-checkpoint/server/checkpoint-core.mjs"
         install_opencode_checkpoint_file \
             "$plugin_src/.claude-plugin/plugin.json" \
             "$plugin_dest/.claude-plugin/plugin.json" \
@@ -1123,10 +1207,6 @@ install_claude_checkpoint() {
             "$plugin_src/server/checkpoint-mcp-server.mjs" \
             "$plugin_dest/server/checkpoint-mcp-server.mjs" \
             "skills/agent-checkpoint/server/checkpoint-mcp-server.mjs"
-        install_opencode_checkpoint_file \
-            "$SCRIPT_DIR/packages/checkpoint-core/src/index.js" \
-            "$plugin_dest/server/checkpoint-core.mjs" \
-            "skills/agent-checkpoint/server/checkpoint-core.mjs"
         install_opencode_checkpoint_file \
             "$plugin_src/README.md" \
             "$plugin_dest/README.md" \
@@ -1198,8 +1278,25 @@ hermes_enable_plugin_entry() {
     # exit 4 = plugin present under plugins.disabled.
     awk -v name="$name" '
         BEGIN {
-            item_re = "^[[:space:]]*-[[:space:]]*" name "[[:space:]]*(#.*)?$"
-            bound_re = "[[,][[:space:]]*" name "[[:space:]]*[],]"
+            squote = sprintf("%c", 39)
+        }
+        function trim(value) {
+            sub(/^[[:space:]]+/, "", value)
+            sub(/[[:space:]]+$/, "", value)
+            return value
+        }
+        function is_exact_name(value) {
+            value = trim(value)
+            return value == name || value == "\"" name "\"" || value == squote name squote
+        }
+        function inline_has_name(value, count, items, i) {
+            sub(/^[[:space:]]*\[[[:space:]]*/, "", value)
+            sub(/[[:space:]]*\][[:space:]]*(#.*)?$/, "", value)
+            count = split(value, items, ",")
+            for (i = 1; i <= count; i++) {
+                if (is_exact_name(items[i])) return 1
+            }
+            return 0
         }
         function stop_disabled() {
             print "install.sh: " name " is listed under plugins.disabled in " FILENAME \
@@ -1215,12 +1312,17 @@ hermes_enable_plugin_entry() {
             exit 3
         }
         in_disabled && /^[[:space:]]*-[[:space:]]/ {
-            if ($0 ~ item_re) stop_disabled()
+            item = $0
+            sub(/^[[:space:]]*-[[:space:]]*/, "", item)
+            sub(/[[:space:]]*(#.*)?$/, "", item)
+            if (is_exact_name(item)) stop_disabled()
             next
         }
         in_disabled { in_disabled = 0 }
         in_plugins && /^[[:space:]]+disabled:/ {
-            if ($0 ~ bound_re) stop_disabled()
+            inline = $0
+            sub(/^[[:space:]]+disabled:[[:space:]]*/, "", inline)
+            if (inline ~ /^\[/ && inline_has_name(inline)) stop_disabled()
             if ($0 ~ /^[[:space:]]+disabled:[[:space:]]*(#.*)?$/) in_disabled = 1
             next
         }
@@ -1309,6 +1411,10 @@ install_hermes_checkpoint() {
             "$plugin_dest/agent_checkpoint.py" \
             "plugins/agent-checkpoint/agent_checkpoint.py"
         install_opencode_checkpoint_file \
+            "$plugin_src/checkpoint-instruction.md" \
+            "$plugin_dest/checkpoint-instruction.md" \
+            "plugins/agent-checkpoint/checkpoint-instruction.md"
+        install_opencode_checkpoint_file \
             "$plugin_src/__init__.py" \
             "$plugin_dest/__init__.py" \
             "plugins/agent-checkpoint/__init__.py"
@@ -1320,6 +1426,14 @@ install_hermes_checkpoint() {
     hermes_enable_plugin_entry "$hermes_home/config.yaml" "agent-checkpoint"
     echo ""
 }
+
+echo "Checkpoint adapter upgrade prerequisite:"
+echo "  Before installation, stop every live checkpoint-watch dashboard and every running OpenCode, 'codex --profile-v2 agent-checkpoint', Claude Code, or Hermes session that uses the checkpoint adapter."
+echo "  Keep those readers and writers stopped until installation completes and the compatible dashboard is started first."
+echo ""
+
+# Validation-only compatibility gate: stop before Step 1 can mutate any target.
+preflight_checkpoint_reader_dependencies "$OPENCODE_TARGET_HOME"
 
 # --- Step 1: Install Skills ---
 step1_count=0
@@ -1480,17 +1594,20 @@ echo "Next steps:"
 echo "  Checkpoint plugin: $OPENCODE_TARGET_HOME/plugins/checkpoint.ts"
 echo "  Checkpoint support: $OPENCODE_TARGET_HOME/lib/opencode-processing-skills/"
 echo "  Checkpoint watcher: $OPENCODE_TARGET_HOME/lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js"
+echo "  Startup order (dashboard before status-writing harnesses):"
+echo "  1. Start the compatible checkpoint dashboard first:"
 echo "  Launch command: node \"$OPENCODE_TARGET_HOME/lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js\""
-echo "  Restart OpenCode to load the checkpoint and checkpoint_path tools."
-echo "  1. In OpenCode, select the new primary agent (e.g. '@maintainer')"
-echo "  2. Generate project documentation: load the 'generate-docs' skill"
-echo "  3. Create an implementation plan: load the 'create-plan' skill"
-echo "  4. OpenCode v1.18.2+: configure top-level subagent_depth: 2 for nested delegation (older versions do not support this setting)"
+echo "  2. Restart OpenCode to load the checkpoint and checkpoint_path tools and lifecycle writer."
+echo "  OpenCode usage: select the new primary agent (e.g. '@maintainer')"
+echo "  Generate project documentation: load the 'generate-docs' skill"
+echo "  Create an implementation plan: load the 'create-plan' skill"
+echo "  OpenCode v1.18.2+: configure top-level subagent_depth: 2 for nested delegation (older versions do not support this setting)"
 if [ "$PROJECT_MODE" = false ] && [ "$codex_enabled" = "1" ]; then
     echo ""
     echo "Codex:"
     echo "  Checkpoint adapter: $CODEX_HOME/agent-checkpoint/"
     echo "  Profile:            $CODEX_HOME/agent-checkpoint.config.toml"
+    echo "  3. Start/restart Codex only after the dashboard:"
     echo "  Activate with:      codex --profile-v2 agent-checkpoint"
     echo "  Base config.toml left untouched; approve the new hooks on first run."
 fi
@@ -1499,6 +1616,7 @@ if [ "$PROJECT_MODE" = false ] && [ "$claude_enabled" = "1" ]; then
     echo "Claude Code:"
     echo "  Checkpoint plugin: $CLAUDE_HOME/skills/agent-checkpoint/"
     echo "  Settings:          $CLAUDE_HOME/agent-checkpoint.settings.json"
+    echo "  4. Start/restart Claude Code only after the dashboard:"
     echo "  Activate with:     CLAUDE_CONFIG_DIR=\"$CLAUDE_HOME\" claude --settings \"$CLAUDE_HOME/agent-checkpoint.settings.json\""
     echo "  Base settings.json and ~/.claude.json left untouched; approve the new hooks on first run."
     echo "  Restart Claude Code (or run /reload-plugins) to load the plugin."
@@ -1507,6 +1625,7 @@ if [ "$PROJECT_MODE" = false ] && [ "$hermes_enabled" = "1" ]; then
     echo ""
     echo "Hermes:"
     echo "  Checkpoint plugin: $HERMES_HOME/plugins/agent-checkpoint/"
+    echo "  5. Start/restart Hermes only after the dashboard:"
     echo "  Activation:        plugins.enabled entry in $HERMES_HOME/config.yaml (active on next session)"
     echo "  Verify with:       hermes plugins list"
     echo "  Disable with:      hermes plugins disable agent-checkpoint"

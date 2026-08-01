@@ -39,7 +39,7 @@ The continuation prompt SHOULD provide:
 - Relevant scope or primary decisions. Do not require an exact file allowlist when related call sites or tests need to be discovered.
 - A verification command or the expected verification goal. Identify whether a supplied command is broad/full. The reviewer may choose focused targeted tests when none were supplied.
 
-Use `tpl-review-fix-prompt.md` and resume the same reviewer `task_id`.
+Use `tpl-review-fix-prompt.md`. Resume the same reviewer `task_id` only when retained reasoning materially benefits remediation; otherwise use the fresh lean path described above.
 
 ## Protocol
 

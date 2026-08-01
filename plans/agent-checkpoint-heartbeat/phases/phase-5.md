@@ -5,7 +5,7 @@ plan: "agent-checkpoint-heartbeat"
 phase: 5
 status: completed
 created: "2026-07-26"
-updated: "2026-07-27"
+updated: "2026-08-01"
 ---
 
 # Phase 5: Claude Code macOS Adapter
@@ -32,28 +32,28 @@ This phase transfers the OpenCode-proven behavior to Claude Code while using its
 
 ### Excludes (deferred to later phases)
 
-- Execution during the OpenCode pilot; this phase is assigned to the later macOS colleague.
+- Execution during the original OpenCode pilot; the adapter was subsequently completed through `checkpoint-harness-integration` Phase 3.
 - Codex or PydanticAI integration.
 - Background monitoring beyond explicit tool calls.
 
 ## Prerequisites
 
-- [ ] Phase 3 authorizes later harness execution.
-- [ ] The colleague revalidates Claude Code primary APIs and macOS paths immediately before implementation.
+- [x] Phase 3 authorizes later harness execution.
+- [x] Claude Code primary APIs and host paths were revalidated immediately before implementation.
 
 ## Deliverables
 
-- [ ] Claude Code adapter packaged through supported plugin facilities.
-- [ ] Session/context bridge required by the callable tool.
-- [ ] macOS-focused behavioral tests and documentation.
+- [x] Claude Code adapter packaged through supported plugin facilities.
+- [x] Session/context bridge required by the callable tool.
+- [x] macOS-focused behavioral tests and documentation.
 
 ## Acceptance Criteria
 
-- [ ] Claude Code produces contract-compatible raw records under the workspace-root checkpoint directory.
-- [ ] Path lookup selects the expected Claude Code session file.
-- [ ] Returned context values match documented statusline/runtime semantics or are unknown.
-- [ ] Parent/subagent instruction behavior matches the pilot contract.
-- [ ] An isolated macOS smoke test passes without modifying unrelated user configuration.
+- [x] Claude Code produces contract-compatible raw records under the workspace-root checkpoint directory.
+- [x] Path lookup selects the expected Claude Code session file.
+- [x] Returned context values match documented statusline/runtime semantics or are unknown.
+- [x] Parent/subagent instruction behavior matches the pilot contract.
+- [x] An isolated macOS smoke test passes without modifying unrelated user configuration.
 
 ## Dependencies on Other Phases
 
@@ -64,4 +64,6 @@ This phase transfers the OpenCode-proven behavior to Claude Code while using its
 
 ## Notes
 
-The implementation plan must already research current Claude Code MCP, plugin, hook, session, and statusline APIs, while marking volatile details for colleague revalidation.
+The implementation plan researched current Claude Code MCP, plugin, hook, session, and statusline APIs; execution and review evidence is recorded in `plans/checkpoint-harness-integration/`.
+
+Reconciled 2026-08-01 from that completed Phase 3 evidence. Phase 6 PydanticAI remains pending.

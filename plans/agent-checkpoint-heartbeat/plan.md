@@ -4,7 +4,7 @@ entity: plan
 plan: "agent-checkpoint-heartbeat"
 status: active
 created: "2026-07-26"
-updated: "2026-07-27"
+updated: "2026-08-01"
 ---
 
 # Plan: agent-checkpoint-heartbeat
@@ -30,7 +30,7 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 - `step_failed=true` records a failed work attempt followed by a correction step; it is not a Canary-quality failure.
 - Chain, work-success, and three-word counts/percentages, file selection, and displays are computed externally from raw logs.
 - Parent agents follow the same checkpoint instruction as subagents.
-- Codex and Claude Code implementation is planned and grounded now for later macOS execution by a colleague; their phases are not part of the OpenCode pilot rollout.
+- Codex and Claude Code were grounded after the OpenCode pilot and subsequently completed through `checkpoint-harness-integration`; PydanticAI remains the only pending adapter phase.
 - Keep the implementation small: no daemon, external watchdog, recovery schema, or autonomous restart mechanism.
 
 ### Scope-Bounding Assumptions
@@ -43,7 +43,7 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 
 ### Functional
 
-- [ ] All supported agents can call `checkpoint(done, next, step_failed=false)` after each completed or failed self-segmented subtask.
+- [ ] All supported agents can call `checkpoint(done, next, step_failed=false)` after each completed or failed self-segmented subtask. (Open only for Phase 6 PydanticAI.)
 - [x] The tool appends one valid JSON object per line to `.agent-checkpoints/<session-id>.jsonl` without storing derived percentages or the filename.
 - [x] Every current record carries timestamp, session ID, done/next labels, step outcome, measured context utilization, and nullable agent/session-title metadata.
 - [x] The tool returns approximate context utilization and remaining K-tokens to support controlled handoff.
@@ -51,7 +51,7 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 - [x] Parent, retriever, Bash, and Python workflows can read and filter a selected session log.
 - [x] External analysis can calculate Chain, Work, and Three-word success/count/percent values while keeping `step_failed` independent from Canary metrics.
 - [x] OpenCode integrates both tools and the instruction for parent and subagent personas.
-- [ ] Codex, Claude Code, and PydanticAI adapters preserve the same observable contract within documented harness limits.
+- [ ] Codex, Claude Code, and PydanticAI adapters preserve the same observable contract within documented harness limits. (Codex and Claude Code are complete; PydanticAI remains pending.)
 
 ### Non-Functional
 
@@ -69,7 +69,7 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 - Root-local `.agent-checkpoints/` convention and ignore behavior.
 - OpenCode plugin/tool pilot, persona instructions, installation, and behavioral verification.
 - Read-only external analysis/display of raw session logs.
-- Researched and grounded future adapters for Codex on macOS, Claude Code on macOS, and PydanticAI.
+- Completed Codex and Claude Code adapters plus the still-pending grounded PydanticAI phase.
 - Harness-specific documentation and installation guidance required by each phase.
 
 ### Out of Scope
@@ -78,12 +78,12 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 - Treating successful checkpoint calls as proof of correct implementation work.
 - Blocking a checkpoint because labels violate three-word or chain expectations.
 - Logging derived chain/word percentages, filenames, or remaining-token values in JSONL.
-- Implementing Codex or Claude Code during the OpenCode pilot phases.
+- Implementing Codex or Claude Code during the original OpenCode pilot phases; both were delivered afterward.
 - Cursor, Hermes, Antigravity-specific adapters, remote telemetry, or centralized log collection.
 
 ## Definition of Done
 
-- [ ] The common current eight-field contract, strict legacy six-field read compatibility, and raw JSONL semantics are documented, tested, and used consistently by every adapter.
+- [ ] The common current eight-field contract, strict legacy six-field read compatibility, and raw JSONL semantics are documented, tested, and used consistently by every adapter. (Open only for Phase 6 PydanticAI.)
 - [x] `.agent-checkpoints/` is a workspace-root sibling of `docs/` and `plans/`, is ignored by Git, and safely isolates per-session files.
 - [x] OpenCode parents and subagents can call `checkpoint` and `checkpoint_path` in an installed pilot.
 - [x] OpenCode records and returns context telemetry according to the documented confidence limits.
@@ -97,9 +97,9 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 ## Testing Strategy
 
 - [x] Unit-test record serialization, safe session-to-path mapping, exact append behavior, and external calculations.
-- [ ] Integration-test each harness tool against a temporary workspace and deterministic session/context fixtures.
+- [ ] Integration-test each harness tool against a temporary workspace and deterministic session/context fixtures. (Open only for Phase 6 PydanticAI.)
 - [x] Verify controlled failure records separately from Canary compliance metrics.
-- [ ] Run isolated installation smoke tests for each adapter without modifying real user configuration.
+- [ ] Run isolated installation smoke tests for each adapter without modifying real user configuration. (Open only for Phase 6 PydanticAI.)
 - [x] Preserve `bash -n install.sh` and existing documentation/frontmatter/link checks.
 
 ## Phases
@@ -121,7 +121,7 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 | Agent-defined subtask granularity varies. | Medium | Measure instruction following and chain consistency; do not interpret the log as objective work sizing. |
 | A failed work step could be mistaken for Canary degradation. | High | Keep `step_failed` as an independent raw outcome and exclude it from Canary calculations. |
 | Concurrent sessions or unsafe IDs could corrupt or escape log paths. | High | Use one sanitized file per session and test append/path behavior. |
-| Codex and Claude Code APIs may change before colleague execution. | Medium | Ground plans in primary APIs now and require a reality check immediately before those phases execute. |
+| PydanticAI APIs may change before Phase 6 execution. | Medium | Keep its grounded plan tied to primary APIs and repeat the reality check immediately before execution. |
 | Cross-language reuse could overcomplicate the KISS design. | Medium | Share the observable contract and fixtures; permit small native wrappers instead of forcing one runtime. |
 
 ## Changelog
@@ -136,3 +136,8 @@ This repository becomes the monorepo for a minimal checkpoint implementation wit
 - OpenCode telemetry corrected to use the SDK client's TUI-equivalent previous-completed-step estimate with an honest null fallback; Phase 2–3 plans, tests, and docs were updated.
 - Phase 3 extended with the dependency-free `checkpoint-watch` live terminal dashboard, age-based session state, installed launch path, and one-shot test mode.
 - Checkpoint records and displays refined with nullable agent/session-title metadata, count-based metrics, legacy-log compatibility, and adaptive wide-terminal layout.
+
+### 2026-08-01
+
+- Reconciled Phases 1–5 with their completed implementation/review evidence, including Codex and Claude Code delivery through `checkpoint-harness-integration`.
+- Removed obsolete future-colleague wording while keeping this plan active, Phase 6 PydanticAI pending, and every aggregate PydanticAI-dependent requirement/test unchecked.

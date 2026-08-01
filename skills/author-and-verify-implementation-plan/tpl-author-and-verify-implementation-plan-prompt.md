@@ -23,7 +23,7 @@ Constraints:
 - You may write exactly this implementation-plan artifact: `{{implementation_plan_path}}`.
 - Do NOT edit code/config files, perform Git operations, or change unrelated docs/plans artifacts.
 - Use the canonical template/headings and frontmatter keys from `skills/author-and-verify-implementation-plan/tpl-implementation-plan.md`.
-- When this task is part of a multi-phase authoring batch, process plans sequentially in dependency order and retain author-owned cross-phase consistency QA. Return the completed ordered set for one independent batch reviewer session by default; do not imply parallel or cold per-phase reviewers.
+- This fresh Delegate session owns exactly this phase implementation plan. For multi-phase work, the Maintainer invokes phases sequentially and later delegates read completed prior plans for cross-phase continuity; do not author another phase in this session. After all plans are complete, the existing ordered batch-review workflow remains unchanged.
 
 ## References (read these yourself)
 

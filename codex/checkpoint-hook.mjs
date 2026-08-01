@@ -15,6 +15,7 @@
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { appendSessionStatus } from "./checkpoint-core.mjs";
 
 const CHECKPOINT_TOOL_NAME = "mcp__agent_checkpoint__checkpoint";
 const INSTRUCTION_FILE = "checkpoint-instruction.md";
@@ -28,14 +29,20 @@ function readInstruction() {
   return readFileSync(instructionPath, "utf8").trim();
 }
 
-// SessionStart injects the heartbeat instruction as additionalContext and
-// tells the agent which session ID its checkpoints are logged under.
-export function handleSessionStart(input) {
+// SessionStart records an observed open, injects the heartbeat instruction as
+// additionalContext, and tells the agent which session ID owns its log.
+export async function handleSessionStart(input) {
   const sessionId = nonEmptyString(input?.session_id);
-  const lines = [readInstruction()];
-  if (sessionId !== null) {
-    lines.push("", `Session checkpoint ID: ${sessionId}`);
+  const workspaceRoot = nonEmptyString(input?.cwd);
+  if (sessionId === null) {
+    throw new TypeError("SessionStart requires a non-empty session_id");
   }
+  if (workspaceRoot === null) {
+    throw new TypeError("SessionStart requires a non-empty cwd");
+  }
+  await appendSessionStatus({ workspaceRoot, sessionId, status: "open" });
+  const lines = [readInstruction()];
+  lines.push("", `Session checkpoint ID: ${sessionId}`);
   return {
     hookSpecificOutput: {
       hookEventName: "SessionStart",
@@ -71,10 +78,10 @@ export function handleCheckpointPreToolUse(input) {
   };
 }
 
-export function handleHookInput(input) {
+export async function handleHookInput(input) {
   switch (input?.hook_event_name) {
     case "SessionStart":
-      return handleSessionStart(input);
+      return await handleSessionStart(input);
     case "PreToolUse":
       return handleCheckpointPreToolUse(input);
     default:
@@ -88,7 +95,7 @@ function main() {
   process.stdin.on("data", (chunk) => {
     raw += chunk;
   });
-  process.stdin.on("end", () => {
+  process.stdin.on("end", async () => {
     let input;
     try {
       input = JSON.parse(raw);
@@ -97,7 +104,7 @@ function main() {
       process.exit(1);
     }
     try {
-      const output = handleHookInput(input);
+      const output = await handleHookInput(input);
       if (output !== null) {
         process.stdout.write(`${JSON.stringify(output)}\n`);
       }
