@@ -70,7 +70,10 @@ inside an isolated `CODEX_HOME`.
   `_checkpoint_session_id` (hook `session_id`), replacing any caller-supplied
   values. All other tools and events produce no output and no lifecycle write.
 - The MCP `checkpoint` tool requires the hook-injected fields and otherwise
-  returns an error without writing. `checkpoint_path` returns the
+  returns an error without writing. It accepts optional strict-boolean
+  `close_session=false`; every successful call appends exact `open`, then the
+  unchanged eight-field checkpoint, then exact `closed` only when requested.
+  A later checkpoint reopens the row. `checkpoint_path` returns the
   workspace-relative `.agent-checkpoints/<encoded-session-id>.jsonl` path
   without writing.
 
@@ -82,12 +85,13 @@ inside an isolated `CODEX_HOME`.
   checkpoints land in the same session log (documented build limit, not an
   adapter choice). A future build that documents subagent identity may restore
   per-subagent logs via a new gated phase.
-- **Open only on the pin.** codex-cli 0.131.0 has no `SessionEnd`. Its `Stop`
+- **No host-derived close on the pin.** codex-cli 0.131.0 has no `SessionEnd`. Its `Stop`
   event carries a `turn_id` and is turn-scoped, so it is never mapped to
   `closed`; process/MCP exit, age, deletion-like signals, crashes, and post-pin
-  upstream events are not substitutes. A log with `SessionStart` and no later
-  observed close therefore remains `OPEN`, which means only “opened without an
-  observed close,” not “currently running” or “completed successfully.”
+  upstream events are not substitutes. A subagent may declare normal closure
+  only on its final checkpoint with `close_session=true`; because Codex logging
+  is session-level, this closes the shared row until the next session checkpoint
+  reopens it. Closure is independent of `step_failed` and is not success.
 - **Honest telemetry.** `context_used` is always `null` and the tool reports
   `unknown`; no documented live-occupancy channel exists on the CLI/MCP path.
   `agent` and `session_title` are always `null` for Codex records.

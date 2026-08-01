@@ -18,12 +18,12 @@ Age is informational and does not prove process liveness.
 Options:
   --once          Print one deterministic, non-ANSI dashboard and exit
   --refresh-ms    Live redraw interval (default: ${DEFAULT_REFRESH_MS})
-  --stale-ms      Informational latest-event age reference (default: ${DEFAULT_STALE_MS})
+  --stale-ms      Compatibility-only validated no-op (default: ${DEFAULT_STALE_MS})
   --help          Show this help
 
 Environment:
   CHECKPOINT_WATCH_REFRESH_MS
-  CHECKPOINT_WATCH_STALE_MS
+  CHECKPOINT_WATCH_STALE_MS (compatibility-only validated no-op)
 `;
 
 /**
@@ -102,12 +102,10 @@ export async function listSessionFiles(workspaceRoot, io = {}) {
   }
 }
 
-function percent(value) {
-  return value === null ? "n/a" : `${Number(value.toFixed(1))}%`;
-}
-
-function metric({ success, count, percent: value }) {
-  return `${success}/${count} (${percent(value)})`;
+function compactMetrics(analysis) {
+  const values = [analysis.chainPercent, analysis.workPercent, analysis.threeWordPercent];
+  const compact = values.map((value) => value === null ? "n/a" : String(Number(value.toFixed(1))));
+  return values.every((value) => value === null) ? compact.join("/") : `${compact.join("/")}%`;
 }
 
 function contextPercent(value) {
@@ -116,7 +114,7 @@ function contextPercent(value) {
 
 /**
  * @param {string} workspaceRoot
- * @param {{ now?: number, staleMs?: number }} [options]
+ * @param {{ now?: number }} [options]
  * @param {WatchIO} [io]
  */
 export async function loadSessionRows(workspaceRoot, options = {}, io = {}) {
@@ -135,9 +133,8 @@ export async function loadSessionRows(workspaceRoot, options = {}, io = {}) {
         activityMs,
         ageMs,
         state: log.state,
-        chain: metric(log.analysis.chain),
-        work: metric(log.analysis.work),
-        words: metric(log.analysis.threeWord),
+        checkpointCount: log.analysis.checkedRecords,
+        metrics: compactMetrics(log.analysis),
         context: contextPercent(latestCheckpoint?.context_used ?? null),
         agent: latestCheckpoint?.agent ?? "-",
         title: latestCheckpoint?.session_title ?? "-",
@@ -151,9 +148,8 @@ export async function loadSessionRows(workspaceRoot, options = {}, io = {}) {
         activityMs: null,
         ageMs: null,
         state: "ERROR",
-        chain: "-",
-        words: "-",
-        work: "ERROR",
+        checkpointCount: "-",
+        metrics: "-",
         context: "-",
         agent: "-",
         title: "-",
@@ -165,7 +161,12 @@ export async function loadSessionRows(workspaceRoot, options = {}, io = {}) {
   }));
 
   return rows.sort((left, right) => {
-    if (left.activityMs !== null && right.activityMs !== null) return right.activityMs - left.activityMs || left.session.localeCompare(right.session);
+    const rank = (row) => row.state === "CLOSED" ? 1 : row.state === "ERROR" ? 2 : 0;
+    const rankDifference = rank(left) - rank(right);
+    if (rankDifference !== 0) return rankDifference;
+    if (left.activityMs !== null && right.activityMs !== null) {
+      return right.activityMs - left.activityMs || left.session.localeCompare(right.session);
+    }
     if (left.activityMs !== null) return -1;
     if (right.activityMs !== null) return 1;
     return left.session.localeCompare(right.session);
@@ -207,40 +208,41 @@ export function formatDashboard(rows, options = {}) {
   );
   /** @type {[string, number, string][]} */
   const fixed = [
-    ["SESSION", 8, "session"],
     ["AGENT", 8, "agent"],
     ["AGE", 5, "age"],
     ["STATE", 7, "state"],
-    ["CHAIN", contentWidth("CHAIN", "chain"), "chain"],
-    ["WORK", contentWidth("WORK", "work"), "work"],
-    ["3-WORD", contentWidth("3-WORD", "words"), "words"],
+    ["CP", contentWidth("CP", "checkpointCount"), "checkpointCount"],
+    ["C/W/3 %", contentWidth("C/W/3 %", "metrics"), "metrics"],
     ["CONTEXT", 7, "context"],
   ];
-  const separatorWidth = 10;
+  const separatorWidth = 8;
   const fixedWidth = fixed.reduce((sum, [, width]) => sum + width, 0);
-  const [titleWidth, doneWidth, nextWidth] = distributedWidths(
+  const [nameWidth, doneWidth, currentWidth] = distributedWidths(
     columns - fixedWidth - separatorWidth,
   );
   const specs = [
-    fixed[0], fixed[1], ["NAME/TITLE", titleWidth, "title"], fixed[2], fixed[3],
-    fixed[4], fixed[5], fixed[6], fixed[7], ["DONE", doneWidth, "done"],
-    ["NEXT", nextWidth, "next"],
+    fixed[0], ["NAME", nameWidth, "title"], fixed[1], fixed[2], fixed[3], fixed[4],
+    fixed[5], ["DONE", doneWidth, "done"], ["CURRENT", currentWidth, "current"],
   ];
   const line = (values) => truncate(
     values.map((value, index) => truncate(value, specs[index][1]).padEnd(specs[index][1])).join(" "),
     columns,
   );
   const output = [
-    truncate(`Checkpoint sessions — age reference ${options.staleMs ?? DEFAULT_STALE_MS}ms (state from explicit status)`, columns),
+    truncate("Checkpoint sessions — lifecycle from explicit status; age is informational", columns),
     line(specs.map(([name]) => name)),
     truncate("-".repeat(columns), columns),
   ];
   if (rows.length === 0) output.push(truncate("No direct .agent-checkpoints/*.jsonl sessions found.", columns));
+  let previousRank = null;
   for (const row of rows) {
+    const rank = row.state === "CLOSED" ? 1 : row.state === "ERROR" ? 2 : 0;
+    if (previousRank !== null && rank !== previousRank) output.push("");
     output.push(line([
-      row.session, row.agent, row.title, formatAge(row.ageMs), row.state, row.chain,
-      row.work, row.words, row.context, row.done, row.next,
+      row.agent, row.title, formatAge(row.ageMs), row.state, row.checkpointCount,
+      row.metrics, row.context, row.done, row.state === "CLOSED" ? "—" : row.next,
     ]));
+    previousRank = rank;
   }
   return output.join("\n");
 }
@@ -252,8 +254,8 @@ export function formatDashboard(rows, options = {}) {
  * @param {boolean} ansi
  */
 async function render(workspaceRoot, options, io, ansi) {
-  const rows = await loadSessionRows(workspaceRoot, { staleMs: options.staleMs, now: io.now?.() ?? Date.now() }, io);
-  const dashboard = formatDashboard(rows, { staleMs: options.staleMs, columns: io.columns ?? process.stdout.columns ?? 120 });
+  const rows = await loadSessionRows(workspaceRoot, { now: io.now?.() ?? Date.now() }, io);
+  const dashboard = formatDashboard(rows, { columns: io.columns ?? process.stdout.columns ?? 120 });
   (io.stdout ?? ((text) => { process.stdout.write(text); }))(`${ansi ? "\x1b[H\x1b[2J" : ""}${dashboard}\n`);
 }
 

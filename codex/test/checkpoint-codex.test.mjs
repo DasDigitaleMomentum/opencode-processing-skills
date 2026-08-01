@@ -143,6 +143,9 @@ test("codex MCP runtime handles the protocol and appends shared-contract records
     listed.result.tools.map((tool) => tool.name),
     ["checkpoint", "checkpoint_path"],
   );
+  const schema = listed.result.tools[0].inputSchema;
+  assert.deepEqual(schema.required, ["done", "next"]);
+  assert.deepEqual(schema.properties.close_session, { type: "boolean", default: false });
 
   const called = await runtime.handleMessage({
     jsonrpc: "2.0",
@@ -185,6 +188,7 @@ test("codex MCP runtime handles the protocol and appends shared-contract records
         done: "Inspect record now",
         next: "Suite continues forward",
         step_failed: true,
+        close_session: true,
         _workspace_root: worktree,
         _checkpoint_session_id: "codex-session",
       },
@@ -194,6 +198,32 @@ test("codex MCP runtime handles the protocol and appends shared-contract records
   const records = checkpointCore.parseCheckpointJsonl(await readFile(recordFile, "utf8"));
   assert.equal(records.length, 2);
   assert.equal(records[1].step_failed, true);
+  let fullLog = checkpointCore.analyzeCheckpointLog(await readFile(recordFile, "utf8"));
+  assert.equal(fullLog.state, "CLOSED");
+  assert.deepEqual(
+    fullLog.records.map((record) => record.status ?? "checkpoint"),
+    ["open", "checkpoint", "open", "checkpoint", "closed"],
+  );
+
+  const reopened = await runtime.handleMessage({
+    jsonrpc: "2.0",
+    id: 41,
+    method: "tools/call",
+    params: {
+      name: "checkpoint",
+      arguments: {
+        done: "Suite continues forward",
+        next: "Session remains available",
+        close_session: false,
+        _workspace_root: worktree,
+        _checkpoint_session_id: "codex-session",
+      },
+    },
+  });
+  assert.equal(reopened.result.isError, undefined);
+  fullLog = checkpointCore.analyzeCheckpointLog(await readFile(recordFile, "utf8"));
+  assert.equal(fullLog.state, "OPEN");
+  assert.equal(fullLog.checkpoints.length, 3);
 
   const pathResult = await runtime.handleMessage({
     jsonrpc: "2.0",
@@ -220,7 +250,30 @@ test("codex MCP runtime handles the protocol and appends shared-contract records
     assert.equal(rejected.result.isError, true);
     assert.match(rejected.result.content[0].text, /_workspace_root and _checkpoint_session_id/);
   }
-  assert.equal(records.length, 2);
+  for (const [index, close_session] of [null, "true", 1, [], {}].entries()) {
+    const sessionId = `invalid-close-${index}`;
+    const rejected = await runtime.handleMessage({
+      jsonrpc: "2.0",
+      id: 60 + index,
+      method: "tools/call",
+      params: {
+        name: "checkpoint",
+        arguments: {
+          done: "Reject invalid closure",
+          next: "Preserve empty output",
+          close_session,
+          _workspace_root: worktree,
+          _checkpoint_session_id: sessionId,
+        },
+      },
+    });
+    assert.equal(rejected.result.isError, true);
+    assert.match(rejected.result.content[0].text, /close_session must be a boolean/);
+    await assert.rejects(
+      access(path.join(worktree, ...checkpointCore.checkpointPath(sessionId).split("/"))),
+      /ENOENT/,
+    );
+  }
 
   const unknown = await runtime.handleMessage({ jsonrpc: "2.0", id: 7, method: "resources/list" });
   assert.equal(unknown.error.code, -32601);
@@ -351,6 +404,8 @@ test("codex SessionStart sources append open and preserve exact instruction outp
     const context = output.hookSpecificOutput.additionalContext;
     assert.ok(context.includes(INSTRUCTION_MARKER));
     assert.ok(context.includes(`Session checkpoint ID: ${sessionId}`));
+    assert.ok(context.includes("subagent sets `close_session=true` only on its final checkpoint"));
+    assert.ok(context.includes("Maintainer or parent leaves it false"));
 
     const raw = await readFile(
       path.join(adapterDir, ...checkpointCore.checkpointPath(sessionId).split("/")),
@@ -396,7 +451,7 @@ test("codex SessionStart sources append open and preserve exact instruction outp
   );
   const mixed = checkpointCore.analyzeCheckpointLog(mixedRaw);
   assert.equal(mixed.state, "OPEN");
-  assert.equal(mixed.records.length, 3);
+  assert.equal(mixed.records.length, 4);
   assert.equal(mixed.checkpoints.length, 1);
   assert.deepEqual(mixed.analysis.work, { success: 1, count: 1, percent: 100 });
 
@@ -439,6 +494,7 @@ test("codex hook pairs allow with updatedInput for the checkpoint PreToolUse", a
       done: "a b c",
       next: "d e f",
       step_failed: true,
+      close_session: false,
       _workspace_root: "/stale",
       _checkpoint_session_id: "stale-id",
     },
@@ -458,6 +514,7 @@ test("codex hook pairs allow with updatedInput for the checkpoint PreToolUse", a
     done: "a b c",
     next: "d e f",
     step_failed: true,
+    close_session: false,
     _workspace_root: "/workspace with space",
     _checkpoint_session_id: "sess-xyz",
   });
@@ -617,10 +674,10 @@ test("codex installer deploys adapter/profile and preserves the base config", as
     await readFile(path.join(adapterDir, "checkpoint-core.mjs"), "utf8"),
     /export async function checkpoint/,
   );
-  assert.match(
-    await readFile(path.join(adapterDir, "checkpoint-instruction.md"), "utf8"),
-    /codex-checkpoint-instruction/,
-  );
+  const instruction = await readFile(path.join(adapterDir, "checkpoint-instruction.md"), "utf8");
+  assert.match(instruction, /codex-checkpoint-instruction/);
+  assert.match(instruction, /close_session=true/);
+  assert.match(instruction, /child declaration closes that shared persisted row/);
 
   const profile = await readFile(path.join(codexHome, "agent-checkpoint.config.toml"), "utf8");
   assert.match(profile, /\[features\]\nhooks = true/);

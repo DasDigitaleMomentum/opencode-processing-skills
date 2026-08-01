@@ -10,4 +10,8 @@ When an attempted subtask fails, still checkpoint with that announced subtask as
 
 Treat unknown context telemetry as unknown; do not infer a stop threshold. If reported context pressure becomes high, complete the current subtask, write a final checkpoint, and return a compact handoff stating progress and the next announced step. Checkpointing records progress but does not prove work quality.
 
+Every successful checkpoint lazily confirms the persisted session as open. `close_session` defaults to `false`. A subagent sets `close_session=true` only on its final checkpoint immediately before returning a digest, summary, or handoff. A Maintainer or parent leaves it false unless intentionally ending the whole persisted session.
+
+Closure is independent of `step_failed` and does not prove work succeeded. An interrupted session or missing final call remains open; any later checkpoint confirms it open again. Hermes children share their root parent's persisted log, so a child declaration closes that shared row until the next parent or child checkpoint reopens it.
+
 Use `checkpoint_path` with the session checkpoint ID to obtain the workspace-relative JSONL log path for inspection.

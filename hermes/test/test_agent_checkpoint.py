@@ -134,6 +134,11 @@ class RegistrationTests(unittest.TestCase):
             ["on_session_start", "pre_api_request", "pre_llm_call", "pre_tool_call", "subagent_start"],
         )
         self.assertEqual(ctx.tools["checkpoint"]["schema"]["name"], "checkpoint")
+        close_schema = ctx.tools["checkpoint"]["schema"]["parameters"]["properties"][
+            "close_session"
+        ]
+        self.assertEqual(close_schema["type"], "boolean")
+        self.assertIs(close_schema["default"], False)
         self.assertEqual(ctx.tools["checkpoint_path"]["schema"]["name"], "checkpoint_path")
         self.assertEqual(ctx.tools["checkpoint"]["toolset"], "agent-checkpoint")
 
@@ -166,6 +171,9 @@ class RegistrationTests(unittest.TestCase):
             "step_failed=true",
             "unknown context telemetry as unknown",
             "final checkpoint",
+            "close_session=true",
+            "Maintainer or parent leaves it false",
+            "Closure is independent",
             "compact handoff",
             "does not prove work quality",
         )
@@ -201,18 +209,19 @@ class CheckpointWriteTests(PluginTestCase):
         )
         self.assertEqual(after_child, records)
 
-    def test_continued_session_binding_does_not_fabricate_status(self):
+    def test_continued_session_checkpoint_lazily_confirms_open(self):
         self.bind_call("continued")
         ac.checkpoint(
             "Continued session checkpoint",
-            "Keep status unknown",
+            "Confirm session open",
             _native_session_id="continued",
         )
         _, records = self.read_records(
             ".agent-checkpoints/continued.jsonl", include_status=True
         )
-        self.assertEqual(len(records), 1)
-        self.assertNotIn("event", records[0])
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0]["status"], "open")
+        self.assertNotIn("event", records[1])
 
     def test_status_record_contract_is_exact(self):
         record = ac._create_status_record(
@@ -269,6 +278,54 @@ class CheckpointWriteTests(PluginTestCase):
         self.assertIs(records[1]["step_failed"], True)
         self.assertEqual(records[0]["next"], records[1]["done"])
 
+    def test_declared_close_and_parent_reopen_preserve_root_owned_log(self):
+        self.start_session("parent")
+        ac._on_subagent_start(parent_session_id="parent", child_session_id="child")
+        self.bind_call("child")
+        clock_calls = []
+
+        def clock():
+            clock_calls.append(True)
+            return "2026-07-26T14:30:00Z"
+
+        ac.checkpoint(
+            "Child final work",
+            "Return child digest",
+            step_failed=True,
+            close_session=True,
+            _clock=clock,
+            _native_session_id="child",
+        )
+        _, closed = self.read_records(
+            ".agent-checkpoints/parent.jsonl", include_status=True
+        )
+        self.assertEqual(len(clock_calls), 1)
+        self.assertEqual(
+            [record.get("status", "checkpoint") for record in closed],
+            ["open", "open", "checkpoint", "closed"],
+        )
+        self.assertEqual(
+            [record["timestamp"] for record in closed[1:]],
+            ["2026-07-26T14:30:00.000Z"] * 3,
+        )
+        self.assertTrue(closed[2]["step_failed"])
+        self.assertFalse((self.workspace / ".agent-checkpoints/child.jsonl").exists())
+
+        self.bind_call("parent")
+        ac.checkpoint(
+            "Return child digest",
+            "Resume parent session",
+            close_session=False,
+            _native_session_id="parent",
+        )
+        _, reopened = self.read_records(
+            ".agent-checkpoints/parent.jsonl", include_status=True
+        )
+        self.assertEqual(
+            [record.get("status", "checkpoint") for record in reopened[-2:]],
+            ["open", "checkpoint"],
+        )
+
     def test_validation_rejects_bad_inputs_without_partial_append(self):
         self.start_session()
         self.bind_call()
@@ -278,6 +335,21 @@ class CheckpointWriteTests(PluginTestCase):
             ac.checkpoint("Done step label", 42)
         with self.assertRaises(TypeError):
             ac.checkpoint("Done step label", "Next step label", step_failed="yes")
+        for value in (None, "true", 1, [], {}):
+            with self.subTest(close_session=value):
+                with self.assertRaisesRegex(TypeError, "close_session must be a boolean"):
+                    ac.checkpoint(
+                        "Done step label", "Next step label", close_session=value
+                    )
+                with self.assertRaisesRegex(TypeError, "close_session must be a boolean"):
+                    ac._handle_checkpoint(
+                        {
+                            "done": "Done step label",
+                            "next": "Next step label",
+                            "close_session": value,
+                        },
+                        session_id="hermes-sess",
+                    )
         _, records = self.read_records(
             ".agent-checkpoints/hermes-sess.jsonl", include_status=True
         )
@@ -1100,11 +1172,11 @@ await claudeEnd({{ hook_event_name: "SessionEnd", session_id: "claude-sess", cwd
         self.bind_call("hermes-sess")
         ac.checkpoint("Hermes session checked", "Hermes next step")
 
-        # Continued-session binding writes a checkpoint but no fabricated open.
+        # Continued-session checkpointing lazily confirms the observed session open.
         self.bind_call("hermes-continued")
         ac.checkpoint(
             "Hermes continued check",
-            "Hermes unknown state",
+            "Hermes open state",
             _native_session_id="hermes-continued",
         )
 
@@ -1116,7 +1188,7 @@ await claudeEnd({{ hook_event_name: "SessionEnd", session_id: "claude-sess", cwd
             "claude-sess.jsonl": ("claude-sess", "CLOSED"),
             "claude-sess--child.jsonl": ("claude-sess--child", "OPEN"),
             "hermes-sess.jsonl": ("hermes-sess", "OPEN"),
-            "hermes-continued.jsonl": ("hermes-continued", "UNKNOWN"),
+            "hermes-continued.jsonl": ("hermes-continued", "OPEN"),
         }
         self.assertEqual(
             sorted(path.name for path in checkpoint_dir.glob("*.jsonl")), sorted(logs)
@@ -1141,15 +1213,22 @@ await claudeEnd({{ hook_event_name: "SessionEnd", session_id: "claude-sess", cwd
             cwd=self.workspace, capture_output=True, text=True,
         )
         self.assertEqual(watch.returncode, 0, watch.stderr)
-        # The dashboard truncates the SESSION column; assert each harness row
-        # via its unique session-id prefix.
-        for filename, (session, state) in logs.items():
-            # The dashboard deterministically ellipsizes the fixed-width
-            # session column, so match only the visible stable prefix.
-            prefix = session[:7]
-            rows = [line for line in watch.stdout.splitlines() if prefix in line]
-            self.assertTrue(rows, filename)
-            self.assertTrue(any(state in row for row in rows), filename)
+        self.assertIn(
+            "AGENT NAME AGE STATE CP C/W/3 % CONTEXT DONE CURRENT",
+            " ".join(watch.stdout.split()),
+        )
+        for session, _ in logs.values():
+            self.assertNotIn(session, watch.stdout)
+        data_rows = [
+            line for line in watch.stdout.splitlines()
+            if any(state in line for state in ("OPEN", "CLOSED", "UNKNOWN", "ERROR"))
+            and not line.startswith("Checkpoint sessions")
+        ]
+        self.assertEqual(sum("OPEN" in row for row in data_rows), 6)
+        self.assertEqual(sum("UNKNOWN" in row for row in data_rows), 1)
+        closed_rows = [row for row in data_rows if "CLOSED" in row]
+        self.assertEqual(len(closed_rows), 1)
+        self.assertIn("—", closed_rows[0])
         # step-1 guard: inspection works through a symlinked bin path
         link_dir = Path(self._tmp.name) / "linked-bin"
         link_dir.mkdir()

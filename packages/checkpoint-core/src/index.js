@@ -232,6 +232,7 @@ export async function checkpoint({
   done,
   next,
   stepFailed = false,
+  closeSession = false,
   contextUsed = null,
   agent = null,
   sessionTitle = null,
@@ -239,6 +240,11 @@ export async function checkpoint({
   clock = () => new Date(),
   workspaceRoot = process.cwd(),
 }) {
+  if (typeof closeSession !== "boolean") {
+    throw new TypeError("closeSession must be a boolean");
+  }
+  const timestamp = timestampFromClock(clock);
+  const recordClock = () => timestamp;
   const record = createCheckpointRecord({
     sessionId,
     done,
@@ -247,9 +253,25 @@ export async function checkpoint({
     contextUsed,
     agent,
     sessionTitle,
-    clock,
+    clock: recordClock,
   });
+  const openRecord = createSessionStatusRecord({
+    sessionId,
+    status: "open",
+    clock: recordClock,
+  });
+  const closedRecord = closeSession
+    ? createSessionStatusRecord({ sessionId, status: "closed", clock: recordClock })
+    : null;
+
+  // Validate the destination before the first append so argument/path errors
+  // cannot leave even the leading lazy-open assignment behind.
+  resolveCheckpointFile(workspaceRoot, sessionId);
+  await appendRecord(workspaceRoot, sessionId, openRecord);
   await appendRecord(workspaceRoot, sessionId, record);
+  if (closedRecord !== null) {
+    await appendRecord(workspaceRoot, sessionId, closedRecord);
+  }
 
   return {
     contextUsed,

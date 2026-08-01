@@ -11,13 +11,13 @@ version: 1.3
 
 ## Overview
 
-`opencode/` supplies the native OpenCode pilot. A minimal TypeScript plugin composes the installed core with OpenCode's `tool` helper when available and otherwise uses the host's dependency-free JSON-Schema compatibility path; a testable runtime binds checkpoint context and appends `open` only for the verified native `session.created` event. It snapshots checkpoint title/telemetry through `PluginInput.client`; one instruction fragment is appended only to installed OpenCode personas.
+`opencode/` supplies the native OpenCode adapter. A minimal TypeScript plugin composes the installed core with OpenCode's `tool` helper or its dependency-free JSON-Schema compatibility path. The runtime binds identity, exposes strict optional `close_session`, snapshots title/telemetry, preserves verified `session.created`, and delegates lazy open/final close ordering to the core. A bounded managed instruction block is installed only into OpenCode personas.
 
 ### Responsibility
 
 The adapter owns OpenCode tool schemas, metadata/telemetry derivation, and feedback, not raw-record validation. Every call snapshots nullable `agent` from `ToolContext.agent` and nullable `session_title` from SDK `session.get`. The title is point-in-time display metadata: it may change in later records, while `session_id` remains definitive (`opencode/checkpoint-runtime.mjs:16-41`, `opencode/checkpoint-runtime.mjs:157-193`). A missing/empty title, SDK error response, thrown title lookup, or rejected metadata promise becomes `null`; title lookup and telemetry run independently with `Promise.allSettled`, so failures do not block the write.
 
-The runtime's generic event callback accepts only `session.created` with a non-empty native `event.properties.info.id` and appends one four-field `session_status: open` record under `PluginInput.worktree`. It emits nothing on plugin load, message/tool activity, update/status/idle, deletion, disposal, or malformed events. The current surface exposes neither an existing-session resume event nor a graceful session-close event, so a resumed checkpoint-only log stays `UNKNOWN` and no OpenCode path writes `closed`.
+The generic event callback still accepts only verified `session.created`; plugin load, activity, update/status/idle, deletion, disposal, and malformed events remain write-free. Every successful checkpoint independently appends `open` first, so a resumed checkpoint-only log becomes `OPEN`; `close_session=true` appends `closed` only after that checkpoint. This is agent-declared closure, not a host-idle or graceful-end inference.
 
 `createOpenCodeContextTelemetry` queries session messages and provider models through `PluginInput.client`, selects the latest previous assistant step with positive output tokens, sums the same five token categories as the TUI, and resolves that message's provider/model context limit (`opencode/checkpoint-runtime.mjs:43-113`). It returns a clamped estimated context fraction and remaining context-window K-tokens. The active assistant step invoking the tool is not finalized, so the values are previous-completed-step estimates, not live occupancy or compaction headroom. Missing, invalid, unmatched, or failed SDK data returns null/unknown without blocking persistence.
 
@@ -35,7 +35,7 @@ The runtime's generic event callback accepts only `session.created` with a non-e
 |---|---|---|
 | `opencode/checkpoint-plugin.ts` | file | Auto-loaded plugin composition shim. |
 | `opencode/checkpoint-runtime.mjs` | file | Tool factory, native context binding, and telemetry feedback. |
-| `opencode/checkpoint-instruction.md` | file | Idempotently marked OpenCode-only parent/subagent instruction. |
+| `opencode/checkpoint-instruction.md` | file | Start/end-bounded OpenCode-only parent/subagent instruction with final-close role guidance. |
 | `opencode/test/checkpoint-plugin.test.mjs` | file | Native-tool and isolated installer integration tests. |
 
 ## Key Symbols
@@ -47,24 +47,24 @@ The runtime's generic event callback accepts only `session.created` with a non-e
 | `createOpenCodeContextTelemetry` | function | public | `opencode/checkpoint-runtime.mjs:43` | Derives TUI-equivalent previous-completed-step estimates with null fallback. |
 | `createOpenCodeCheckpointPlugin` | function | public | `opencode/checkpoint-runtime.mjs:122` | Builds the two native tools plus the creation-only lifecycle event callback. |
 | `event` | plugin callback | public | `opencode/checkpoint-runtime.mjs` | Maps only verified `session.created` identity to shared-core `open`; ignores unsupported resume/close signals. |
-| `checkpoint.execute` | tool executor | public | `opencode/checkpoint-runtime.mjs:157` | Settles title/telemetry independently and writes session/worktree plus nullable agent/title snapshots. |
-| `checkpoint_path.execute` | tool executor | public | `opencode/checkpoint-runtime.mjs:203` | Returns only the workspace-relative encoded JSONL path. |
-| `Checkpoint Heartbeat` | instruction | installed | `opencode/checkpoint-instruction.md:3` | Directs parents/subagents on chaining, failed steps, and unknown telemetry. |
+| `checkpoint.execute` | tool executor | public | `opencode/checkpoint-runtime.mjs:171` | Strictly validates raw `close_session`, settles metadata/telemetry, and forwards identity plus optional close to the core. |
+| `checkpoint_path.execute` | tool executor | public | `opencode/checkpoint-runtime.mjs:221` | Returns only the workspace-relative encoded JSONL path. |
+| `Checkpoint Heartbeat` | instruction | installed | `opencode/checkpoint-instruction.md:3` | Directs chaining/failures/context handling and limits `close_session=true` to a subagent's final checkpoint or intentional parent-session end. |
 
 ## Data Flow
 
 1. OpenCode auto-loads installed `plugins/checkpoint.ts`.
 2. On verified `session.created`, the event callback uses the event's native ID and the plugin worktree to append `open`. Unsupported activity/resume/close candidates are ignored.
-3. The shim creates session-title and telemetry readers with `PluginInput.client`; `checkpoint(done, next, step_failed=false)` starts both lookups for `context.sessionID`/`directory`.
+3. The shim exposes `checkpoint(done, next, step_failed=false, close_session=false)`; the native schema or fallback executor rejects a supplied non-boolean before persistence, then starts title/telemetry lookups.
 4. `session.get` supplies the point-in-time title while `context.agent` supplies the current persona. Either normalizes to `null` when absent/empty; title lookup failure is isolated and cannot prevent persistence.
 5. The runtime scans backward to the latest assistant message with positive output, sums input/output/reasoning/cache-read/cache-write, and matches `providerID`/`modelID` to its context limit. The output-zero active tool-calling step is not selected.
-6. The core persists an eight-field checkpoint containing metadata and the estimated fraction; feedback reports the estimated percentage and remaining context-window K-tokens. Status records remain four-field and never enter checkpoint metrics.
+6. The core persists exact `open` → eight-field checkpoint → optional exact `closed`; feedback and checkpoint-only metrics remain unchanged.
 7. Missing or malformed telemetry and SDK failures persist `context_used: null` and report both values as `unknown`; metadata failures likewise persist `null` without blocking the record.
 8. `checkpoint_path(session_id)` returns the selected relative path for direct reading or core inspection. The stable ID, not mutable title text, selects the log.
 
 ## Configuration
 
-No new YAML key exists. `targets.opencode.home` is also the global checkpoint plugin home; project mode uses `./.opencode/`. During upgrades, stop the dashboard and writer-enabled harnesses first, run the reader-symlink preflight/install, start the exact printed dashboard command, and only then restart OpenCode. A symlinked required core/watcher reader stops before plugin replacement; ordinary plugin/runtime/persona symlinks remain preserved.
+No new YAML key exists. `targets.opencode.home` is also the global checkpoint plugin home; project mode uses `./.opencode/`. During upgrades, stop readers/writers, install reader-first, start the dashboard, then restart OpenCode. Required reader symlinks still stop installation. Ordinary persona symlinks remain untouched. Non-symlink personas receive one exact start/end-bounded block: exact current bytes are stable, only the exact known legacy fragment migrates with prefix/suffix preservation, and unknown/customized marked content stops path-specifically without mutation.
 
 ## Inventory Notes
 

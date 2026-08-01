@@ -15,7 +15,7 @@ version: 1.4
 
 ### Responsibility
 
-The module owns harness-neutral persistence and analysis. Harness adapters supply native session identity, workspace root, nullable agent/title snapshots, and honest telemetry. Current checkpoints contain `agent` and `session_title` in addition to the original six fields; parsing a legacy checkpoint adds both as `null` in memory without rewriting source bytes. A status event contains exactly `timestamp`, `session_id`, `event: "session_status"`, and `status: "open" | "closed"`. Status events never contribute to checkpoint metrics. OpenCode, Codex, Claude Code, and Hermes now consume the same append primitive only for lifecycle hooks their pinned surfaces actually observe. `remainingKTokens` may be returned by `checkpoint` but is never persisted.
+The module owns harness-neutral persistence and analysis. Harness adapters supply native session identity, workspace root, nullable agent/title snapshots, honest telemetry, and strict optional `closeSession`. Current checkpoints contain `agent` and `session_title`; legacy parsing adds both as `null` in memory without rewriting bytes. Status events remain exactly `timestamp`, `session_id`, `event: "session_status"`, and `status: "open" | "closed"`. Every checkpoint validates all records from one timestamp before writing and appends `open` → checkpoint → optional `closed` as separate lines. Status events never contribute to metrics; `remainingKTokens` and `closeSession` are never persisted.
 
 ### Dependencies
 
@@ -48,7 +48,7 @@ The module owns harness-neutral persistence and analysis. Harness adapters suppl
 | `createCheckpointRecord` | function | public | `packages/checkpoint-core/src/index.js` | Creates a timestamped current checkpoint with false/null defaults. |
 | `createSessionStatusRecord` | function | public | `packages/checkpoint-core/src/index.js` | Creates an exact timestamped lifecycle event. |
 | `checkpointPath` | function | public | `packages/checkpoint-core/src/index.js` | Percent-encodes a non-empty session ID into `.agent-checkpoints/<id>.jsonl`. |
-| `checkpoint` | async function | public | `packages/checkpoint-core/src/index.js` | Appends one compact eight-field checkpoint line. |
+| `checkpoint` | async function | public | `packages/checkpoint-core/src/index.js:230` | Strictly validates optional `closeSession` and appends exact `open` → checkpoint → optional `closed` lines from one captured timestamp. |
 | `appendSessionStatus` | async function | public | `packages/checkpoint-core/src/index.js` | Appends one compact status line through the same path/containment boundary. |
 | `parseCheckpointLogJsonl` | function | public | `packages/checkpoint-core/src/index.js` | Strictly parses all three exact variants in physical line order. |
 | `filterCheckpointRecords` | function | public | `packages/checkpoint-core/src/index.js` | Returns normalized checkpoint copies from an already parsed mixed array. |
@@ -61,24 +61,24 @@ The module owns harness-neutral persistence and analysis. Harness adapters suppl
 | `main` | async function | public/CLI | `packages/checkpoint-core/bin/checkpoint-inspect.js:55` | Reads exactly one supplied path and exits nonzero on invalid input. |
 | `parseArgs` | function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:60` | Resolves modes and positive refresh/stale values from environment and CLI. |
 | `listSessionFiles` | async function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:90` | Lists only direct regular `.agent-checkpoints/*.jsonl` files. |
-| `loadSessionRows` | async function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:122` | Builds newest-first rows and isolates malformed files as `ERROR` rows. |
-| `formatDashboard` | function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:202` | Formats metadata/count columns and deterministically allocates remaining terminal width to title/done/next. |
-| `runLiveDashboard` | async function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:265` | Redraws by timer/event and cleans resources/cursor on exit. |
-| `main` (dashboard) | async function | public/CLI | `packages/checkpoint-core/bin/checkpoint-watch.js:318` | Runs help, one-shot, or live mode from the current workspace. |
+| `loadSessionRows` | async function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:120` | Builds lifecycle-ranked/latest-event-sorted rows, compact metrics, and isolated `ERROR` rows while retaining session ID internally. |
+| `formatDashboard` | function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:203` | Formats the exact compact columns, blank state-group separators, hidden IDs, and closed `CURRENT=—`. |
+| `runLiveDashboard` | async function | public | `packages/checkpoint-core/bin/checkpoint-watch.js:267` | Redraws by timer/event and cleans resources/cursor on exit. |
+| `main` (dashboard) | async function | public/CLI | `packages/checkpoint-core/bin/checkpoint-watch.js:320` | Runs help, one-shot, or live mode from the current workspace. |
 
 ## Data Flow
 
-1. An adapter calls `checkpoint` with session ID, worktree, labels, outcome, telemetry, and nullable agent/title metadata. Capability-gated lifecycle hooks call `appendSessionStatus`: OpenCode and Codex append observed opens, Claude appends parent/subagent opens and a parent graceful close, and Hermes appends only a new parent's open.
-2. The core validates the exact variant and appends one compact line below the worktree's `.agent-checkpoints/` directory without rewriting prior bytes.
+1. An adapter calls `checkpoint` with session ID, worktree, labels, outcome, strict optional close, telemetry, and nullable metadata. Capability-gated lifecycle hooks remain additive.
+2. The core validates strict close type, destination, and every exact record before the first write, then sequentially appends one compact line each in `open` → checkpoint → optional `closed` order without rewriting prior bytes. An I/O failure may leave only that truthful prefix.
 3. `parseCheckpointLogJsonl` preserves physical line order. The compatibility `parseCheckpointJsonl` facade filters status events and normalizes only legacy checkpoint metadata.
 4. `analyzeCheckpointLog` separates `latestEvent`, `latestStatusEvent`, and `latestCheckpoint`; lifecycle reduction follows physical status-event order, while metrics use filtered checkpoints only.
 5. `checkpoint-inspect` renders explicit state plus separated event/status/checkpoint details. `checkpoint-watch` uses latest-event age as information and renders `OPEN`, `CLOSED`, or `UNKNOWN`; only its per-file read/parse catch path creates an `ERROR` row.
 
 ## Configuration
 
-Direct inspection is `node packages/checkpoint-core/bin/checkpoint-inspect.js .agent-checkpoints/<encoded-session>.jsonl`. The dashboard is `node packages/checkpoint-core/bin/checkpoint-watch.js` (live) or the same command with `--once`. Defaults are a 1,000 ms refresh and a 120,000 ms informational age-reference threshold; CLI flags override `CHECKPOINT_WATCH_REFRESH_MS`/`CHECKPOINT_WATCH_STALE_MS`. Age never selects lifecycle state. `OPEN` means an observed open without a later close, `CLOSED` means an observed graceful close, and `UNKNOWN` means no status event; none proves current process liveness.
+Direct inspection is `node packages/checkpoint-core/bin/checkpoint-inspect.js .agent-checkpoints/<encoded-session>.jsonl`. The dashboard is `node packages/checkpoint-core/bin/checkpoint-watch.js` (live) or `--once`. Refresh defaults to 1,000 ms. `--stale-ms`/`CHECKPOINT_WATCH_STALE_MS` remain positively validated compatibility-only no-ops. Age never selects lifecycle state; no state proves current process liveness or work success.
 
-The dashboard reserves fixed widths for identity/status fields, lets rendered metric counts determine metric widths, and divides remaining terminal columns across `NAME/TITLE`, `DONE`, and `NEXT`. Remainder columns go to those fields in that order. Each value and final line is deterministically truncated to its assigned width, using a trailing ellipsis where at least two characters fit (`packages/checkpoint-core/bin/checkpoint-watch.js:184-245`).
+The dashboard renders only `AGENT | NAME | AGE | STATE | CP | C/W/3 % | CONTEXT | DONE | CURRENT`; session ID stays internal and remains visible in the unchanged inspector. Open/unknown, closed, and error groups are separated and ordered in that rank; valid rows sort newest-first. Remaining width is shared among `NAME`, `DONE`, and `CURRENT`, with deterministic ellipsis. Closed rows show `CURRENT=—`.
 
 ## Inventory Notes
 

@@ -269,6 +269,7 @@ test("claude MCP runtime handles the protocol and appends telemetry-fed contract
   const schema = listed.result.tools[0].inputSchema;
   assert.deepEqual(schema.required, ["done", "next"]);
   assert.equal(schema.properties.step_failed.default, false);
+  assert.deepEqual(schema.properties.close_session, { type: "boolean", default: false });
   for (const internal of ["_checkpoint_session_id", "_telemetry_session_id", "_agent_type"]) {
     assert.match(schema.properties[internal].description, /hook injected/);
   }
@@ -302,6 +303,7 @@ test("claude MCP runtime handles the protocol and appends telemetry-fed contract
         done: "Inspect record now",
         next: "Suite continues forward",
         step_failed: true,
+        close_session: true,
         _checkpoint_session_id: "sess-parent--agent-1",
         _telemetry_session_id: "sess-parent",
         _agent_type: "implementer",
@@ -330,6 +332,11 @@ test("claude MCP runtime handles the protocol and appends telemetry-fed contract
   assert.equal(subagentRecord.agent, "implementer");
   assert.equal(subagentRecord.session_title, "Demo Session");
   assert.equal(subagentRecord.step_failed, true);
+  assert.deepEqual(
+    checkpointCore.parseCheckpointLogJsonl(subagentRaw).map((record) => record.status ?? "checkpoint"),
+    ["open", "checkpoint", "closed"],
+  );
+  assert.equal(checkpointCore.analyzeCheckpointLog(subagentRaw).state, "CLOSED");
 
   for (const raw of [parentRaw, subagentRaw]) {
     assert.doesNotMatch(
@@ -365,6 +372,53 @@ test("claude MCP runtime handles the protocol and appends telemetry-fed contract
       /_checkpoint_session_id and _telemetry_session_id/,
     );
   }
+
+  for (const [index, close_session] of [null, "true", 1, [], {}].entries()) {
+    const sessionId = `invalid-close-${index}`;
+    const rejected = await runtime.handleMessage({
+      jsonrpc: "2.0",
+      id: 60 + index,
+      method: "tools/call",
+      params: {
+        name: "checkpoint",
+        arguments: {
+          done: "Reject invalid closure",
+          next: "Preserve empty output",
+          close_session,
+          _checkpoint_session_id: sessionId,
+          _telemetry_session_id: sessionId,
+        },
+      },
+    });
+    assert.equal(rejected.result.isError, true);
+    assert.match(rejected.result.content[0].text, /close_session must be a boolean/);
+    await assert.rejects(
+      access(path.join(worktree, ...checkpointCore.checkpointPath(sessionId).split("/"))),
+      /ENOENT/,
+    );
+  }
+
+  const reopened = await runtime.handleMessage({
+    jsonrpc: "2.0",
+    id: 70,
+    method: "tools/call",
+    params: {
+      name: "checkpoint",
+      arguments: {
+        done: "Suite continues forward",
+        next: "Session remains available",
+        close_session: false,
+        _checkpoint_session_id: "sess-parent--agent-1",
+        _telemetry_session_id: "sess-parent",
+        _agent_type: "implementer",
+      },
+    },
+  });
+  assert.equal(reopened.result.isError, undefined);
+  assert.equal(
+    checkpointCore.analyzeCheckpointLog(await readFile(subagentFile, "utf8")).state,
+    "OPEN",
+  );
 
   const unknown = await runtime.handleMessage({ jsonrpc: "2.0", id: 7, method: "resources/list" });
   assert.equal(unknown.error.code, -32601);
@@ -624,6 +678,12 @@ test("claude hook injects the checkpoint instruction on SessionStart and Subagen
   ]);
   assert.equal(parentOutput.hookSpecificOutput.hookEventName, "SessionStart");
   assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(INSTRUCTION_MARKER));
+  assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
+    "subagent sets `close_session=true` only on its final checkpoint",
+  ));
+  assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
+    "Maintainer or parent leaves it false",
+  ));
   assert.ok(
     parentOutput.hookSpecificOutput.additionalContext.includes("Session checkpoint ID: sess-123"),
   );
@@ -641,6 +701,7 @@ test("claude hook injects the checkpoint instruction on SessionStart and Subagen
   const subagentOutput = JSON.parse(subagent.stdout);
   assert.equal(subagentOutput.hookSpecificOutput.hookEventName, "SubagentStart");
   assert.ok(subagentOutput.hookSpecificOutput.additionalContext.includes(INSTRUCTION_MARKER));
+  assert.ok(subagentOutput.hookSpecificOutput.additionalContext.includes("close_session=true"));
   assert.ok(
     subagentOutput.hookSpecificOutput.additionalContext.includes(
       "Session checkpoint ID: sess-123--agent-9",
@@ -763,6 +824,7 @@ test("claude hook rewrites checkpoint PreToolUse inputs for parent and subagent"
       done: "a b c",
       next: "d e f",
       step_failed: true,
+      close_session: true,
       _checkpoint_session_id: "stale-id",
       _telemetry_session_id: "stale-telemetry",
       _agent_type: "stale-agent",
@@ -782,6 +844,7 @@ test("claude hook rewrites checkpoint PreToolUse inputs for parent and subagent"
     done: "a b c",
     next: "d e f",
     step_failed: true,
+    close_session: true,
     _checkpoint_session_id: "sess-xyz",
     _telemetry_session_id: "sess-xyz",
   });
@@ -795,7 +858,7 @@ test("claude hook rewrites checkpoint PreToolUse inputs for parent and subagent"
     cwd: "/workspace",
     permission_mode: "default",
     tool_name: CHECKPOINT_TOOL,
-    tool_input: { done: "a b c", next: "d e f" },
+    tool_input: { done: "a b c", next: "d e f", close_session: false },
     tool_use_id: "toolu_2",
   });
   assert.equal(subagent.status, 0, subagent.stderr);
@@ -803,10 +866,24 @@ test("claude hook rewrites checkpoint PreToolUse inputs for parent and subagent"
   assert.deepEqual(subagentSpecific.updatedInput, {
     done: "a b c",
     next: "d e f",
+    close_session: false,
     _checkpoint_session_id: "sess-xyz--agent-7",
     _telemetry_session_id: "sess-xyz",
     _agent_type: "delegate",
   });
+
+  for (const close_session of [null, "true", 1, [], {}]) {
+    const invalid = runHook({
+      hook_event_name: "PreToolUse",
+      session_id: "sess-invalid",
+      cwd: "/workspace",
+      tool_name: CHECKPOINT_TOOL,
+      tool_input: { done: "a b c", next: "d e f", close_session },
+    });
+    assert.equal(invalid.status, 1);
+    assert.equal(invalid.stdout, "");
+    assert.match(invalid.stderr, /close_session must be a boolean/);
+  }
   assert.notEqual(
     subagentSpecific.updatedInput._checkpoint_session_id,
     parentSpecific.updatedInput._checkpoint_session_id,

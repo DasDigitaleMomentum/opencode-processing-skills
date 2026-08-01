@@ -139,6 +139,9 @@ export function handleCheckpointPreToolUse(input) {
       },
     };
   }
+  if (toolInput.close_session !== undefined && typeof toolInput.close_session !== "boolean") {
+    throw new TypeError("checkpoint close_session must be a boolean");
+  }
   const publicInput = { ...toolInput };
   for (const field of INTERNAL_FIELDS) {
     delete publicInput[field];

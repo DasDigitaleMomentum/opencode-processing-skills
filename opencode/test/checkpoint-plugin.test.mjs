@@ -27,6 +27,29 @@ import {
 
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, "../..");
 const INSTRUCTION_MARKER = "<!-- opencode-checkpoint-instruction -->";
+const INSTRUCTION_END_MARKER = "<!-- /opencode-checkpoint-instruction -->";
+const LEGACY_INSTRUCTION = `<!-- opencode-checkpoint-instruction -->
+
+## Checkpoint Heartbeat
+
+This instruction applies to parents and subagents. Segment work into meaningful subtasks and call \`checkpoint\` after each completed or failed subtask. Write \`done\` and \`next\` as exactly three words, and reuse the previous \`next\` text verbatim as the following \`done\`.
+
+Where possible, include \`checkpoint\` in the same parallel tool-call block as the next independent tool calls. Do not create an additional model round trip solely for checkpointing.
+
+When an attempted subtask fails, still checkpoint with that announced subtask as \`done\`, set \`step_failed=true\`, and make \`next\` the corrective step. This records work progress and is not itself a Canary failure.
+
+Treat unknown context telemetry as unknown; do not infer a stop threshold. If reported context pressure becomes high, complete the current subtask, write a final checkpoint, and return a compact handoff stating progress and the next announced step. Checkpointing records progress but does not prove work quality.
+`;
+const INITIAL_LEGACY_INSTRUCTION = `<!-- opencode-checkpoint-instruction -->
+
+## Checkpoint Heartbeat
+
+This instruction applies to parents and subagents. Segment work into meaningful subtasks and call \`checkpoint\` after each completed or failed subtask. Write \`done\` and \`next\` as exactly three words, and reuse the previous \`next\` text verbatim as the following \`done\`.
+
+When an attempted subtask fails, still checkpoint with that announced subtask as \`done\`, set \`step_failed=true\`, and make \`next\` the corrective step. This records work progress and is not itself a Canary failure.
+
+Treat unknown context telemetry as unknown; do not infer a stop threshold. If reported context pressure becomes high, complete the current subtask, write a final checkpoint, and return a compact handoff stating progress and the next announced step. Checkpointing records progress but does not prove work quality.
+`;
 
 function schema() {
   return {
@@ -241,6 +264,9 @@ async function assertInstalledOpenCodePilot(home) {
   ]) {
     const persona = await readFile(path.join(home, `agents/${name}.md`), "utf8");
     assert.equal(persona.split(INSTRUCTION_MARKER).length - 1, 1, name);
+    assert.equal(persona.split(INSTRUCTION_END_MARKER).length - 1, 1, name);
+    assert.match(persona, /subagent sets `close_session=true` only on its final checkpoint/);
+    assert.match(persona, /Maintainer or parent leaves it false/);
   }
 
   assert.match(
@@ -254,6 +280,9 @@ test("native tools isolate parent and subagent logs with honest unknown telemetr
   t.after(() => rm(worktree, { recursive: true, force: true }));
   const plugin = createOpenCodeCheckpointPlugin({ tool: fakeTool, checkpointCore });
   const hooks = await plugin({ worktree });
+  assert.deepEqual(Object.keys(hooks.tool.checkpoint.args), [
+    "done", "next", "step_failed", "close_session",
+  ]);
 
   const parentResult = await hooks.tool.checkpoint.execute(
     { done: "Parent task finished", next: "Delegate task started" },
@@ -264,6 +293,7 @@ test("native tools isolate parent and subagent logs with honest unknown telemetr
       done: "Focused tests attempted",
       next: "Test failure correct",
       step_failed: true,
+      close_session: true,
     },
     { sessionID: "subagent-session" },
   );
@@ -297,6 +327,11 @@ test("native tools isolate parent and subagent logs with honest unknown telemetr
     "utf8",
   );
   assert.equal(checkpointCore.parseCheckpointJsonl(subagentRaw)[0].step_failed, true);
+  assert.deepEqual(
+    checkpointCore.parseCheckpointLogJsonl(subagentRaw).map((record) => record.status ?? "checkpoint"),
+    ["open", "checkpoint", "closed"],
+  );
+  assert.equal(checkpointCore.analyzeCheckpointLog(subagentRaw).state, "CLOSED");
   const parentPath = await hooks.tool.checkpoint_path.execute({ session_id: "parent/session" });
   const subagentPath = await hooks.tool.checkpoint_path.execute({ session_id: "subagent-session" });
   assert.equal(parentPath, ".agent-checkpoints/parent%2Fsession.jsonl");
@@ -335,6 +370,7 @@ test("native tools isolate parent and subagent logs with honest unknown telemetr
   assert.match(correctedSummary, /Work: 1\/2 \(50%\)/);
   assert.match(correctedSummary, /Three-word compliance: 4\/4 \(100%\)/);
   assert.deepEqual(await readFile(path.join(worktree, ...subagentPath.split("/"))), correctedBefore);
+  assert.equal(checkpointCore.analyzeCheckpointLog(correctedBefore.toString("utf8")).state, "OPEN");
 
   await hooks.tool.checkpoint.execute(
     { done: "not three", next: "still accepted" },
@@ -345,6 +381,21 @@ test("native tools isolate parent and subagent logs with honest unknown telemetr
     "utf8",
   );
   assert.equal(checkpointCore.parseCheckpointJsonl(parentRaw).length, 2);
+
+  for (const [index, close_session] of [null, "true", 1, [], {}].entries()) {
+    const sessionID = `invalid-close-${index}`;
+    await assert.rejects(
+      hooks.tool.checkpoint.execute(
+        { done: "Reject invalid closure", next: "Preserve empty output", close_session },
+        { sessionID, worktree },
+      ),
+      /close_session must be a boolean/,
+    );
+    await assert.rejects(
+      access(path.join(worktree, ...checkpointCore.checkpointPath(sessionID).split("/"))),
+      /ENOENT/,
+    );
+  }
 });
 
 test("session.created writes open while unsupported resume and close signals stay absent", async (t) => {
@@ -402,8 +453,11 @@ test("session.created writes open while unsupported resume and close signals sta
     "utf8",
   );
   const resumedAnalysis = checkpointCore.analyzeCheckpointLog(resumedRaw);
-  assert.equal(resumedAnalysis.state, "UNKNOWN");
-  assert.equal(resumedAnalysis.records.length, 1);
+  assert.equal(resumedAnalysis.state, "OPEN");
+  assert.deepEqual(
+    resumedAnalysis.records.map((record) => record.status ?? "checkpoint"),
+    ["open", "checkpoint"],
+  );
   assert.equal(resumedAnalysis.checkpoints.length, 1);
 
   await hooks.tool.checkpoint.execute(
@@ -419,7 +473,7 @@ test("session.created writes open while unsupported resume and close signals sta
   );
   const mixed = checkpointCore.analyzeCheckpointLog(mixedRaw);
   assert.equal(mixed.state, "OPEN");
-  assert.equal(mixed.records.length, 2);
+  assert.equal(mixed.records.length, 3);
   assert.equal(mixed.checkpoints.length, 1);
   assert.deepEqual(mixed.analysis.work, { success: 1, count: 1, percent: 100 });
   assert.equal(mixed.records.some((record) => record.status === "closed"), false);
@@ -668,6 +722,58 @@ test("global installer deploys assets and idempotent instructions while preservi
   }
 });
 
+test("installer migrates only the exact legacy managed fragment and preserves surrounding bytes", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-opencode-managed-migration-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const home = path.join(root, "opencode-home");
+  const configFile = await writeInstallerConfig(root);
+  runInstaller([], { cwd: root, configFile, opencodeHome: home });
+
+  const current = await readFile(path.join(REPOSITORY_ROOT, "opencode/checkpoint-instruction.md"), "utf8");
+  const legacyPath = path.join(home, "agents/ordinary-legacy.md");
+  const initialLegacyPath = path.join(home, "agents/delegate-codex.md");
+  const retainedVariantPath = path.join(home, "agents/delegate-retained.md");
+  const currentPath = path.join(home, "agents/ordinary-current.md");
+  const prefix = "front matter and user bytes\n";
+  const suffix = "user suffix without terminal newline";
+  await writeFile(legacyPath, `${prefix}${LEGACY_INSTRUCTION}${suffix}`);
+  await writeFile(initialLegacyPath, `${prefix}${INITIAL_LEGACY_INSTRUCTION}${suffix}`);
+  await writeFile(retainedVariantPath, `variant prefix\n${LEGACY_INSTRUCTION}variant suffix\n`);
+  const exactCurrent = `${prefix}${current}${suffix}`;
+  await writeFile(currentPath, exactCurrent);
+
+  const output = runInstaller([], { cwd: root, configFile, opencodeHome: home });
+  assert.match(output, /Updated: ordinary-legacy\.md/);
+  assert.match(output, /Updated: delegate-codex\.md/);
+  assert.match(output, /Updated: delegate-retained\.md/);
+  assert.match(output, /Present: ordinary-current\.md/);
+  assert.equal(await readFile(legacyPath, "utf8"), `${prefix}${current}${suffix}`);
+  assert.equal(await readFile(initialLegacyPath, "utf8"), `${prefix}${current}${suffix}`);
+  assert.equal(
+    await readFile(retainedVariantPath, "utf8"),
+    `variant prefix\n${current}variant suffix\n`,
+  );
+  assert.equal(await readFile(currentPath, "utf8"), exactCurrent);
+});
+
+test("installer refuses unknown marked persona content without changing its bytes", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-opencode-managed-refusal-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const home = path.join(root, "opencode-home");
+  const configFile = await writeInstallerConfig(root);
+  runInstaller([], { cwd: root, configFile, opencodeHome: home });
+  const personaPath = path.join(home, "agents/custom-unknown.md");
+  const custom = `user prefix\n${INSTRUCTION_MARKER}\ncustom managed words\nuser suffix without newline`;
+  await writeFile(personaPath, custom);
+
+  const result = runInstallerResult([], { cwd: root, configFile, opencodeHome: home });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /unknown or customized checkpoint instruction/);
+  assert.ok(result.stderr.includes(personaPath), result.stderr);
+  assert.match(result.stderr, /Restore the exact managed block or remove its marker/);
+  assert.equal(await readFile(personaPath, "utf8"), custom);
+});
+
 test("installer stops loudly before writers when required OpenCode reader paths contain symlinks", async (t) => {
   const cases = [
     {
@@ -821,10 +927,12 @@ test("project installer preflights required readers before project-local writer 
 
 test("lifecycle documentation preserves honest events and ordered upgrade steps", async () => {
   const installation = await readFile(path.join(REPOSITORY_ROOT, "docs/installation.md"), "utf8");
-  assert.match(installation, /OpenCode writes `open` only for verified `session\.created`/);
-  assert.match(installation, /pinned Codex writes `open` for `SessionStart`; neither writes `closed`/);
-  assert.match(installation, /Pinned Claude Code writes parent\/subagent `open` and native-parent `SessionEnd` `closed`/);
-  assert.match(installation, /Pinned Hermes writes only new-parent, parent-owned `open` and never fabricates child attribution or `closed`/);
+  assert.match(installation, /every adapter now performs lazy open plus optional declared close/);
+  assert.match(installation, /`open` → checkpoint → optional declared `closed`/);
+  assert.match(installation, /No child-end hook, host-idle heuristic, or parent-child field is added/);
+  assert.match(installation, /unknown\/customized marked content stops loudly unchanged/);
+  assert.match(installation, /`--stale-ms` and `CHECKPOINT_WATCH_STALE_MS` remain accepted.*no-ops/);
+  assert.match(installation, /`AGENT`, `NAME`, `AGE`, `STATE`, `CP`, `C\/W\/3 %`, `CONTEXT`, `DONE`, and `CURRENT`/);
   assertOutputOrder(installation, [
     "Before `./install.sh`, stop every live dashboard",
     "Run the installer.",
@@ -839,10 +947,11 @@ test("lifecycle documentation preserves honest events and ordered upgrade steps"
     path.join(REPOSITORY_ROOT, "docs/agent-checkpoint-heartbeat.md"),
     "utf8",
   );
-  assert.match(heartbeat, /OpenCode schreibt `open` ausschließlich bei einem verifizierten `session\.created`/);
-  assert.match(heartbeat, /`Stop` enthält eine `turn_id` und beendet nur einen Turn/);
-  assert.match(heartbeat, /Claude Code schreibt Parent-\/Subagent-`open`/);
-  assert.match(heartbeat, /Hermes schreibt nur beim beobachteten neuen Parent-`on_session_start`/);
+  assert.match(heartbeat, /jeder erfolgreiche Checkpoint `open`/);
+  assert.match(heartbeat, /`Stop`, Exit und Crash bleiben write-free/);
+  assert.match(heartbeat, /`open` → Checkpoint → `closed`/);
+  assert.match(heartbeat, /Subagent setzt `close_session=true` ausschließlich auf seinem letzten Checkpoint/);
+  assert.match(heartbeat, /Session-ID.*im Dashboard aber nicht gerendert/);
   assertOutputOrder(heartbeat, [
     "laufendes Dashboard sowie alle Writer-fähigen OpenCode-, Checkpoint-Profil-Codex-, Claude-Code- und Hermes-Sessions vor der Installation stoppen",
     "Reader und Writer installieren",
