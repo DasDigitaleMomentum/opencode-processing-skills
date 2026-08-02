@@ -77,7 +77,7 @@ The plugin registers `checkpoint`/`checkpoint_path`, injects the complete role-a
 
 ### Checkpoint dashboard quickstart
 
-The installer also deploys the dependency-free `checkpoint-watch` terminal dashboard. Install globally or into the current project, then run the **exact `Launch command:` printed by that installer run**:
+The installer always deploys the dependency-free Node `checkpoint-watch` terminal dashboard. Install globally or into the current project, then run the **exact `Launch command:` printed by that installer run**. The following commands are the portable Node source/fallback paths; a verified optional global native build can make `$HOME/.local/bin/checkpoint-watch` the printed launch instead:
 
 ```bash
 # Global installation (default OpenCode home shown)
@@ -101,7 +101,15 @@ The printed command reflects a configured OpenCode home or the absolute project 
 
 Do not leave a writer-enabled harness running while its command/plugin files are replaced, and do not start one ahead of the refreshed dashboard. The installer prints this same quiesce → install readers/writers → start dashboard → restart harness sequence; it does not detect or stop processes automatically. From this repository's source tree, use `node packages/checkpoint-core/bin/checkpoint-watch.js`.
 
-With no mode flag it stays live, redraws on checkpoint-directory changes and on a timer, and exits cleanly on Ctrl-C (or SIGTERM): its watcher and timer are closed and the terminal cursor is restored. For scripts or one deterministic non-ANSI rendering, add `--once`.
+#### Optional native global watcher
+
+Global installation checks for an already executable `scriptc`; it never installs the compiler or changes `PATH`. When present, the installer copies only the watcher entry and shared core into a disposable directory under `${TMPDIR:-/tmp}`, runs ordinary `scriptc coverage` and `scriptc build`, and requires native `--help`, `--once`, and non-TTY live filesystem-refresh/signal/cursor-restoration smokes. Only a binary that passes every check is copied to a same-directory temporary file and atomically renamed to `$HOME/.local/bin/checkpoint-watch`. A user-managed symlink at that path is preserved.
+
+On native success, the summary prints that executable as `Launch command:` and prints the installed Node invocation as `Node fallback:`. If scriptc is absent, coverage/build is unsupported, a runtime-deferred fence is reached, or any smoke fails, installation still succeeds, any previous native destination remains unchanged, and the Node invocation stays the launch command with concise fallback guidance. `./install.sh --project` does not probe scriptc and does not inspect, create, or modify `$HOME/.local/bin`.
+
+scriptc support is experimental and evidenced only by the successful local build and smokes. Compilation currently requires scriptc's supported Node.js compiler version (Node 20 or newer), clang/toolchain availability, and a platform supported by the installed scriptc release; macOS arm64 is its primary documented platform and other platforms remain qualified. The produced executable does not require Node, but Node source remains authoritative and installed on every path. No compilation is required to use this project.
+
+With no mode flag it stays live, redraws on checkpoint-directory changes and on a timer, and exits cleanly on raw Ctrl-C, SIGINT, or SIGTERM: input and signal listeners are removed, prior stdin raw/flow state is restored, queued rendering drains, its watcher and timer are closed, and the terminal cursor is restored. Non-TTY live input remains signal-driven. For scripts or one deterministic non-ANSI rendering that never enters raw mode or installs a key listener, add `--once`.
 
 ```bash
 node packages/checkpoint-core/bin/checkpoint-watch.js --once
@@ -109,7 +117,9 @@ CHECKPOINT_WATCH_REFRESH_MS=500 CHECKPOINT_WATCH_STALE_MS=300000 node packages/c
 node packages/checkpoint-core/bin/checkpoint-watch.js --refresh-ms 500 --stale-ms 300000
 ```
 
-Refresh values are positive integer milliseconds. `--stale-ms` and `CHECKPOINT_WATCH_STALE_MS` remain accepted and positively validated for compatibility but are output-neutral no-ops. The exact columns are `AGENT`, `NAME`, `AGE`, `STATE`, `CP`, `C/W/3 %`, `CONTEXT`, `DONE`, and `CURRENT`; session IDs appear only in paths/raw logs and the detailed inspector. `C/W/3 %` is slash-separated, for example `100/66.7/100%`, while `CP` carries checkpoint count. Open/unknown rows come first newest-first, closed rows follow after a blank separator newest-first, and errors are last; closed `CURRENT` is `—`, while unclosed rows show raw `next`. Age never changes lifecycle state or proves liveness.
+Refresh values are positive integer milliseconds. `--stale-ms` and `CHECKPOINT_WATCH_STALE_MS` remain accepted and positively validated for compatibility but are output-neutral no-ops; they do not configure old-row visibility. The fixed presentation cutoff is exactly 10,800,000 ms from the latest physical event. Rows below it remain visible, while valid rows at or above it are hidden initially in both live and `--once` output. Lowercase `v` alone toggles all old rows in live mode; uppercase `V` and unrelated input do nothing. When shown, current open/unknown rows come first, old open/unknown rows form a separate paragraph, closed rows form one paragraph, and errors remain last and always visible because they have no trustworthy event age.
+
+The exact columns are `AGENT`, `NAME`, `AGE`, `STATE`, `CP`, `C/W/3 %`, `CONTEXT`, `DONE`, and `CURRENT`; session IDs appear only in paths/raw logs and the detailed inspector. At the ordinary 120-column width, complete known agent identities such as `maintainer-direct` take priority and long `NAME` values ellipsize first; genuinely narrow output remains deterministic and bounded. `C/W/3 %` is slash-separated, for example `100/66.7/100%`, while `CP` carries checkpoint count. Valid rows stay newest-first inside each paragraph; closed `CURRENT` is `—`, while unclosed rows show raw `next`. Age filtering never changes lifecycle state or proves liveness.
 
 The dashboard divides adaptive width among `NAME`, `DONE`, and `CURRENT`, deterministically truncates overlong values, and caps every line at terminal width. The detailed inspector is unchanged: it still shows selected-path session identity, raw `Next announced`, detailed metric counts, and strict stderr/nonzero failure behavior.
 

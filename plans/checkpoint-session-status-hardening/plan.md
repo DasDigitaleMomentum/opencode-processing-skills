@@ -2,9 +2,9 @@
 type: planning
 entity: plan
 plan: "checkpoint-session-status-hardening"
-status: active
+status: completed
 created: "2026-07-31"
-updated: "2026-08-01"
+updated: "2026-08-02"
 ---
 
 # Plan: checkpoint-session-status-hardening
@@ -36,6 +36,10 @@ Known adapter defects are corrected, and each session log can contain strict `se
 - User decision (2026-08-01): leave the fully implemented plan active and explicitly blocked until the exact Claude Code 2.1.170 and Hermes v0.19.0 host gate can run in a suitable environment; do not claim final success before that gate passes.
 - User decision (2026-08-01): every successful checkpoint lazily confirms the session as `open`; optional `close_session=true` on the final checkpoint lets a subagent declare normal session closure. Closure is not proof of successful work.
 - User decision (2026-08-01): keep age and lifecycle distinct without a redundant recent/stale label. The dashboard drops session ID, compacts quality metrics, groups closed sessions after open/unknown sessions, and presents raw `next` as `CURRENT` only while work remains unclosed.
+- User decision (2026-08-02): show the complete agent name at normal dashboard widths and reclaim space from the session title before truncating agent identity.
+- User decision (2026-08-02): hide sessions with no event update for three hours by default. In live mode, `v` toggles those rows; when visible, old unclosed `OPEN`/`UNKNOWN` rows form a separate paragraph below current unclosed rows.
+- User decision (2026-08-02): when `scriptc` is available, a global installation should compile and atomically install a native `checkpoint-watch` at `~/.local/bin/checkpoint-watch`; the dependency-free Node launch remains the portable fallback.
+- User decision (2026-08-02): close this plan without another phase. The exact Claude Code 2.1.170/Hermes v0.19.0 host gate remains explicitly unrun rather than being claimed as passed.
 
 ### Scope-Bounding Assumptions
 
@@ -60,6 +64,9 @@ Known adapter defects are corrected, and each session log can contain strict `se
 - [x] `checkpoint` accepts optional `close_session=false`; subagents set it on their final checkpoint and adapters append `closed` after that checkpoint without treating closure as work success.
 - [x] The dashboard presents `AGENT`, `NAME`, `AGE`, `STATE`, checkpoint count, compact `C/W/3 %`, `CONTEXT`, `DONE`, and `CURRENT`, with no session-ID or recent/stale column.
 - [x] Open/unknown rows sort newest-first, closed rows are visually separated and sort newest-first, errors remain last, and `CURRENT` is `—` for closed rows.
+- [x] The dashboard prioritizes the complete agent identity over `NAME`, hides rows older than three hours by default, and toggles them with `v` in live mode.
+- [x] Visible old unclosed rows are separated from current unclosed rows without changing persisted lifecycle state or treating age as liveness.
+- [x] Global installation compiles and installs `~/.local/bin/checkpoint-watch` when `scriptc` is available, while missing or unusable `scriptc` leaves the Node watcher usable.
 
 ### Non-Functional
 
@@ -68,7 +75,9 @@ Known adapter defects are corrected, and each session log can contain strict `se
 - [x] Installer runs remain idempotent, additive, and isolated from unrelated user configuration.
 - [x] Status writes use one append operation per line and never infer success, failure, or liveness beyond observed hook semantics.
 - [x] `checkpoint-inspect` retains nonzero/stderr failure behavior for malformed/unreadable logs; `checkpoint-watch` isolates those files as `ERROR` rows without treating `ERROR` as lifecycle state.
-- [ ] Focused regressions and the broad repository gate pass; host-specific pinned CLI smokes are recorded separately when the binaries are available.
+- [x] Keyboard handling restores terminal input mode and cursor state on normal exit, signal exit, and failures.
+- [x] Native compilation uses a disposable staging directory and leaves no `.scriptc` or LLVM artifacts in the repository.
+- [ ] Focused regressions and the broad repository gate pass; host-specific pinned CLI smokes are recorded separately when the binaries are available. (closure exception: exact pinned binaries unavailable; user closed the plan on 2026-08-02)
 
 ## Scope
 
@@ -98,9 +107,12 @@ Known adapter defects are corrected, and each session log can contain strict `se
 - [x] Reader-first installation copies compatible readers before any installed adapter can emit status events.
 - [x] Existing metrics exclude status events and existing checkpoint-only consumers retain their API behavior.
 - [x] Relevant docs and plans match the final code and honest lifecycle limitations.
-- [ ] Targeted suites and the approved broad gate pass, with any unavailable pinned-host smoke explicitly recorded rather than silently skipped.
-- [ ] Resumed sessions become `OPEN` on their next checkpoint; normally completed subagents become `CLOSED` when their final checkpoint declares closure; interrupted sessions remain honestly unclosed.
-- [ ] Compact dashboard output removes redundant columns without losing agent, title, age, lifecycle, context, last completed work, or announced current work.
+- [ ] Targeted suites and the approved broad gate pass, with any unavailable pinned-host smoke explicitly recorded rather than silently skipped. (closure exception recorded 2026-08-02)
+- [x] Resumed sessions become `OPEN` on their next checkpoint; normally completed subagents become `CLOSED` when their final checkpoint declares closure; interrupted sessions remain honestly unclosed.
+- [x] Compact dashboard output removes redundant columns without losing agent, title, age, lifecycle, context, last completed work, or announced current work.
+- [x] At ordinary terminal widths, full agent names remain visible while long `NAME` values truncate first.
+- [x] Live `v` toggling deterministically hides/shows every row whose latest event is at least three hours old; `--once` remains deterministic and non-interactive.
+- [x] A scriptc-produced watcher passes native `--help` and `--once` smoke tests before atomic installation to `~/.local/bin`.
 
 ## Testing Strategy
 
@@ -109,10 +121,12 @@ Known adapter defects are corrected, and each session log can contain strict `se
 - [x] Add exact regressions for Hermes multi-session binding, full instruction delivery, quoted disabled forms, and non-negative headroom; add Codex whole-directory symlink preservation.
 - [x] Add per-adapter lifecycle-hook tests and cross-adapter mixed-log inspection parity without inventing unsupported close hooks.
 - [x] Add isolated installation-order assertions and document/test the upgrade sequence: install reader assets first, restart live readers, then start/restart status-writing harness sessions.
-- [ ] Run focused tests during implementation, then once ready run `node --test packages/checkpoint-core/test/*.test.js opencode/test/*.test.mjs codex/test/*.test.mjs claude/test/*.test.mjs`, `python3 -m unittest discover -s hermes/test`, and `bash -n install.sh` as the final gate.
-- [ ] Run pinned Claude Code and Hermes CLI smokes in an environment containing the required binaries, or record the explicit environment blocker before completion.
+- [ ] Run focused tests during implementation, then once ready run `node --test packages/checkpoint-core/test/*.test.js opencode/test/*.test.mjs codex/test/*.test.mjs claude/test/*.test.mjs`, `python3 -m unittest discover -s hermes/test`, and `bash -n install.sh` as the final gate. (stopped only at the recorded pinned-host absence)
+- [ ] Run pinned Claude Code and Hermes CLI smokes in an environment containing the required binaries, or record the explicit environment blocker before completion. (not run; user-accepted closure exception)
 - [x] Add cross-adapter tests for lazy open, final declared close, default compatibility, and close-after-checkpoint physical ordering.
 - [x] Add deterministic dashboard tests for compact columns, slash-separated percentages, closed grouping, age sorting, hidden session IDs, and closed `CURRENT` display.
+- [x] Add focused dashboard tests for agent-width priority, the exact three-hour boundary, default hiding, `v` toggling, old-unclosed grouping, and input cleanup.
+- [x] Add installer tests for scriptc available/unavailable/build-failure paths, disposable build staging, executable installation, and unchanged Node fallback behavior.
 
 ## Phases
 
@@ -123,6 +137,7 @@ Known adapter defects are corrected, and each session log can contain strict `se
 | 3 | OpenCode and Codex Status Writers | Adds only lifecycle events supported by verified OpenCode and Codex hooks after readers are compatible. | [Phase](phases/phase-3.md) | completed |
 | 4 | Claude, Hermes, and Rollout Closure | Adds supported Claude/Hermes events, verifies cross-harness behavior, updates docs, and reconciles stale plan state. | [Phase](phases/phase-4.md) | completed |
 | 5 | Declared Closure and Compact Dashboard | Removes resumed-session `UNKNOWN`, lets subagents declare normal closure, and compacts the dashboard around lifecycle and current work. | [Phase](phases/phase-5.md) | completed |
+| 6 | Watcher Usability and Native Packaging | Improves identity visibility and old-session navigation, then optionally installs a scriptc-native watcher. | [Phase](phases/phase-6.md) | completed |
 
 ## Risks & Open Questions
 
@@ -135,6 +150,7 @@ Known adapter defects are corrected, and each session log can contain strict `se
 | Pinned Claude/Hermes binaries are absent in the current environment. | Medium | Keep host-smoke gates explicit; use contract/hook tests locally and run host smokes where binaries exist before final completion. |
 | Multiple processes may append to one file without stronger ordering guarantees. | Medium | Treat resulting physical line order as authoritative and promise no stronger cross-process ordering. |
 | OpenCode revalidation may find no trustworthy lifecycle start/resume event. | Medium | Emit no OpenCode status event in that case; checkpoint-only logs remain `UNKNOWN` rather than fabricating `OPEN`. |
+| `scriptc` is experimental and platform/toolchain support is narrower than Node. | Medium | Keep Node source installation authoritative, compile only when available, smoke-test the temporary binary, and install it atomically only after success. |
 
 ## Changelog
 
@@ -164,3 +180,12 @@ Known adapter defects are corrected, and each session log can contain strict `se
 - Phase 5 implementation completed and its independent implementation review returned Accepted with no findings.
 - Local verification recorded Node 87/88 with only the exact Claude Code 2.1.170 binary unavailable, Hermes 54/55 with only the exact Hermes v0.19.0 binary unavailable, reviewer-focused Node 40/40 and Hermes 22/22, plus passing `bash -n` and diff checks.
 - Phase 5 moved to completed. The plan remains active and blocked solely on the existing exact pinned-host gate; the broad gate has not passed and plan completion is not claimed.
+
+### 2026-08-02
+
+- Added Phase 6 from live watcher feedback: full agent identity priority, default hiding of sessions without updates for three hours with live `v` toggling and old-unclosed grouping, plus optional scriptc-native installation to `~/.local/bin` when available. The pre-existing pinned Claude/Hermes host gate remains independently blocked.
+- Authored and independently reviewed the Phase 6 implementation plan. The review found two Major and one Minor actionability gaps; all three were remediated with none unresolved before execution.
+- Completed Phase 6 implementation. Initial implementation review returned Needs Rework with Major F-1 and Minor F-2/F-3; the same reviewer fixed native PTY width, mixed-schema native parity, and stale inventory anchors with none unresolved.
+- Local Phase 6 evidence passed: watcher 17/17, native static build plus non-TTY and 80/120-column PTY smokes, focused installer 4/4, and anchor checks. The exact Node gate reached 95/96 with only missing Claude Code 2.1.170; Hermes reached 54/55 with only missing Hermes v0.19.0. The overall plan remains active and final success is not claimed.
+- Fixed newer OpenCode host compatibility: a filesystem-root `worktree` no longer sends writes to `/.agent-checkpoints`; the adapter falls back to the actual OpenCode directory. Focused and complete OpenCode tests passed 19/19.
+- Closed the plan at the user's explicit direction without adding another phase. The missing exact Claude Code 2.1.170/Hermes v0.19.0 host gate remains a documented, unpassed closure exception.

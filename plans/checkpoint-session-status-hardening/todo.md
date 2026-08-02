@@ -2,19 +2,19 @@
 type: planning
 entity: todo
 plan: "checkpoint-session-status-hardening"
-updated: "2026-08-01"
+updated: "2026-08-02"
 ---
 
 # Todo: checkpoint-session-status-hardening
 
 > Tracking [checkpoint-session-status-hardening](plan.md)
 
-## Active Phase: None - Exact Pinned-Host Gate Blocked
+## Active Phase: Plan Completed
 
 ### Phase Context
 
-- **Scope**: [Phase 5](phases/phase-5.md)
-- **Implementation**: [Phase 5 Plan](implementation/phase-5-impl.md)
+- **Scope**: [Phase 6](phases/phase-6.md)
+- **Implementation**: [Phase 6 Plan](implementation/phase-6-impl.md)
 - **Latest Handover**: Not created
 - **Relevant Docs**:
   - [Agent Checkpoint / Heartbeat](../../docs/agent-checkpoint-heartbeat.md)
@@ -76,10 +76,20 @@ None.
 - [x] Implement compact dashboard columns, grouping, and age sorting. <!-- completed: 2026-08-01 -->
 - [x] Add cross-adapter lifecycle and deterministic dashboard regressions. <!-- completed: 2026-08-01 -->
 - [x] Complete independent Phase 5 review with verdict Accepted and no findings. <!-- completed: 2026-08-01 -->
+- [x] Author the grounded Phase 6 implementation plan, independently review it, and remediate accepted F-1–F-3 with none unresolved. <!-- completed: 2026-08-02 -->
+- [x] Prioritize complete agent identity and truncate `NAME` first at ordinary widths. <!-- completed: 2026-08-02 -->
+- [x] Hide rows without an event update for three hours by default and toggle them with `v` in live mode. <!-- completed: 2026-08-02 -->
+- [x] Separate visible old unclosed rows from current unclosed rows without changing lifecycle semantics. <!-- completed: 2026-08-02 -->
+- [x] Make `checkpoint-watch.js` compile statically with scriptc and pass non-TTY plus 80/120-column PTY live smokes. <!-- completed: 2026-08-02 -->
+- [x] Add opportunistic verified native installation to `~/.local/bin` for global installs while preserving Node fallback and project isolation. <!-- completed: 2026-08-02 -->
+- [x] Update watcher/install documentation and focused cross-harness parity expectations. <!-- completed: 2026-08-02 -->
+- [x] Complete independent Phase 6 implementation review and resolve Major F-1 plus Minor F-2/F-3 with none unresolved. <!-- completed: 2026-08-02 -->
+- [x] Fix newer OpenCode workspace resolution so a root-valued `worktree` falls back to the actual project directory; pass OpenCode 19/19. <!-- completed: 2026-08-02 -->
+- [x] Close the plan on explicit user direction without another phase; retain the unavailable exact pinned-host gate as an unpassed closure exception. <!-- completed: 2026-08-02 -->
 
 ### Blocked
 
-- [ ] In a suitable environment, run the exact host gate with Claude Code 2.1.170 and Hermes v0.19.0, then evaluate overall plan completion. Until then, the fully implemented plan remains active and blocked; the full gate and final success are not claimed. <!-- blocked: 2026-07-31, reason: required host binaries unavailable -->
+None. The exact Claude Code 2.1.170/Hermes v0.19.0 host gate was not run and remains recorded as a user-accepted closure exception.
 
 ## Changelog
 
@@ -110,3 +120,12 @@ None.
 - Completed Phase 5 implementation and cleared all Phase 5 implementation todos; the independent implementation review returned Accepted with no findings.
 - Recorded local evidence: Node 87/88 with only the exact Claude Code 2.1.170 binary unavailable, Hermes 54/55 with only the exact Hermes v0.19.0 binary unavailable, reviewer-focused Node 40/40 and Hermes 22/22, plus passing `bash -n` and diff checks.
 - Returned the plan to active/blocked solely on the existing exact pinned-host gate. The broad gate is not claimed as passed.
+
+### 2026-08-02
+
+- Activated Phase 6 for dashboard identity width, three-hour visibility toggling, and optional scriptc-native installation. The exact pinned-host gate remains a separate blocker for overall plan completion.
+- Authored and independently reviewed the Phase 6 implementation plan. Accepted findings F-1–F-3 were remediated in the reviewer session; implementation is now in progress.
+- Completed Phase 6 and its review remediation. Watcher 17/17, native non-TTY and 80/120-column PTY smokes, focused installer 4/4, and documentation anchors pass; only the unchanged exact Claude/Hermes host checks remain unavailable.
+- Returned the plan to active/blocked solely on the exact pinned-host gate. No broad-gate success or overall plan completion is claimed.
+- Fixed the newer OpenCode root-worktree regression and passed all 19 OpenCode tests.
+- Closed the plan on explicit user direction without another phase. The exact pinned-host gate remains documented as unavailable and unpassed.

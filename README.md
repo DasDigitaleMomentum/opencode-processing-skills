@@ -47,6 +47,11 @@ OpenCode, Codex, Claude Code, or Hermes session using the checkpoint adapter.
 After installation, run the exact `checkpoint-watch` command printed by the
 installer, then restart the enabled harnesses and select `@maintainer` in
 OpenCode.
+Global installation opportunistically compiles a native
+`$HOME/.local/bin/checkpoint-watch` when an already-installed `scriptc` passes
+coverage, build, snapshot, and live smokes. This is optional: the installed
+Node watcher and its printed fallback command remain available, and project
+installation never touches the global binary.
 On OpenCode v1.18.2+, set `"subagent_depth": 2` for worker-to-retriever handoffs. Older versions do not support this setting and generally allow nested tasks through permissions alone.
 If Codex, Claude Code, Cursor, or Hermes are installed locally, skills are synced to their config directories during install.
 Hermes support includes the native checkpoint plugin and conservative
@@ -109,11 +114,17 @@ node packages/checkpoint-core/bin/checkpoint-watch.js --once
 ```
 
 For global or project-local installations, use the exact `Launch command:`
-printed by `./install.sh` or `./install.sh --project`. The dashboard refreshes
-live and shows informational age, explicit `OPEN`/`CLOSED`/`UNKNOWN` state,
-chain and three-word compliance, work status, context, done, and next. State
-comes only from observed lifecycle events; it never infers process liveness
-from age.
+printed by `./install.sh` or `./install.sh --project`; a successful optional
+global native build also prints the exact `Node fallback:`. The dashboard
+refreshes live and shows informational age, explicit
+`OPEN`/`CLOSED`/`UNKNOWN` state, chain and three-word compliance, work status,
+context, done, and current work. Agent identity has priority over the mutable
+session name at the normal 120-column width. Rows whose latest physical event
+is at least three hours old are hidden initially in both live and `--once`
+output; lowercase `v` toggles all old rows in live mode and places old
+unclosed rows in a separate paragraph. This cutoff changes presentation only:
+state still comes solely from observed lifecycle events and never infers
+process liveness from age.
 
 → [Checkpoint installation and dashboard quickstart](docs/installation.md#checkpoint-dashboard-quickstart)
 

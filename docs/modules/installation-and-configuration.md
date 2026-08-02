@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "installation-and-configuration"
-version: 1.5
+version: 1.6
 ---
 
 # Module: Installation and Configuration
@@ -11,7 +11,7 @@ version: 1.5
 
 ## Overview
 
-The root distribution surface explains the project, establishes repository-wide conventions, exposes the optional installer schema, and installs skills, agent definitions, and checkpoint assets into supported locations. `install.sh` is a dependency-light Bash entry point with environment-over-YAML-over-default precedence, global and project-local modes, model/frontmatter injection, generated agent variants, symlink preservation, reader-before-writer checkpoint installation, and target-specific behavior. The operational walkthrough and compatibility caveats remain in the [Installation Guide](../installation.md).
+The root distribution surface explains the project, establishes repository-wide conventions, exposes the optional installer schema, and installs skills, agent definitions, and checkpoint assets into supported locations. `install.sh` is a dependency-light Bash entry point with environment-over-YAML-over-default precedence, global and project-local modes, model/frontmatter injection, generated agent variants, symlink preservation, reader-before-writer checkpoint installation, an optional verified scriptc-native global watcher, and target-specific behavior. The operational walkthrough and compatibility caveats remain in the [Installation Guide](../installation.md).
 
 ### Responsibility
 
@@ -25,6 +25,7 @@ This module owns the public repository entry points and the mechanics that turn 
 | Agent definitions under `agents/` | module | Supply canonical personas copied to OpenCode and Claude targets and adapted for Cursor. |
 | Cursor integration assets under `cursor/` | module | Supply orchestrator skills, task-delegation guidance, bootstrap text, and the optional project rule. |
 | POSIX-like shell and core command-line tools | external | Bash executes the installer using `grep`, `awk`, `sed`, `cp`, `mkdir`, `rm`, `mktemp`, `tr`, and related core utilities. |
+| scriptc, Node.js >=20, and clang/toolchain | optional external | A pre-existing compatible toolchain may compile the staged global watcher; absence or any failed diagnostic/smoke retains the Node launch and does not fail installation. |
 | Git | external | Supports cloning/updating the repository and supplies the tracked release and source context; installation itself performs no Git mutation. |
 | Harness home directories | external | OpenCode, Codex, Claude Code, Cursor, Hermes, and Antigravity presence determine auto-enabled destinations and compatibility behavior. |
 | Manual reference documentation | module | [Installation](../installation.md), [Skills](../skills.md), and [Agents](../agents.md) provide user-facing procedures and architecture detail without being part of this module's inventory. |
@@ -117,28 +118,29 @@ This module owns the public repository entry points and the mechanics that turn 
 | `cursor_install_project_rule` | function | internal | `install.sh:885` | Copies the optional project-local Cursor orchestrator rule. |
 | `cursor_install_extras` | function | internal | `install.sh:903` | Coordinates Cursor subagents, bootstrap, orchestrator skills, and project rule installation. |
 | `install_opencode_checkpoint_file` | function | internal | `install.sh:916` | Copies one checkpoint asset while preserving an existing symlink. |
+| `install_optional_native_checkpoint_watch` | function | internal | `install.sh` | Globally stages watcher/core, runs scriptc coverage/build and native snapshot/live smokes, then atomically installs a verified executable while preserving prior/symlink destinations on failure. |
 | `required_checkpoint_reader_symlink_error` | function | internal | `install.sh` | Stops loudly with path-specific recovery guidance for a user-managed required reader/core link. |
 | `preflight_required_checkpoint_reader` | function | internal | `install.sh` | Performs one validation-only required-path symlink check. |
 | `preflight_required_checkpoint_reader_components` | function | internal | `install.sh` | Checks every component below a target base so a symlinked reader ancestor cannot redirect a later copy. |
 | `preflight_checkpoint_reader_dependencies` | function | internal | `install.sh` | Checks OpenCode core/watcher plus enabled Codex and Claude bundled-core dependencies before Step 1 mutates targets; its successful shared-reader result also gates Hermes installation. |
-| `install_opencode_checkpoint` | function | internal | `install.sh` | Installs shared core and complete watcher readers before runtime/plugin writers. |
-| `install_opencode_checkpoint_instruction` | function | internal | `install.sh:1037` | Appends the bounded current block when absent, preserves exact current/symlinked personas, exactly migrates the known legacy bytes, and refuses unknown marked content unchanged. |
-| `install_codex_checkpoint` | function | internal | `install.sh:1126` | Installs bundled lazy-open/declared-close core before MCP support, status hook, and opt-in profile while preserving base configuration. |
-| `install_claude_checkpoint` | function | internal | `install.sh:1206` | Installs the bundled mixed-log core before strict-close hooks/runtime and preserves Claude base settings. |
-| `install_hermes_checkpoint` | function | internal | `install.sh:1446` | Installs the Python lazy-open/declared-close mirror and instruction before additive opt-in enablement. |
+| `install_opencode_checkpoint` | function | internal | `install.sh` | Installs shared core and complete watcher readers, attempts the global-only optional native watcher, then installs runtime/plugin writers. |
+| `install_opencode_checkpoint_instruction` | function | internal | `install.sh:1199` | Appends the bounded current block when absent, preserves exact current/symlinked personas, exactly migrates the known legacy bytes, and refuses unknown marked content unchanged. |
+| `install_codex_checkpoint` | function | internal | `install.sh:1311` | Installs bundled lazy-open/declared-close core before MCP support, status hook, and opt-in profile while preserving base configuration. |
+| `install_claude_checkpoint` | function | internal | `install.sh:1391` | Installs the bundled mixed-log core before strict-close hooks/runtime and preserves Claude base settings. |
+| `install_hermes_checkpoint` | function | internal | `install.sh:1631` | Installs the Python lazy-open/declared-close mirror and instruction before additive opt-in enablement. |
 | `Argument parsing` | workflow | public | `install.sh:53` | Accepts global mode, `--project`, and help; rejects unknown options before filesystem changes. |
 | `Target resolution` | workflow | internal | `install.sh:223` | Applies YAML/default/env precedence and decides which harness destinations are enabled. |
 | `Project mode override` | workflow | internal | `install.sh:328` | Replaces global OpenCode destinations with `./.opencode/` and optionally adds `./.cursor/`. |
-| `Install Skills` | workflow | internal | `install.sh:1489` | Copies every skill package to each enabled destination, replacing ordinary directories but skipping symlinks. |
-| `Hermes category description` | workflow | internal | `install.sh:1518` | Writes global-mode `DESCRIPTION.md` metadata for the Hermes `processing` category unless the path is a symlink. |
-| `Install Agents` | workflow | internal | `install.sh:1537` | Copies canonical personas to agent destinations and injects configured models/options. |
-| `Create delegate variants` | workflow | internal | `install.sh:1575` | Generates every configured delegate alias in each agent destination. |
-| `Create implementer variants` | workflow | internal | `install.sh:1591` | Generates every configured implementer variant in each agent destination. |
-| `Install OpenCode checkpoint` | workflow | internal | `install.sh:1607` | Deploys shared core/watcher/runtime/plugin, then safely applies the managed OpenCode instruction after aliases exist. |
-| `Install Cursor orchestration layer` | workflow | internal | `install.sh:1626` | Adds Cursor-specific personas, bootstrap, orchestrator skills, and optional project rule after shared copies. |
+| `Install Skills` | workflow | internal | `install.sh:1674` | Copies every skill package to each enabled destination, replacing ordinary directories but skipping symlinks. |
+| `Hermes category description` | workflow | internal | `install.sh:1703` | Writes global-mode `DESCRIPTION.md` metadata for the Hermes `processing` category unless the path is a symlink. |
+| `Install Agents` | workflow | internal | `install.sh:1722` | Copies canonical personas to agent destinations and injects configured models/options. |
+| `Create delegate variants` | workflow | internal | `install.sh:1760` | Generates every configured delegate alias in each agent destination. |
+| `Create implementer variants` | workflow | internal | `install.sh:1776` | Generates every configured implementer variant in each agent destination. |
+| `Install OpenCode checkpoint` | workflow | internal | `install.sh:1792` | Deploys shared core/watcher/runtime/plugin, then safely applies the managed OpenCode instruction after aliases exist. |
+| `Install Cursor orchestration layer` | workflow | internal | `install.sh:1811` | Adds Cursor-specific personas, bootstrap, orchestrator skills, and optional project rule after shared copies. |
 | `Checkpoint upgrade prerequisite` | output | public | `install.sh` | Requires the live dashboard and writer-enabled OpenCode, Codex, Claude Code, and Hermes sessions to quiesce before the first mutation. |
-| `Checkpoint watcher launch` | output | public | `install.sh` | Prints the installed watcher path and exact quoted Node launch command before every enabled harness restart instruction. |
-| `Nested delegation reminder` | output | public | `install.sh:1604` | Gives version-aware guidance: v1.18.2+ uses top-level `subagent_depth: 2`; older versions omit the unsupported setting. |
+| `Checkpoint watcher launch` | output | public | `install.sh` | Prints a verified global native launch plus exact Node fallback, or the Node launch after optional failure/project installation, before every enabled harness restart instruction. |
+| `Nested delegation reminder` | output | public | `install.sh:1845` | Gives version-aware guidance: v1.18.2+ uses top-level `subagent_depth: 2`; older versions omit the unsupported setting. |
 
 ## Data Flow
 
@@ -147,12 +149,13 @@ This module owns the public repository entry points and the mechanics that turn 
 3. Enabled targets populate shared skill and agent destination arrays. Project mode replaces global agent/skill paths with `./.opencode/` and may add `./.cursor/`; Hermes stays global-only and uses its `processing` category; Antigravity is detected but served through Claude.
 4. Before any target mutation, the installer prints the quiescence prerequisite and validates every component of the required OpenCode core/watcher plus enabled Codex and Claude bundled-core destinations. A symlink at one of those dependencies is preserved but aborts with path-specific update-or-replace-and-rerun guidance; it is never counted as a compatible refresh. Hermes installation and enablement require that same successful shared-reader preflight.
 5. Every checked-in skill package is copied to each enabled destination. Agent personas are copied only to agent-capable targets, then configured aliases/variants are generated as before.
-6. The effective OpenCode target receives compatible shared core and compact watcher before runtime/plugin; Codex/Claude receive bundled strict-close cores before hooks/runtime, and Hermes receives its Python mirror before enablement. The four instructions are refreshed through their existing paths. OpenCode persona migration is exact and bounded; unrelated configuration and symlink guarantees remain unchanged.
-7. The summary prints the exact dashboard launch command first, then OpenCode, Codex, Claude Code, and Hermes startup instructions for enabled targets. This completes the enforced operator sequence: quiesce → install readers/writers → start dashboard → restart harnesses. Cursor installation behavior is otherwise unchanged, and the installer does not edit OpenCode runtime JSON/JSONC.
+6. The effective OpenCode target receives compatible shared core and compact watcher before runtime/plugin. In global mode only, an existing scriptc is then exercised in a disposable source tree: coverage, build, native help/once, and non-TTY live refresh/signal/cursor smokes must all pass before a same-directory temporary executable is atomically renamed to `$HOME/.local/bin/checkpoint-watch`. Optional failure leaves any previous destination and the portable reader intact; a destination symlink is preserved. Project mode does not inspect this path or probe scriptc.
+7. Codex/Claude receive bundled strict-close cores before hooks/runtime, and Hermes receives its Python mirror before enablement. The four instructions are refreshed through their existing paths. OpenCode persona migration is exact and bounded; unrelated configuration and symlink guarantees remain unchanged.
+8. The summary prints the verified native launch and exact Node fallback, or the Node launch alone, then OpenCode, Codex, Claude Code, and Hermes startup instructions for enabled targets. This completes the enforced operator sequence: quiesce → install readers/writers → start dashboard → restart harnesses. Cursor installation behavior is otherwise unchanged, and the installer does not edit OpenCode runtime JSON/JSONC.
 
 ## Configuration
 
-`config.yaml.example` is optional and becomes active only after it is copied to the ignored `config.yaml` or selected through `OPS_CONFIG_FILE`. `targets` entries accept `enabled: true | false | auto` and `home`; OpenCode is always included, and its existing `home` also controls global checkpoint installation. Project mode uses `./.opencode`. No checkpoint-specific setting was added.
+`config.yaml.example` is optional and becomes active only after it is copied to the ignored `config.yaml` or selected through `OPS_CONFIG_FILE`. `targets` entries accept `enabled: true | false | auto` and `home`; OpenCode is always included, and its existing `home` also controls global checkpoint installation. Project mode uses `./.opencode`. No checkpoint- or scriptc-specific setting was added: global detection is opportunistic, and project mode is always Node-only.
 
 Root agent keys accept either `agent: provider/model` or an object with `model` plus arbitrary provider option scalars. `additional_delegates` and `additional_implementers` use the same scalar/object forms, keyed by the suffix added to the generated persona name. The example exposes `reasoningEffort`, `temperature`, `top_p`, and `maxTokens`, while the installer forwards any non-empty option key/value it parses.
 

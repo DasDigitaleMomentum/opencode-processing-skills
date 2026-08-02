@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   access,
+  chmod,
   lstat,
   mkdtemp,
   mkdir,
@@ -160,12 +161,13 @@ async function inspect(selectedPath, cwd) {
   return stdout;
 }
 
-function runInstallerResult(args, { cwd, configFile, opencodeHome }) {
+function runInstallerResult(args, { cwd, configFile, opencodeHome, env = {} }) {
   return spawnSync("bash", [path.join(REPOSITORY_ROOT, "install.sh"), ...args], {
     cwd,
     encoding: "utf8",
     env: {
       ...process.env,
+      PATH: "/usr/bin:/bin",
       HOME: path.dirname(opencodeHome),
       OPS_CONFIG_FILE: configFile,
       OPS_OPENCODE_HOME: opencodeHome,
@@ -174,6 +176,7 @@ function runInstallerResult(args, { cwd, configFile, opencodeHome }) {
       OPS_SYNC_CURSOR: "false",
       OPS_SYNC_HERMES: "false",
       OPS_ANTIGRAVITY_PATH: path.join(cwd, "absent-antigravity"),
+      ...env,
     },
   });
 }
@@ -219,6 +222,69 @@ async function writeInstallerConfig(root) {
     ].join("\n"),
   );
   return configFile;
+}
+
+async function writeFakeScriptc(root, behavior) {
+  const bin = path.join(root, "fake-scriptc-bin");
+  const invocationLog = path.join(root, "scriptc-invocations.log");
+  await mkdir(bin, { recursive: true });
+  const script = path.join(bin, "scriptc");
+  const nativeBody = `#!/bin/sh
+behavior=${JSON.stringify(behavior)}
+if [ "\${1:-}" = "--help" ]; then
+  [ "$behavior" != "help-failure" ] || exit 11
+  printf '%s\\n' 'Usage: checkpoint-watch [--once]'
+  exit 0
+fi
+if [ "\${1:-}" = "--once" ]; then
+  [ "$behavior" != "once-failure" ] || exit 12
+  printf '%s\\n' 'Checkpoint sessions — fake native once'
+  exit 0
+fi
+[ "$behavior" != "live-start-failure" ] || exit 13
+printf '\\033[?25l\\033[H\\033[2JCheckpoint sessions — fake native live\\n'
+if [ "$behavior" = "live-exit-failure" ]; then
+  trap 'printf "\\033[?25h"; exit 14' TERM INT
+elif [ "$behavior" = "cursor-failure" ]; then
+  trap 'exit 0' TERM INT
+else
+  trap 'printf "\\033[?25h"; exit 0' TERM INT
+fi
+seen=false
+while :; do
+  if [ "$behavior" != "live-refresh-failure" ] && [ "$seen" = false ] && [ -f .agent-checkpoints/native-installer-smoke.jsonl ]; then
+    printf '\\033[H\\033[2JCheckpoint sessions — fake native live\\nnative-refresh\\n'
+    seen=true
+  fi
+  sleep 0.02
+done
+`;
+  const fake = `#!/usr/bin/env bash
+set -u
+printf '%s\\n' "\${1:-missing}" >> ${JSON.stringify(invocationLog)}
+case "\${1:-}" in
+  coverage)
+    if [ ${JSON.stringify(behavior)} = coverage-failure ]; then exit 21; fi
+    if [ ${JSON.stringify(behavior)} = coverage-fence ]; then printf '%s\\n' 'SC2002'; else printf '%s\\n' 'compile statically'; fi
+    ;;
+  build)
+    if [ ${JSON.stringify(behavior)} = build-failure ]; then exit 22; fi
+    output=''
+    shift
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = -o ]; then output="$2"; shift 2; else shift; fi
+    done
+    [ -n "$output" ] || exit 23
+    cat > "$output" <<'NATIVE'
+${nativeBody}NATIVE
+    if [ ${JSON.stringify(behavior)} != non-executable ]; then chmod 755 "$output"; fi
+    ;;
+  *) exit 24 ;;
+esac
+`;
+  await writeFile(script, fake);
+  await chmod(script, 0o755);
+  return { bin, invocationLog };
 }
 
 async function assertInstalledOpenCodePilot(home) {
@@ -479,6 +545,33 @@ test("session.created writes open while unsupported resume and close signals sta
   assert.equal(mixed.records.some((record) => record.status === "closed"), false);
 });
 
+test("OpenCode directory wins when newer hosts expose root as worktree", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "checkpoint-opencode-directory-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const plugin = createOpenCodeCheckpointPlugin({ tool: fakeTool, checkpointCore });
+  const hooks = await plugin({ directory, worktree: path.parse(directory).root });
+
+  await hooks.event({
+    event: {
+      type: "session.created",
+      properties: { info: { id: "new-host-event" } },
+    },
+  });
+  await hooks.tool.checkpoint.execute(
+    { done: "Workspace root resolved", next: "Verify directory output" },
+    {
+      sessionID: "new-host-tool",
+      directory,
+      worktree: path.parse(directory).root,
+    },
+  );
+
+  for (const sessionId of ["new-host-event", "new-host-tool"]) {
+    const file = path.join(directory, ...checkpointCore.checkpointPath(sessionId).split("/"));
+    assert.equal((await readFile(file, "utf8")).includes(`"session_id":"${sessionId}"`), true);
+  }
+});
+
 test("telemetry uses the latest completed assistant step and sums all token categories", async () => {
   const telemetry = createOpenCodeContextTelemetry(
     fakeClient({
@@ -683,6 +776,7 @@ test("global installer deploys assets and idempotent instructions while preservi
   const watcherPath = path.join(home, "lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js");
   assert.match(output, new RegExp(`Checkpoint watcher: ${watcherPath.replaceAll("\\", "\\\\")}`));
   assert.match(output, new RegExp(`Launch command: node "${watcherPath.replaceAll("\\", "\\\\")}"`));
+  assert.match(output, /Native watcher unavailable: scriptc was not found/);
   assertOutputOrder(output, [
     "Checkpoint adapter upgrade prerequisite:",
     "Step 1.1:",
@@ -720,6 +814,102 @@ test("global installer deploys assets and idempotent instructions while preservi
     const persona = await readFile(path.join(home, `agents/${name}.md`), "utf8");
     assert.equal(persona.split(INSTRUCTION_MARKER).length - 1, 1, name);
   }
+});
+
+test("optional native installer keeps the Node fallback and prior binary on every failed gate", async (t) => {
+  const scenarios = [
+    "coverage-failure",
+    "coverage-fence",
+    "build-failure",
+    "non-executable",
+    "help-failure",
+    "once-failure",
+    "live-start-failure",
+    "live-refresh-failure",
+    "live-exit-failure",
+    "cursor-failure",
+  ];
+  for (const behavior of scenarios) {
+    const root = await mkdtemp(path.join(os.tmpdir(), `checkpoint-opencode-native-${behavior}-`));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    const home = path.join(root, "opencode-home");
+    const configFile = await writeInstallerConfig(root);
+    const { bin } = await writeFakeScriptc(root, behavior);
+    const nativePath = path.join(root, ".local/bin/checkpoint-watch");
+    await mkdir(path.dirname(nativePath), { recursive: true });
+    const sentinel = `preserved native ${behavior}\n`;
+    await writeFile(nativePath, sentinel);
+
+    const output = runInstaller([], {
+      cwd: root,
+      configFile,
+      opencodeHome: home,
+      env: { PATH: `${bin}:/usr/bin:/bin` },
+    });
+    const watcherPath = path.join(home, "lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js");
+    assert.match(output, /Native watcher unavailable: .*using installed Node fallback/);
+    assert.match(output, new RegExp(`Launch command: node "${watcherPath.replaceAll("\\", "\\\\")}"`));
+    assert.doesNotMatch(output, /Node fallback:/);
+    assert.equal(await readFile(nativePath, "utf8"), sentinel, behavior);
+    await assertInstalledOpenCodePilot(home);
+  }
+});
+
+test("verified optional native installer atomically selects native and retains the exact Node fallback", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-opencode-native-success-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const home = path.join(root, "opencode-home");
+  const configFile = await writeInstallerConfig(root);
+  const { bin, invocationLog } = await writeFakeScriptc(root, "success");
+  const stageRoot = path.join(root, "native-stages");
+  await mkdir(stageRoot);
+  const nativePath = path.join(root, ".local/bin/checkpoint-watch");
+  await mkdir(path.dirname(nativePath), { recursive: true });
+  await writeFile(nativePath, "previous regular native\n");
+
+  const output = runInstaller([], {
+    cwd: root,
+    configFile,
+    opencodeHome: home,
+    env: { PATH: `${bin}:/usr/bin:/bin`, TMPDIR: stageRoot },
+  });
+  const watcherPath = path.join(home, "lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js");
+  assert.match(output, new RegExp(`Native watcher installed: ${nativePath.replaceAll("\\", "\\\\")}`));
+  assert.match(output, new RegExp(`Launch command: "${nativePath.replaceAll("\\", "\\\\")}"`));
+  assert.match(output, new RegExp(`Node fallback: node "${watcherPath.replaceAll("\\", "\\\\")}"`));
+  assert.doesNotMatch(await readFile(nativePath, "utf8"), /previous regular native/);
+  assert.notEqual((await lstat(nativePath)).mode & 0o111, 0);
+  const help = spawnSync(nativePath, ["--help"], { encoding: "utf8" });
+  assert.equal(help.status, 0, help.stderr);
+  assert.match(help.stdout, /Usage: checkpoint-watch/);
+  assert.equal(await readFile(invocationLog, "utf8"), "coverage\nbuild\n");
+  assert.deepEqual(await readdir(stageRoot), []);
+  await assertInstalledOpenCodePilot(home);
+});
+
+test("optional native installer preserves a user-managed destination symlink without probing scriptc", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-opencode-native-symlink-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const home = path.join(root, "opencode-home");
+  const configFile = await writeInstallerConfig(root);
+  const { bin, invocationLog } = await writeFakeScriptc(root, "success");
+  const protectedTarget = path.join(root, "protected-native");
+  await writeFile(protectedTarget, "protected native bytes\n");
+  const nativePath = path.join(root, ".local/bin/checkpoint-watch");
+  await mkdir(path.dirname(nativePath), { recursive: true });
+  await symlink(protectedTarget, nativePath);
+
+  const output = runInstaller([], {
+    cwd: root,
+    configFile,
+    opencodeHome: home,
+    env: { PATH: `${bin}:/usr/bin:/bin` },
+  });
+  assert.match(output, /preserving user-managed symlink/);
+  assert.equal((await lstat(nativePath)).isSymbolicLink(), true);
+  assert.equal(await readlink(nativePath), protectedTarget);
+  assert.equal(await readFile(protectedTarget, "utf8"), "protected native bytes\n");
+  await assert.rejects(readFile(invocationLog, "utf8"), /ENOENT/);
 });
 
 test("installer migrates only the exact legacy managed fragment and preserves surrounding bytes", async (t) => {
@@ -933,6 +1123,11 @@ test("lifecycle documentation preserves honest events and ordered upgrade steps"
   assert.match(installation, /unknown\/customized marked content stops loudly unchanged/);
   assert.match(installation, /`--stale-ms` and `CHECKPOINT_WATCH_STALE_MS` remain accepted.*no-ops/);
   assert.match(installation, /`AGENT`, `NAME`, `AGE`, `STATE`, `CP`, `C\/W\/3 %`, `CONTEXT`, `DONE`, and `CURRENT`/);
+  assert.match(installation, /fixed presentation cutoff is exactly 10,800,000 ms/);
+  assert.match(installation, /Lowercase `v` alone toggles all old rows/);
+  assert.match(installation, /atomically renamed to `\$HOME\/\.local\/bin\/checkpoint-watch`/);
+  assert.match(installation, /`\.\/install\.sh --project` does not probe scriptc/);
+  assert.match(installation, /Node 20 or newer/);
   assertOutputOrder(installation, [
     "Before `./install.sh`, stop every live dashboard",
     "Run the installer.",
@@ -952,6 +1147,9 @@ test("lifecycle documentation preserves honest events and ordered upgrade steps"
   assert.match(heartbeat, /`open` → Checkpoint → `closed`/);
   assert.match(heartbeat, /Subagent setzt `close_session=true` ausschließlich auf seinem letzten Checkpoint/);
   assert.match(heartbeat, /Session-ID.*im Dashboard aber nicht gerendert/);
+  assert.match(heartbeat, /`10\.800\.000` ms \(drei Stunden\)/);
+  assert.match(heartbeat, /kleine `v` alle alten Zeilen/);
+  assert.match(heartbeat, /vorherigen Raw-\/Flow-Zustand wieder her/);
   assertOutputOrder(heartbeat, [
     "laufendes Dashboard sowie alle Writer-fähigen OpenCode-, Checkpoint-Profil-Codex-, Claude-Code- und Hermes-Sessions vor der Installation stoppen",
     "Reader und Writer installieren",
@@ -968,6 +1166,22 @@ test("lifecycle documentation preserves honest events and ordered upgrade steps"
     "Start the dashboard with the installer's exact `Launch command`",
     "Restart OpenCode, then start/restart Codex",
   ]);
+
+  const overview = await readFile(path.join(REPOSITORY_ROOT, "docs/overview.md"), "utf8");
+  assert.match(overview, /no required compilation step/i);
+  assert.match(overview, /atomically installs `\$HOME\/\.local\/bin\/checkpoint-watch`/);
+  const checkpointModule = await readFile(
+    path.join(REPOSITORY_ROOT, "docs/modules/checkpoint-core.md"),
+    "utf8",
+  );
+  assert.match(checkpointModule, /`OLD_ROW_MS`/);
+  assert.match(checkpointModule, /complete known agent identities/);
+  const installationModule = await readFile(
+    path.join(REPOSITORY_ROOT, "docs/modules/installation-and-configuration.md"),
+    "utf8",
+  );
+  assert.match(installationModule, /`install_optional_native_checkpoint_watch`/);
+  assert.match(installationModule, /Project mode does not inspect this path or probe scriptc/);
 });
 
 test("project installer targets only the workspace .opencode directory", async (t) => {
@@ -1006,4 +1220,36 @@ test("project installer targets only the workspace .opencode directory", async (
     "Restart OpenCode",
   ]);
   await assert.rejects(readFile(path.join(forbiddenGlobal, "plugins/checkpoint.ts")), /ENOENT/);
+});
+
+test("project installer neither probes scriptc nor mutates the global native bin", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-opencode-project-native-isolation-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const project = path.join(root, "project");
+  await mkdir(project);
+  const configFile = await writeInstallerConfig(root);
+  const { bin, invocationLog } = await writeFakeScriptc(root, "success");
+  const globalBin = path.join(root, ".local/bin");
+  await mkdir(globalBin, { recursive: true });
+  await writeFile(path.join(globalBin, "checkpoint-watch"), "global native sentinel\n");
+  await writeFile(path.join(globalBin, "unrelated"), "unrelated sentinel\n");
+  const beforeEntries = await readdir(globalBin);
+
+  const output = runInstaller(["--project"], {
+    cwd: project,
+    configFile,
+    opencodeHome: path.join(root, "forbidden-global"),
+    env: { PATH: `${bin}:/usr/bin:/bin` },
+  });
+  const canonicalProject = await realpath(project);
+  const watcherPath = path.join(
+    canonicalProject,
+    ".opencode/lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js",
+  );
+  assert.match(output, new RegExp(`Launch command: node "${watcherPath.replaceAll("\\", "\\\\")}"`));
+  assert.doesNotMatch(output, /Native watcher (installed|unavailable)|Node fallback:/);
+  assert.deepEqual(await readdir(globalBin), beforeEntries);
+  assert.equal(await readFile(path.join(globalBin, "checkpoint-watch"), "utf8"), "global native sentinel\n");
+  assert.equal(await readFile(path.join(globalBin, "unrelated"), "utf8"), "unrelated sentinel\n");
+  await assert.rejects(readFile(invocationLog, "utf8"), /ENOENT/);
 });
