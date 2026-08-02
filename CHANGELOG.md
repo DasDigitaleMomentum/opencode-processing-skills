@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.5.5 — 2026-08-02
+
+### Changed
+- **Smallest-sufficient planning**: Plan scope and the minimum necessary phase set are confirmed before artifact creation; authors prefer direct reuse, justify present need for new foundations/abstractions, and perform one bounded deletion pass.
+- **Exception-based scope reviews**: Plan and implementation-plan reviews check for both gaps and unnecessary work but persist only evidence-backed exceptions, without clean-item matrices or formal completeness certification.
+- **Compact reduction digests**: Reviews report verdict, reduction-required status, severity counts, actionable findings, and the next decision without mandatory before/after bookkeeping.
+- **Bounded remediation gate**: Once an optional review is invoked, blocking scope findings must be applied or explicitly rejected before progression. Plan reductions use one `update-plan` pass; implementation-plan reductions use one `review-fix` pass; automatic re-review loops remain prohibited.
+- **On-demand planning artifacts**: Empty implementation and handover directories and unresolved todo links are no longer scaffolded during plan creation.
+
 ## 0.5.4 — 2026-07-26
 
 ### Fixed

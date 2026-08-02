@@ -69,15 +69,16 @@ Skill-defined artifacts with explicit path/template (reviews, implementation pla
 4. [REVIEW IMPL PLAN]  → delegate-strong → review-implementation-plan
 5. EXECUTE             → implementer     → execute-work-package
 6. [REVIEW IMPL]       → delegate-strong → review-implementation
-7. [REVIEW FIX]        → same reviewer   → review-fix
-8. UPDATE PLAN         → doc-explorer    → update-plan
+7. [REVIEW FIX]        → reviewer/fresh  → review-fix
+8. UPDATE PLAN         → primary         → update-plan
 9. [HANDOVER]          → doc-explorer    → generate-handover
 ```
 
 - Create **all** implementation plans before executing phases (wave 1 → wave 2).
 - Reviews go to `plans/<name>/reviews/`.
-- Accepted related review findings resume the same reviewer Task through `review-fix`, including fixes spanning multiple files or runtime code. Use a new work package or authoring pass only for changed scope/objective, a new primary decision, unavailable context, or an explicit fresh-context request. Do not create automatic review-fix loops.
-- Plan updates → doc-explorer, not implementer.
+- Reviews check for gaps and unnecessary work but report only evidence-backed exceptions. Once invoked, `Reduction Required: Yes` or unresolved Critical/Major findings block progression until applied or explicitly rejected with rationale.
+- Accepted plan-review reductions run once through primary-owned `update-plan`. Accepted implementation-plan/implementation findings use `review-fix`, reusing the reviewer Task only when retained reasoning helps. The remediation digest ends the pass; do not create automatic re-review loops.
+- Plan updates → primary through `update-plan`; doc-explorer is an optional helper, never implementer.
 
 ### Additional loops
 

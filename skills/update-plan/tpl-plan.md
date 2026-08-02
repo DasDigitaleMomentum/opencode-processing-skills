@@ -9,23 +9,37 @@ updated: "{{date}}"
 
 # Plan: {{plan_name}}
 
-## Objective
+## Problem / Context
 
-<!-- What should be achieved? Clear, measurable goal -->
+<!-- What problem or current state motivates this work? Keep this concise and link detailed architecture context. -->
 
-## Motivation
+## Target Outcome
 
-<!-- Why is this needed? Business value, technical debt, user demand -->
+<!-- What measurable outcome should replace the current state, and why does it matter? -->
+
+## Guiding Decisions & Constraints
+
+<!-- Binding decisions and constraints that govern scope or acceptable solutions. Do not invent unspecified policy. -->
+
+- {{decision_or_constraint}}
+
+### Scope-Bounding Assumptions (optional)
+
+<!-- Include only assumptions that materially bound scope, acceptance, or later decisions. Omit otherwise. -->
+
+- {{assumption}}
 
 ## Requirements
 
-<!-- Functional and non-functional requirements -->
+<!-- Confirmed requirements only. Do not infer generic quality requirements. -->
 
 ### Functional
 
 - [ ] {{requirement}}
 
 ### Non-Functional
+
+<!-- Optional: include only explicit requirements or obligations supported by a concrete invariant/risk. -->
 
 - [ ] {{requirement}}
 
@@ -47,21 +61,21 @@ updated: "{{date}}"
 
 ## Testing Strategy
 
-<!-- What tests are needed, what coverage is expected -->
+<!-- Tests proportionate to the changed behavior and concrete risk. N/A is acceptable with a short reason; do not invent infrastructure. -->
 
 - [ ] {{test_description}}
 
 ## Phases
 
-<!-- Only if plan exceeds single-session capacity -->
+<!-- Use the smallest sufficient phase set. For multi-phase plans, state briefly why each phase needs a separate execution boundary. -->
 
-| Phase | Title | Scope | Status |
-|-------|-------|-------|--------|
-| 1 | {{title}} | [Detail](phases/phase-1.md) | pending |
+| Phase | Title | Contribution | Why Separate | Detail | Status |
+|-------|-------|--------------|--------------|--------|--------|
+| 1 | {{title}} | {{contribution_to_target_outcome}} | {{necessity_or_single_phase}} | [Phase](phases/phase-1.md) | pending |
 
 ## Risks & Open Questions
 
-<!-- Known risks, unresolved questions, assumptions -->
+<!-- Optional: only decision-relevant known risks or unresolved questions. Omit rather than inventing hypothetical risks. -->
 
 | Risk/Question | Impact | Mitigation/Answer |
 |---------------|--------|-------------------|

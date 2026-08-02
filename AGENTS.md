@@ -51,7 +51,7 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 - **Session-resilient**: Everything persisted, handover on demand
 - **Context-aware**: Documents structured for partial loading (not everything into context at once)
 - **Policy-light**: Routing rules are defaults, not self-imposed blockers; preserve valid context and avoid automatic review/fix loops
-- **Scope-disciplined**: No Gold-Plating, No Adversarial Reviewing, No Scope Creep; pursue evidence-backed defects and required related changes without inventing extra work
+- **Scope-disciplined**: Authors produce the smallest sufficient plan and perform one deletion pass before handoff. Reviews check for gaps and unnecessary work but persist only evidence-backed exceptions, avoiding formal certification, replacement work, and automatic review loops.
 
 ## Design Decisions
 
@@ -63,7 +63,7 @@ Phases define scope and acceptance criteria independent of technical approach. T
 
 ### Why does the primary agent author plans, not doc-explorer?
 
-Scope plans are conversation-anchored: requirements emerge from user dialogue, trade-offs are negotiated, and DoD is agreed upon. This context lives in the primary agent's conversation. Grounded per-phase implementation plans are different: one fresh Delegate per phase writes the explicit skill-governed artifact from gated scope and prior artifacts. Documentation, by contrast, is codebase-anchored and belongs to Doc Explorer.
+Scope plans are conversation-anchored: requirements emerge from user dialogue, trade-offs are negotiated, and DoD is agreed upon. This context lives in the primary agent's conversation. The primary proposes and confirms the smallest sufficient phase set before writing artifacts. Grounded per-phase implementation plans are different: one fresh Delegate per phase writes the smallest sufficient technical approach from gated scope and current code, then performs one author-owned deletion pass. Documentation, by contrast, is codebase-anchored and belongs to Doc Explorer.
 
 ### Why keep exploration and writing within workflow agents?
 
@@ -100,7 +100,7 @@ This keeps planning and execution responsibilities separated while still standar
 
 ## Target Project File Convention
 
-When skills/agents create artifacts in a target project:
+When skills/agents create artifacts in a target project, they use this convention. Empty implementation and handover directories are created only when their artifacts are needed:
 
 ```
 project-root/

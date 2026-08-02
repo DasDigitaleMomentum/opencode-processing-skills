@@ -29,14 +29,14 @@ Non-trivial code changes: **blueprint → approve → execute** (`execute-work-p
 
 Implementation plans (`author-and-verify-implementation-plan`) route through the canonical delegate persona using the appropriate Cursor Task type and may be written directly because the skill provides the explicit output path/template. Do not add a Blueprint gate for implementation-plan authoring.
 
-Delegate routing roles share the same installed canonical persona; Cursor selects model capacity through the mapped Task type rather than installed OpenCode-style aliases. Load `delegate-analysis` for routine investigation. After an implementation or implementation-plan review, prefer resuming the same reviewer Task with `review-fix` for accepted related findings, including multi-file runtime fixes. Use a new work package only for changed scope/objective, a new primary decision, unavailable context, or an explicit fresh-context request. Do not create automatic review-fix loops.
+Delegate routing roles share the same installed canonical persona; Cursor selects model capacity through the mapped Task type rather than installed OpenCode-style aliases. Load `delegate-analysis` for routine investigation. Reviews check for gaps and unnecessary work but report only evidence-backed exceptions. Once invoked, `Reduction Required: Yes` or unresolved Critical/Major findings block progression until applied or explicitly rejected with rationale. Apply accepted plan reductions once through `update-plan`; use `review-fix` for accepted implementation-plan/implementation findings. The remediation digest ends the pass; do not create automatic re-review loops.
 
 ## Lifecycle
 
 ```
 create-plan → [review-plan] → author-and-verify-implementation-plan
 → [review-implementation-plan] → execute-work-package → [review-implementation]
-→ [review-fix using same reviewer] → update-plan → [generate-handover]
+→ [review-fix using reviewer/fresh path] → update-plan → [generate-handover]
 ```
 
 Multi-phase: author all implementation plans first, then execute phases sequentially.

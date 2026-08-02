@@ -16,10 +16,6 @@ updated: "{{date}}"
 
 <!-- What should this phase achieve? Specific, bounded goal -->
 
-## Contribution to Plan Goal
-
-<!-- Why does this phase exist, and how does its bounded outcome advance the plan's target outcome? -->
-
 ## Scope
 
 <!-- What is in scope for THIS phase specifically -->
@@ -28,13 +24,15 @@ updated: "{{date}}"
 
 - {{item}}
 
-### Excludes (deferred to later phases)
+### Excludes
+
+<!-- Exclusion does not create or authorize a later phase. -->
 
 - {{item}}
 
 ## Prerequisites
 
-<!-- What must be done before this phase can start -->
+<!-- Optional: only concrete prerequisites. Omit if none. -->
 
 - [ ] {{prerequisite}}
 
@@ -52,11 +50,11 @@ updated: "{{date}}"
 
 ## Dependencies on Other Phases
 
-<!-- Which phases must complete first, which can run in parallel -->
+<!-- Optional: actual dependencies only. Omit if none. -->
 
 | Phase | Relationship | Notes |
 |-------|-------------|-------|
-| {{phase_ref}} | blocks/blocked-by/parallel | {{notes}} |
+| {{phase_ref}} | blocks/blocked-by | {{notes}} |
 
 ## Notes
 

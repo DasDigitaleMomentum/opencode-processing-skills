@@ -34,19 +34,13 @@ Do **not** use this skill to:
 
 ## Review Focus
 
-The primary specifies the review focus when delegating. The default focus is **functional and technical findings** — correctness, feasibility, completeness of the solution.
+The default priority is the smallest sufficient implementation: confirm that phase obligations are covered and no implementation step or new artifact is unauthorized, unnecessary, or needlessly indirect. Use the actual codebase to substantiate material concerns, but record only evidence-backed exceptions. The primary may add a focus via `{{focus}}`.
 
 ### Review posture
 
-**No Gold-Plating. No Adversarial Reviewing. No Scope Creep.** Report only
-evidence-backed problems that affect correctness, security, acceptance, or the
-reviewed objective. Do not hunt for gotchas, invent improvements, or keep a
-review/fix loop alive to create more work. This does not mean overlooking real
-defects.
+**Detect existing gold-plating without becoming an adversarial reviewer.** A reduction finding must name a concrete planned step/artifact and show missing authorization, missing present necessity, or a smaller sufficient path in the current codebase. Do not invent ideal architecture, hardening, tests, infrastructure, policy, or replacement work. Zero findings remains valid.
 
-**Formal criteria** (DoD compliance checklists, NFR conformance, reference consistency, documentation cleanup) are secondary. Only include formal findings when they reveal **real problems** — not as standard checkboxes to fill. A review cluttered with formal nitpicking buries the findings that matter.
-
-The primary passes the focus via `{{focus}}` in the delegation prompt. If no focus is specified, use the default.
+Testing, references, Reality Check wording, documentation, and other formal criteria are not checklist obligations. Report them only when a concrete defect would block or misdirect execution.
 
 ---
 
@@ -62,9 +56,9 @@ The primary passes the focus via `{{focus}}` in the delegation prompt. If no foc
 
 - **Subagent (delegate-strong / general)**
   - Starts without authoring context, then retains shared review context across a batch.
-  - Examines the **actual codebase** to verify references and feasibility.
+  - Uses the actual codebase selectively when a material concern needs evidence.
   - Writes the existing review artifact for every reviewed phase at `plans/<name>/reviews/impl-plan-review-phase-N.md`.
-  - Performs exactly one integrated cross-phase consistency assessment for a batch and returns one aggregate digest.
+  - Reports material cross-phase conflicts in the relevant artifact and returns one aggregate digest.
 
 ### Why `delegate-strong` (not `doc-explorer`)
 
@@ -87,7 +81,7 @@ Primary gathers:
 - Review focus from the delegation prompt
 - `plans/<name>/plan.md`
 - One phase/implementation-plan pair for **single-phase mode**, or all selected pairs in dependency order for **batch mode**
-- `docs/overview.md`, `docs/modules/*.md` (if available)
+- Relevant existing docs only when they reduce a material code lookup
 
 ### 2) Delegate
 
@@ -99,33 +93,26 @@ Provide:
 - One review output path per phase: `plans/<name>/reviews/impl-plan-review-phase-N.md`
 - Review focus (freetext — what to prioritize)
 
-In batch mode, use one fresh reviewer session independent from the authoring work by default. The reviewer:
-
-1. Reviews phases sequentially in dependency order.
-2. Collects shared or overlapping evidence once and reuses it across phase reviews.
-3. Writes each per-phase review artifact as that phase is completed.
-4. Performs exactly one integrated cross-phase consistency assessment after the per-phase passes and records it in one of those artifacts.
-5. Returns one aggregate digest covering all reviewed phases.
-
-Retriever delegation is evidence-oriented, not phase-oriented. Do not create nested per-phase retriever fan-out by default; delegate separable shared evidence once and request phase-specific evidence only where it is genuinely distinct.
-
-Do not automatically create one reviewer per phase. Separate reviewers are allowed only for explicit independent perspectives, genuinely unrelated technical domains, specialist requirements, or when combined evidence exceeds practical context capacity. For an oversized batch, partition by contiguous dependency/domain groups rather than mechanically per phase. Completed phase reviews are not repeated; a central pass checks only interfaces crossing partitions.
+In batch mode, one fresh reviewer processes phases sequentially, reuses shared evidence, writes each per-phase artifact, reports only material shared-interface conflicts, and returns one aggregate digest. Split the batch only when unrelated domains or practical context capacity require it.
 
 ### 3) Receive summary
 
-For single-phase mode, the subagent returns the existing compact summary. For batch mode, it returns one aggregate digest containing:
+For single-phase mode, the subagent returns the same fields for that phase. For batch mode, it returns one aggregate digest containing:
 - Overall and per-phase verdicts (Ready / Needs Revision / Major Gaps)
+- Overall and per-phase reduction flags
 - Aggregate finding count by severity
-- Top 3 findings across the batch
-- The integrated cross-phase consistency result
+- Top 3 actionable findings across the batch
+- Required next action
 
 ### 4) Act on findings
 
 Primary decides:
-- **Ready**: Proceed to `execute-work-package`.
-- **Needs Revision**: After accepting findings, resume the same reviewer `task_id` through `review-fix` only when retained reasoning materially helps; otherwise use a fresh lean path. Related implementation-plan corrections may span multiple steps, symbols, and references; size alone does not decide reuse.
+- **Ready**: Proceed to `execute-work-package` only when reduction is not required and no Critical/Major findings remain.
+- **Needs Revision**: Do not execute. Accept or explicitly reject each blocking finding. Apply accepted implementation-plan reductions once through `review-fix`, reusing the reviewer only when retained reasoning materially helps; otherwise use a fresh lean path.
 - **New authoring pass**: Re-run `author-and-verify-implementation-plan` only when the objective/gated scope changes, a new primary decision or investigation is required, the reviewer session is unavailable, or the primary explicitly wants a fresh planning context.
 - **Major Gaps**: Discuss with user; potentially revise phase scope via `update-plan`.
+
+The remediation digest closes the accepted pass. Do not automatically re-review or continue until zero findings. A fresh review requires an explicit user/primary decision or materially changed scope/risk.
 
 ---
 
@@ -134,37 +121,41 @@ Primary decides:
 Each review artifact `plans/<name>/reviews/impl-plan-review-phase-N.md` MUST:
 
 - Follow the canonical template headings and frontmatter keys.
-- Include a clear **Overall Assessment** with verdict and reasoning.
-- Verify implementation steps against **actual codebase** (not just the plan text).
-- Rate every finding with a **severity** (Critical / Major / Minor / Note).
-- Address **Real-World Testing** explicitly.
-- Validate the **Reality Check** section of the implementation plan.
-- Validate that every step cites an authorizing gated item or preserved existing invariant and that blocking decisions stop dependent planning.
+- Include a clear assessment with verdict, reduction flag, and brief reasoning.
+- Use current code evidence for material feasibility or minimality findings; do not exhaustively revalidate every reference when no concern exists.
+- Report only exceptions; do not reproduce phase-coverage or per-step disposition tables.
+- Give every finding a stable ID, severity, evidence, and concrete action.
+- State `No findings` when the review finds no material problem.
 
-In batch mode, exactly one per-phase artifact MUST also include the optional **Cross-Phase Consistency** section and identify the reviewed phase set. This preserves existing artifact and review-fix compatibility without introducing a mandatory consolidated review type.
+In batch mode, record material cross-phase findings in the affected per-phase artifact. Do not create a mandatory consistency section or consolidated artifact.
+
+Verdict rules:
+
+- `Ready` requires `Reduction Required: No` and zero Critical/Major findings.
+- Any executable step or new artifact without clear authorization or present necessity is at least Major and requires `Needs Revision`.
+- Use `Major Gaps` when missing gated intent or an unresolved blocking decision prevents a defensible technical plan.
 
 ---
 
 ## Rules
 
-- The reviewer must examine the **actual codebase** — not just the plan documents. File paths and symbols in the implementation plan must be verified against current repo state.
+- Examine the actual codebase only as needed to judge feasibility and substantiate findings. Do not perform exhaustive path/symbol certification as a formal exercise.
 - The reviewer must begin fresh from the authoring context. In batch mode, retain review context across phases; fresh perspective does not require a cold reviewer per phase.
 - Support both single-phase and batch review without changing the per-phase artifact naming convention.
-- Batch review is sequential in dependency order and produces one aggregate digest plus exactly one integrated cross-phase consistency assessment.
-- Automatic parallel reviewer-per-phase fan-out is prohibited by default. Apply only the explicit reviewer-separation and contiguous partitioning exceptions defined above, with a central consistency check limited to cross-partition interfaces.
-- Retriever delegation is evidence-oriented: collect shared evidence once and avoid nested phase-oriented fan-out by default.
-- Validate the sequential plans and their artifact-based cross-phase continuity proportionally; do not reconstruct every phase's authoring pass.
-- Findings are **advisory**. The primary decides whether and how to act.
+- Batch review is sequential in dependency order and produces one aggregate digest. Cross-phase checks are limited to actual shared interfaces and dependencies.
+- Do not fan out one reviewer per phase by default or reconstruct each authoring pass.
+- Findings are **advisory decisions**, not automatic edits. The primary must accept or explicitly reject blocking findings before progression.
 - Do not modify the implementation plan during review — only produce the review artifact.
 - Do not discard the reviewer `task_id` until the primary has decided whether remediation is needed.
 - Ensure the `reviews/` directory exists before delegating (create if needed).
-- Review testing, rollback, edge cases, security, deployment, and documentation only where required by explicit scope or concrete risk. Accept `N/A` with a short reason and do not require infrastructure merely to satisfy a template.
-- Unspecified product, policy, security, privacy, compliance, authorization, or operational behavior is not missing scope. Flag concrete regressions or vulnerabilities, but do not invent policy.
-- A review may report zero findings when no evidence-backed defect exists; do not manufacture findings or search for extra scope.
+- Zero findings is valid. Report testing, rollback, security, deployment, documentation, or policy only when a concrete defect exists; do not invent requirements or infrastructure.
+- Pay particular attention to new layers, modules, interfaces, generic infrastructure, cleanup, and future-phase preparation, but report only concrete unnecessary work.
+- Once a review is invoked, `Reduction Required: Yes` or unresolved Critical/Major findings block progression until the primary remediates or explicitly rejects them with rationale.
+- One review plus one accepted remediation pass is the default bound. Never start an automatic review/fix/re-review loop.
 
 ---
 
 ## Templates
 
-- `tpl-impl-plan-review.md` — Canonical review output format with embedded review criteria
+- `tpl-impl-plan-review.md` — Canonical compact per-phase review output
 - `tpl-review-impl-plan-prompt.md` — Primary → reviewer delegation prompt

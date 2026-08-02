@@ -14,7 +14,7 @@ updated: "{{date}}"
 
 ## Approach
 
-<!-- High-level technical approach. Above code level - describe WHAT changes WHERE and WHY -->
+<!-- Describe the smallest sufficient technical change, what existing structures it reuses, and why any new structure is necessary now. -->
 
 ## Affected Modules
 
@@ -33,46 +33,32 @@ updated: "{{date}}"
 ## Implementation Steps
 
 <!-- Ordered steps, each above code level. Not line-by-line but also not hand-wavy.
-     Each step should reference concrete targets (file paths and/or symbols/components). -->
+     Each step should reference concrete targets and its authorizing gated item or preserved invariant. -->
 
 ### Step 1: {{step_title}}
 
 - **What**: {{description}}
 - **Where**: {{module/file/area}}
-- **Why**: {{rationale}}
-- **Considerations**: {{edge_cases_or_constraints}}
+- **Authorized By**: {{requirement_scope_item_acceptance_criterion_or_existing_invariant}}
+- **Why**: {{present_need_and_rationale}}
+- **Considerations**: {{relevant_constraints_or_N/A}}
 
 ## Testing Plan
 
-<!-- How to verify the implementation.
-     Prefer a single primary "verify" command when possible (e.g. `pytest ...`, `npm test`, `go test ./...`). -->
+<!-- One command that exercises changed behavior. Do not add test infrastructure merely to fill this section. -->
 
-| Test Type | What to Test | Expected Outcome |
-|-----------|-------------|-----------------|
-| {{type}} | {{description}} | {{outcome}} |
+**Primary Verify Command**: `{{command}}`
 
-## Rollback Strategy
+### Additional Checks (optional)
 
-<!-- How to undo changes if something goes wrong -->
+- {{check_required_by_scope_or_concrete_risk}}
 
-## Open Decisions
+## Rollback Strategy (optional)
 
-| Decision | Options | Chosen | Rationale |
-|----------|---------|--------|-----------|
-| {{decision}} | {{options}} | {{chosen}} | {{rationale}} |
+<!-- How to undo changes if relevant. Otherwise state N/A with a short reason. Do not invent infrastructure. -->
 
-## Reality Check
+## Reality Check (optional)
 
-<!-- Ground this implementation plan against current repository reality.
-     Use this section to record what you verified in the codebase (anchors) and any mismatches.
-     Do NOT change the gated phase scope here; raise scope changes to the primary. -->
+<!-- Optional: include only material code/plan mismatches or decisions that block dependent work. Omit when none exist. -->
 
-### Code Anchors Used
-
-| File | Symbol/Area | Why it matters |
-|------|-------------|----------------|
-| {{path}} | {{symbol_or_area}} | {{why}} |
-
-### Mismatches / Notes
-
-- {{note}}
+- {{mismatch_or_blocking_decision}}

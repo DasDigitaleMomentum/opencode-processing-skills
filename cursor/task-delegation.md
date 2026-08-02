@@ -45,7 +45,8 @@ Return only a **compact digest** to the primary session — not full file conten
   tests required to complete accepted findings.
 - `delegate-strong`: use for independent reviews and genuinely difficult or high-risk skill-defined artifacts. Implementation plans may use the canonical delegate and may be written directly because the skill provides an explicit path/template; do **not** add a Blueprint gate.
 - `delegate`: use for routine analysis with `delegate-analysis`; do not escalate to `delegate-strong` merely because work has multiple steps.
-- After an implementation or implementation-plan review, resume the same Task using `review-fix` only when retained reasoning materially helps; otherwise use a fresh lean path. Related fixes may span multiple files, but file count alone does not decide reuse.
+- Reviews check for gaps and unnecessary work but report only evidence-backed exceptions. Once invoked, `Reduction Required: Yes` or unresolved Critical/Major findings block progression until applied or explicitly rejected with rationale.
+- Apply accepted plan-review reductions once through primary-owned `update-plan`. After an implementation or implementation-plan review, resume the same Task using `review-fix` only when retained reasoning materially helps; otherwise use a fresh lean path. The remediation digest ends the pass; do not automatically re-review.
 - `doc-explorer`: docs-focused; use for `generate-docs`/`update-docs` and selected skill-governed `plans/**` maintenance where applicable.
 - Larger ad-hoc writes with undefined shape/targets should start with an informal Blueprint before mutation.
 - Start one fresh authoring Task per phase implementation plan and one fresh `implementer` per phase/work package. Resume only that package's BLUEPRINT → EXECUTE pair; after its digest the Task retires. `review-fix` may reuse its reviewer Task when retained reasoning materially helps; do not create automatic review-fix loops.
@@ -69,7 +70,7 @@ Never combine blueprint and execute in one call.
 | `web-research` | `Task: web-research. Scope: <topic>. Constraints: <optional>` |
 | `deep-dive` | `Task: deep-dive. Scope: <entry>. Question: <what>` |
 
-Prefix these prompts with `Load skill delegate-analysis.` After a review, use `Task(resume="<reviewer-id>", prompt="Load skill review-fix ...")` and include accepted finding IDs, allowed scope, and verification.
+Prefix analysis prompts with `Load skill delegate-analysis.` For accepted review findings, load `review-fix` and include finding IDs, allowed scope, and verification. Use `Task(resume="<reviewer-id>", ...)` only when retained reviewer reasoning helps; otherwise start a fresh lean Task.
 
 ## Cursor vs OpenCode skill notes
 

@@ -75,11 +75,7 @@ Provide:
   - `plans/<plan>/phases/phase-N.md` (required: gated intent/DoD for the target phase)
   - `plans/<plan>/implementation/phase-N-impl.md` (if exists)
   - `plans/<plan>/implementation/phase-(N-1)-impl.md` (optional: when the phase builds on previous technical decisions)
-  - `plans/<plan>/implementation/phase-(N+1)-impl.md` (optional: when this phase must align with a later interface)
-- Docs references (optional but recommended):
-  - `docs/overview.md`
-  - `docs/modules/*.md`
-  - `docs/features/*.md`
+- Only relevant existing docs references, if they materially reduce code discovery
 - Any constraints that must be preserved (naming conventions, verify command preference, etc.).
 
 ### 1) Author + verify
@@ -90,12 +86,15 @@ The delegate:
 
 1. Reads the plan (for global context) and the phase intent/DoD.
 2. Locates the relevant code areas using docs inventories and targeted code search.
-3. Writes/updates the implementation plan using the template.
-4. Ensures the plan is **concrete**:
+3. Designs the **smallest sufficient technical change**, reusing current structures unless a new element is presently necessary.
+4. Performs one deletion pass: removes or merges any step, new artifact, abstraction, or infrastructure that can be omitted without violating gated scope or a concrete existing invariant. This is author-owned QA, not a review loop.
+5. Writes/updates the implementation plan using the template and ensures it is **concrete**:
    - references real file paths/symbols
    - traces every implementation step to an authorizing requirement, scope item, acceptance criterion, or existing invariant that must be preserved
+   - explains present necessity in the step's **Why**, rather than adding future-oriented work
+   - justifies new modules, layers, interfaces, shared utilities, migrations, or infrastructure with evidence that a direct change to existing structures is insufficient
    - includes a **single** proposed verify command (or preserves the given one)
-   - captures mismatches as “Reality Check” notes
+   - captures only material mismatches as “Reality Check” notes
    - marks any necessary but ungated decision as blocking and does not plan work that depends on it
 
 If the phase depends on previous phases, its fresh delegate reads the necessary completed implementation plans to keep continuity. The Maintainer retains phase ordering and cross-phase decisions.
@@ -105,6 +104,7 @@ If the phase depends on previous phases, its fresh delegate reads the necessary 
 Primary confirms:
 
 - The implementation plan stays within the gated phase scope.
+- No evident step or new structure is unnecessary for the phase.
 - The verify command is appropriate.
 - The “Reality Check” section (if any) is acceptable.
 
@@ -118,13 +118,9 @@ The generated/updated `plans/<plan>/implementation/phase-N-impl.md` MUST include
 - **Implementation Steps** that reference concrete targets (files/symbols/components).
 - An **Authorized By** reference for every implementation step.
 - A **single** verify command in the Testing Plan that exercises changed behavior.
-- A **Test Integrity Constraints** subsection identifying which existing tests are affected and how.
-- A **Reality Check** section:
-  - code anchors (files/symbols) used to ground the plan
-  - mismatches or open questions (if discovered)
-  - blocking decisions that prevent dependent planning
+- A **Reality Check** section only when material mismatches or blocking decisions exist.
 
-The implementation plan must follow the canonical headings and frontmatter keys from the bundled template.
+The implementation plan must follow the canonical frontmatter and required headings from the bundled template. Omit sections marked optional when irrelevant.
 
 ---
 
@@ -133,12 +129,15 @@ The implementation plan must follow the canonical headings and frontmatter keys 
 - Skill-first: when invoked, follow this workflow and template.
 - **Fresh phase sessions, sequential processing.** When authoring implementation plans for multiple phases, the Maintainer starts one fresh Delegate session per phase and processes phases strictly one at a time in dependency order. Each delegate writes only its target phase plan; do not reuse the authoring `task_id` for another phase or author phases in parallel.
 - **Artifact-based cross-phase continuity.** Each later phase delegate reads the completed prior implementation plans and checks shared interfaces, naming, data-flow assumptions, and dependency ordering while authoring its own target. It reports any inconsistency that requires changing a prior artifact or gated decision to the Maintainer rather than silently taking ownership of another phase.
-- **Independent review handoff.** After all phase plans are authored, hand the ordered implementation-plan set to one fresh reviewer session by default so it can review sequentially, reuse shared evidence, and perform the existing integrated cross-phase consistency assessment. Do not change implementation-plan review batching or create a consolidated artifact.
+- **Independent review handoff.** After all phase plans are authored, hand the ordered set to one fresh reviewer session by default. Do not create a consolidated artifact.
 - Do not change phase scope/DoD; record mismatches under "Reality Check" and raise to the primary.
-- Prefer minimal, accurate plan updates over speculative completeness.
+- Produce the smallest sufficient solution, not the smallest edit at the expense of correctness. Preserve necessary error handling, tests, and existing invariants while rejecting speculative completeness.
+- Prefer direct changes and existing structures. Justify new modules, layers, interfaces, shared utilities, migrations, or infrastructure in the relevant step's **Why**.
+- Do not generalize current work for hypothetical later phases. Preserve an already-gated cross-phase interface, but do not pre-implement or future-proof behavior.
 - Unspecified product, policy, security, privacy, compliance, authorization, or operational behavior is not authorization to add it. Preserve applicable existing invariants and avoid concrete regressions or vulnerabilities, but do not invent new policy.
-- If a necessary decision is not gated, record it under **Reality Check → Blocking Decisions** and stop before selecting an answer or planning dependent work. Purely local, reversible technical details may be selected when they do not change observable behavior or policy.
-- Make testing, rollback, edge-case, deployment, and documentation planning proportional to the phase and concrete risk. `N/A` with a short reason is valid; do not create infrastructure merely to satisfy a template.
+- If a necessary decision is not gated, record it as a blocking Reality Check item and stop before planning dependent work. Purely local, reversible technical details may be selected when they do not change observable behavior or policy.
+- Omit testing detail beyond the primary verify command, rollback, edge-case, deployment, and documentation planning unless explicit scope or concrete risk needs it.
+- Perform exactly one author-owned minimality pass before returning. Do not start an author/review/rewrite loop.
 
 ---
 

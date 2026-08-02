@@ -1,7 +1,7 @@
 ---
 type: documentation
 entity: project-overview
-version: 1.6
+version: 1.7
 ---
 
 # OpenCode Processing Skills
@@ -66,9 +66,9 @@ user request -> orchestrator -> matching skill -> scoped subagent
 |---------|-------------|---------------|
 | Multi-target installation | Resolves layered configuration and installs skills, agents, or adapters into each supported harness. | [Detail](features/multi-target-installation.md) |
 | Documentation lifecycle | Generates structured initial docs and later refreshes only the affected inventories and references. | [Detail](features/documentation-lifecycle.md) |
-| Persistent planning lifecycle | Persists objectives, phases, implementation plans, todos, and handovers across sessions. | [Detail](features/persistent-planning-lifecycle.md) |
+| Persistent planning lifecycle | Confirms and persists the smallest sufficient plan, then authors traceable implementation plans and creates downstream artifacts on demand. | [Detail](features/persistent-planning-lifecycle.md) |
 | Gated work-package execution | Separates an implementation blueprint, explicit gate, stateful execution, and compact result digest. | [Detail](features/gated-work-package-execution.md) |
-| Independent review and remediation | Produces optional evidence-backed quality gates and reuses reviewer context for accepted fixes. | [Detail](features/independent-review-and-remediation.md) |
+| Independent review and remediation | Produces optional exception-only reviews of gaps and unnecessary work that become binding once invoked, then routes accepted findings through one bounded remediation pass without automatic re-review. | [Detail](features/independent-review-and-remediation.md) |
 | Agent checkpoint heartbeat | Records chained progress and failed attempts, inspects one selected log, and watches direct workspace logs in a checkpoint-age dashboard. | [Detail](agent-checkpoint-heartbeat.md) |
 
 ## Development

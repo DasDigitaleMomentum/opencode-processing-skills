@@ -15,6 +15,7 @@ The main-loop orchestrator. Handles user interaction, planning decisions, scope,
 - Delegates expensive exploration to subagents
 - Keeps context lean by receiving digests instead of full outputs
 - Persists curated documentation to `docs/` and uses `plans/` proportionally for multi-phase, multi-session, explicitly requested, or durably coordinated/tracked work
+- Confirms the smallest sufficient plan before artifact writes, owns plan updates/reductions through `update-plan`, and enforces any optional review gate once invoked
 - Commits only when you ask
 
 **When it works itself vs. delegates:**
@@ -45,9 +46,9 @@ The one canonical, skill-driven persona and standard choice for normal delegatio
 
 Each phase implementation plan uses one fresh Delegate session. The Maintainer invokes phases sequentially, and each later phase delegate reads completed prior artifacts rather than inheriting an increasingly expensive authoring session.
 
-After an implementation or implementation-plan review, choose remediation-session reuse by retained context value versus context cost. Resume the reviewer through `review-fix` when its analysis, unresolved assumptions, or cross-file reasoning materially helps; prefer a fresh lean task, or a tiny primary check, for a fully specified fix, test, or command. File count and session age do not decide reuse. The review artifact remains unchanged, and no review/fix loop starts automatically.
+After an implementation or implementation-plan review, choose remediation-session reuse by retained context value versus context cost. Accepted implementation-plan findings receive one `review-fix` pass that reports fixed/unresolved IDs, edits, changed/directly affected verification, and next action. The review artifact remains unchanged, and no review/fix/re-review loop starts automatically. Plan-review findings instead remain primary-owned through one `update-plan` pass.
 
-For multiple implementation-plan reviews, the maintainer defaults to one reviewer session that is fresh from the authoring work, not one reviewer per phase. The reviewer works sequentially in dependency order, reuses consolidated evidence, writes each per-phase review artifact, performs one integrated consistency assessment, and returns one aggregate digest. Parallel per-phase reviewers and nested phase-oriented retriever fan-out are not defaults; oversized review is divided only into contiguous dependency/domain groups with a central cross-partition interface check.
+For multiple implementation-plan reviews, the maintainer defaults to one reviewer session that is fresh from the authoring work, not one reviewer per phase. The reviewer works sequentially in dependency order, reuses consolidated evidence, writes each per-phase review artifact, records material cross-phase conflicts only in affected artifacts, and returns one compact aggregate digest. Parallel per-phase reviewers and nested phase-oriented retriever fan-out are not defaults; oversized review is divided only into contiguous dependency/domain groups with a central cross-partition interface check.
 
 Delegates and reviewers send separable low-complexity evidence gathering and trivial task chains to `retriever` by default, even when raw input is large, and may call `doc-explorer` only for genuinely documentation- or module-oriented child tasks. They may directly read scoped source, authoritative docs/plans, symbols, and compact targeted evidence; after a Retriever summary they inspect only specific referenced gaps instead of repeating broad retrieval. The parent owns iterative analysis, source judgment, synthesis, verdicts, severity, scope interpretation, and final artifacts.
 
@@ -77,7 +78,7 @@ Doc Explorer is the documentation-specialized Delegate. It sends separable broad
 
 **Does NOT write:** Code files or ad-hoc analysis writeups; use `delegate` for those. Implementation plans default to the canonical delegate via `author-and-verify-implementation-plan`.
 
-**Used by:** `generate-docs`, `update-docs`, `create-plan`, `update-plan`, `generate-handover`
+**Used by:** `generate-docs`, `update-docs`, and `generate-handover`; it may provide bounded evidence or mechanical assistance to `create-plan`/`update-plan`, but the primary owns plan decisions and reduction remediation.
 
 ### `implementer`
 

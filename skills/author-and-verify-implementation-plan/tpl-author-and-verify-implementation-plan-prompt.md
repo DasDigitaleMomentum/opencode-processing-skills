@@ -16,13 +16,16 @@ Task:
 Constraints:
 - Do NOT change phase scope/DoD. If you find mismatches, capture them under **Reality Check** and report to primary.
 - Trace every implementation step to an authorizing requirement, scope item, acceptance criterion, or preserved existing invariant.
+- Produce the smallest sufficient solution. Use each step's **Why** to explain present necessity and prefer existing structures and direct changes.
+- New modules, layers, interfaces, shared utilities, migrations, or infrastructure require evidence that the current outcome needs them and a simpler reuse path is insufficient. Do not future-proof for hypothetical later phases.
+- Before writing the final artifact, perform exactly one deletion pass and remove or merge reducible work. Do not create an author/review loop.
 - Do not invent unspecified product, policy, security, privacy, compliance, authorization, or operational behavior. Preserve existing invariants and avoid concrete regressions or vulnerabilities without creating new policy.
-- Record any necessary ungated decision under **Reality Check → Blocking Decisions** and stop before choosing it or planning dependent work. Local, reversible technical choices are allowed only when they do not change observable behavior or policy.
-- Keep testing, rollback, edge-case, deployment, and documentation content proportional to relevance and risk. `N/A` with a short reason is valid; do not create infrastructure to satisfy the template.
+- Record any necessary ungated decision as a blocking **Reality Check** item and stop before planning dependent work.
+- Omit optional testing, rollback, edge-case, deployment, and documentation detail unless scope or concrete risk needs it.
 - Use existing project docs inventories if present (`docs/**`).
 - You may write exactly this implementation-plan artifact: `{{implementation_plan_path}}`.
 - Do NOT edit code/config files, perform Git operations, or change unrelated docs/plans artifacts.
-- Use the canonical template/headings and frontmatter keys from `skills/author-and-verify-implementation-plan/tpl-implementation-plan.md`.
+- Use the canonical frontmatter and required headings; omit optional sections when irrelevant.
 - This fresh Delegate session owns exactly this phase implementation plan. For multi-phase work, the Maintainer invokes phases sequentially and later delegates read completed prior plans for cross-phase continuity; do not author another phase in this session. After all plans are complete, the existing ordered batch-review workflow remains unchanged.
 
 ## References (read these yourself)
@@ -32,9 +35,8 @@ Constraints:
 - Phase: {{phase_ref}}
 - Current Implementation Plan (if any): {{implementation_plan_ref}}
 
-### Adjacent Implementation Plans (optional)
-- Previous phase (optional): {{prev_implementation_plan_ref}}
-- Next phase (optional): {{next_implementation_plan_ref}}
+### Previous Implementation Plan (optional)
+- Previous phase when this phase depends on it: {{prev_implementation_plan_ref}}
 
 ### Docs (optional)
 - Overview: {{docs_overview_ref}}

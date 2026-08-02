@@ -52,12 +52,12 @@ Same sequence as `ops-orchestrator`:
 ```
 create-plan → [review-plan] → author-and-verify-implementation-plan
 → [review-implementation-plan] → execute-work-package → [review-implementation]
-→ [review-fix using same reviewer] → update-plan → [generate-handover]
+→ [review-fix using reviewer/fresh path] → update-plan → [generate-handover]
 ```
 
-Create all impl plans before executing phases. Impl plans → canonical delegate persona using the appropriate Cursor Task type. Plan updates → doc-explorer.
+Create all impl plans before executing phases. Impl plans → canonical delegate persona using the appropriate Cursor Task type. Plan updates, including accepted plan-review reductions, stay primary-owned through `update-plan`; doc-explorer is optional evidence/mechanical help.
 
-Accepted related review findings normally use same-Task `review-fix`, including fixes spanning multiple files or runtime code. Use a new work package or authoring pass only for changed scope/objective, a new primary decision, unavailable context, or an explicit fresh-context request. Do not create automatic review-fix loops.
+Reviews check for gaps and unnecessary work but report only evidence-backed exceptions. Once invoked, `Reduction Required: Yes` or unresolved Critical/Major findings block progression until applied or explicitly rejected with rationale. Apply accepted plan reductions once through `update-plan`; accepted implementation-plan/implementation findings use `review-fix`. The remediation digest ends the pass; do not create automatic re-review loops.
 
 ## Execution summary
 

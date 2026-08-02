@@ -64,18 +64,18 @@ This module owns Cursor-specific orchestration vocabulary, Task invocation/resum
 | `Orchestrator.Delegation anti-patterns` | table | internal | `cursor/skills/ops-orchestrator/SKILL.md:43` | Maps context-expensive primary behavior to Cursor Task delegation. |
 | `Orchestrator.When to use which role` | section | public | `cursor/skills/ops-orchestrator/SKILL.md:52` | Defines semantic roles, Task types, artifact write boundaries, and Blueprint exceptions. |
 | `Orchestrator.Plan-to-implementation lifecycle` | workflow | public | `cursor/skills/ops-orchestrator/SKILL.md:63` | Defines ordered routing across planning, reviews, execution, remediation, plan updates, and handovers. |
-| `Orchestrator.Additional loops` | section | internal | `cursor/skills/ops-orchestrator/SKILL.md:82` | Routes legacy preparation, documentation generation/updates, and plan resumption. |
-| `Orchestrator.Execution summary` | workflow | public | `cursor/skills/ops-orchestrator/SKILL.md:88` | Maps gated implementation to Blueprint Task, primary approval, and resumed Execute Task. |
-| `Orchestrator.Work tracking` | policy | public | `cursor/skills/ops-orchestrator/SKILL.md:98` | Requires `TodoWrite` and exactly one in-progress item for multi-step work. |
-| `Orchestrator.Testing policy` | policy | public | `cursor/skills/ops-orchestrator/SKILL.md:102` | Requires root-cause fixes, inter-phase tests, and behavior-exercising verification. |
-| `Orchestrator.Safety` | policy | public | `cursor/skills/ops-orchestrator/SKILL.md:108` | Prohibits unauthorized destructive work, requires minimal deltas, synchronizes plans, and gates commits on request. |
+| `Orchestrator.Additional loops` | section | internal | `cursor/skills/ops-orchestrator/SKILL.md:83` | Routes legacy preparation, documentation generation/updates, and plan resumption. |
+| `Orchestrator.Execution summary` | workflow | public | `cursor/skills/ops-orchestrator/SKILL.md:89` | Maps gated implementation to Blueprint Task, primary approval, and resumed Execute Task. |
+| `Orchestrator.Work tracking` | policy | public | `cursor/skills/ops-orchestrator/SKILL.md:99` | Requires `TodoWrite` and exactly one in-progress item for multi-step work. |
+| `Orchestrator.Testing policy` | policy | public | `cursor/skills/ops-orchestrator/SKILL.md:103` | Requires root-cause fixes, inter-phase tests, and behavior-exercising verification. |
+| `Orchestrator.Safety` | policy | public | `cursor/skills/ops-orchestrator/SKILL.md:109` | Prohibits unauthorized destructive work, requires minimal deltas, synchronizes plans, and gates commits on request. |
 | `ops-orchestrator-direct frontmatter` | frontmatter | public | `cursor/skills/ops-orchestrator-direct/SKILL.md:1` | Declares the non-interactive skill name, trigger description, Cursor compatibility, category, and source. |
 | `Orchestrator Direct (Cursor)` | workflow | public | `cursor/skills/ops-orchestrator-direct/SKILL.md:13` | Establishes the non-interactive Cursor primary and its durable file interface. |
 | `Orchestrator Direct.Ground Truth` | section | public | `cursor/skills/ops-orchestrator-direct/SKILL.md:21` | Assigns authoritative phase scope to `plans/**` and navigation context to `docs/**`. |
 | `Orchestrator Direct.Scope reminder` | policy | public | `cursor/skills/ops-orchestrator-direct/SKILL.md:26` | Prevents gotcha-driven or unrelated work while retaining required related discovery. |
 | `Orchestrator Direct.Operating Rules` | policy | public | `cursor/skills/ops-orchestrator-direct/SKILL.md:32` | Defines documentation-first behavior, safety questions, delegation, bounded inline edits, sparse questions, status endings, and parallelism. |
 | `Orchestrator Direct.When to use which role` | section | public | `cursor/skills/ops-orchestrator-direct/SKILL.md:44` | Reuses the canonical mapping while clarifying artifact ownership and implementation-plan routing. |
-| `Orchestrator Direct.Plan-to-implementation lifecycle` | workflow | public | `cursor/skills/ops-orchestrator-direct/SKILL.md:48` | Preserves lifecycle order, two-wave phase handling, and same-reviewer remediation. |
+| `Orchestrator Direct.Plan-to-implementation lifecycle` | workflow | public | `cursor/skills/ops-orchestrator-direct/SKILL.md:48` | Preserves lifecycle order, two-wave phase handling, and context-value-based remediation routing. |
 | `Orchestrator Direct.Execution summary` | workflow | public | `cursor/skills/ops-orchestrator-direct/SKILL.md:62` | Reduces gated execution to Task Blueprint, approval, and resumed execution. |
 | `Orchestrator Direct.Work tracking` | policy | public | `cursor/skills/ops-orchestrator-direct/SKILL.md:66` | Requires one in-progress `TodoWrite` item for work with three or more steps. |
 | `Orchestrator Direct.Testing & safety` | policy | public | `cursor/skills/ops-orchestrator-direct/SKILL.md:70` | Reuses the interactive orchestrator's test, safety, delta, and commit constraints. |
@@ -83,9 +83,9 @@ This module owns Cursor-specific orchestration vocabulary, Task invocation/resum
 | `Role → Task mapping` | table | public | `cursor/task-delegation.md:5` | Maps every semantic framework role and shell-heavy verification to a Cursor subagent type and persona file. |
 | `How to invoke` | workflow | public | `cursor/task-delegation.md:21` | Defines persona-prefixed Task prompts for explicit skill loading, artifact paths, and compact returns. |
 | `Write boundaries` | policy | public | `cursor/task-delegation.md:40` | Defines scope discipline, delegate escalation, artifact exceptions, review remediation continuity, and fresh-context criteria. |
-| `Gated implementation (blueprint → execute)` | workflow | public | `cursor/task-delegation.md:53` | Requires two separate Task calls joined by the reviewer-approved resume identifier. |
-| `Delegation prompt patterns` | table | public | `cursor/task-delegation.md:63` | Standardizes prompt labels for exploration, targeted reading, web research, and deep dives. |
-| `Cursor vs OpenCode skill notes` | mapping | public | `cursor/task-delegation.md:74` | Translates `task()`/`task_id` terminology, the `explore` exception, and doc-explorer self-delegation into Cursor semantics. |
+| `Gated implementation (blueprint → execute)` | workflow | public | `cursor/task-delegation.md:54` | Requires two separate Task calls joined by the reviewer-approved resume identifier. |
+| `Delegation prompt patterns` | table | public | `cursor/task-delegation.md:64` | Standardizes prompt labels for exploration, targeted reading, web research, and deep dives. |
+| `Cursor vs OpenCode skill notes` | mapping | public | `cursor/task-delegation.md:75` | Translates `task()`/`task_id` terminology, the `explore` exception, and doc-explorer self-delegation into Cursor semantics. |
 | `tpl-orchestrator frontmatter` | frontmatter | public | `cursor/tpl-orchestrator.mdc:1` | Declares the project rule description and disables unconditional application. |
 | `tpl-orchestrator trigger workflow` | workflow | public | `cursor/tpl-orchestrator.mdc:6` | Activates documentation-first orchestration, skill loading, persona-based Task delegation, and gated implementation for matching requests. |
 

@@ -45,6 +45,8 @@ objective. Discover related files, call sites, integration points, and tests
 when they are required for the accepted work. This reminder does not permit
 ignoring real defects.
 
+In plan and implementation-plan reviews, auditing existing work for authorization and present necessity is required scope discipline, not adversarial reviewing. Recommend removal, merging, or simplification only for concrete planned items with evidence; do not replace them with new work.
+
 ## How You Work
 
 1. Receive a task from the primary agent.
