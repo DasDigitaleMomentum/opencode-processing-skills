@@ -16,8 +16,8 @@ updated: "{{date}}"
 <!-- Updated on each phase transition by update-plan -->
 
 - **Scope**: [Phase {{phase_number}}](phases/phase-{{phase_number}}.md)
-- **Implementation**: [Phase {{phase_number}} Plan](implementation/phase-{{phase_number}}-impl.md)
-- **Latest Handover**: [Session {{date}}](handovers/session-{{date}}.md) <!-- update when handover is created -->
+- **Implementation**: Not authored yet <!-- replace with link when created -->
+- **Latest Handover**: None <!-- replace with link when created -->
 - **Relevant Docs**: <!-- list module docs relevant to this phase -->
 
 ### Pending

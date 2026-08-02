@@ -142,9 +142,11 @@ process liveness from age.
 
 **Reuse review context conditionally.** Accepted related findings may return to the same reviewer through `review-fix` when retained reasoning materially helps, including multi-file runtime fixes. This does not carry authoring or implementation sessions across phases/work packages; further reviews are optional and never loop automatically.
 
-**Keep reviews disciplined.** No Gold-Plating. No Adversarial Reviewing. No Scope Creep. Report evidence-backed defects and required related changes, not gotchas or invented work.
+**Generate the smallest sufficient plan.** Confirm scope and the minimum necessary phase set before writing artifacts. Plan and implementation-plan authors prefer direct changes and existing structures, justify new foundations or abstractions by present need, and perform one deletion pass before handoff.
 
-**Plan with intent.** Plans now carry problem context, target outcomes, and binding constraints into each phase. Implementation steps trace back to gated scope, while proportional reviews accept justified `N/A` and zero findings — closing the gaps that used to turn missing decisions into gold-plated policy or security work.
+**Keep reviews disciplined.** No Gold-Plating. No Adversarial Reviewing. No Scope Creep. Reviewers check for gaps and unnecessary work but write only evidence-backed exceptions, not coverage matrices or clean-item certifications. Reduction findings remove concrete work; they do not invent replacement architecture or requirements.
+
+**Make an invoked review consequential.** `Reduction Required: Yes` or unresolved Critical/Major findings block progression until the primary applies or explicitly rejects them. Plan reduction runs once through `update-plan`; implementation-plan reduction runs once through `review-fix`; neither starts an automatic re-review loop.
 
 **File-based persistence.** `docs/` and `plans/` are the interface. Readable by humans and AI. No hidden state. Your knowledge survives session boundaries.
 

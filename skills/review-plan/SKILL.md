@@ -33,18 +33,13 @@ Do **not** use this skill to:
 
 ## Review Focus
 
-The primary specifies the review focus when delegating. The default focus is **functional and technical findings** — correctness, feasibility, and whether intent/scope/context are sufficient for the later implementation-plan pass.
+The default priority is the smallest sufficient scope: confirm that requested outcomes are covered and that no phase or material deliverable is unauthorized, unnecessary, or needlessly separate. Inspect the relevant plan elements, but record only evidence-backed exceptions. The primary may add a focus via `{{focus}}`.
 
 ### Review posture
 
-**No Gold-Plating. No Adversarial Reviewing. No Scope Creep.** Report only
-evidence-backed problems that affect correctness, security, acceptance, or the
-reviewed objective. Do not hunt for gotchas, invent improvements, or turn a
-review into a search for work. This does not mean overlooking real defects.
+**Detect existing gold-plating without becoming an adversarial reviewer.** A scope-reduction finding must identify a concrete planned item and show missing authorization, missing present necessity, or a smaller sufficient path. Do not invent requirements, ideal architectures, hardening, infrastructure, or findings. Zero findings remains valid.
 
-**Formal criteria** (DoD compliance checklists, NFR conformance, reference consistency, documentation cleanup) are secondary. Only include formal findings when they reveal **real problems** — not as standard checkboxes to fill. A review cluttered with formal nitpicking buries the findings that matter.
-
-The primary passes the focus via `{{focus}}` in the delegation prompt. If no focus is specified, use the default.
+DoD wording, testing, references, documentation, and other formal criteria are not checklist obligations. Report them only when a concrete defect would block or misdirect execution.
 
 ---
 
@@ -60,7 +55,7 @@ The primary passes the focus via `{{focus}}` in the delegation prompt. If no foc
 
 - **Subagent (delegate-strong / general)**
   - Reads plan + phase documents with **no prior context** (fresh eyes).
-  - Evaluates against the structured criteria embedded in the review template.
+  - Applies this skill's exception-based review focus.
   - Writes the review artifact to `plans/<name>/reviews/plan-review.md`.
 
 ### Why `delegate-strong` (not `doc-explorer`)
@@ -99,17 +94,18 @@ Provide:
 
 Subagent returns:
 - Overall verdict (Ready / Needs Revision / Major Gaps)
-- Finding count by severity
-- Top 3 findings
+- Reduction required (Yes / No)
+- Finding count by severity and the top 3 actionable findings
+- Required next action
 
 ### 4) Act on findings
 
 Primary decides:
-- **Ready**: Proceed to `author-and-verify-implementation-plan`.
-- **Needs Revision**: Update plan via `update-plan`, then optionally re-review.
-- **Major Gaps**: Discuss with user before proceeding.
+- **Ready**: Proceed to `author-and-verify-implementation-plan` only when reduction is not required and no Critical/Major findings remain.
+- **Needs Revision**: Do not proceed. Accept or explicitly reject each blocking finding. Apply accepted plan reductions once through the review-remediation mode of `update-plan`.
+- **Major Gaps**: Stop and discuss the missing intent or authorization with the user before restructuring the plan.
 
-Plans remain conversation-owned by the primary. Resume the same reviewer `task_id` for clarification of findings instead of creating a new delegate, but apply plan changes through `update-plan`. `review-fix` is reserved for implementation plans and implementations.
+Plans remain conversation-owned by the primary. Resume the same reviewer `task_id` only for clarification; apply accepted changes through `update-plan`. The remediation digest closes that pass. Do not automatically re-review or continue until zero findings. A fresh review requires an explicit user/primary decision or materially changed scope.
 
 ---
 
@@ -118,26 +114,34 @@ Plans remain conversation-owned by the primary. Resume the same reviewer `task_i
 The review artifact `plans/<name>/reviews/plan-review.md` MUST:
 
 - Follow the canonical template headings and frontmatter keys.
-- Include a clear **Overall Assessment** with verdict and reasoning.
-- Rate every finding with a **severity** (Critical / Major / Minor / Note).
-- Include a **Findings Summary** table consolidating all findings.
-- Assess testing only where required by explicit objectives, use cases, acceptance criteria, or concrete risk; justified `N/A` is acceptable.
+- Include a clear assessment with verdict, reduction flag, and brief reasoning.
+- Report only exceptions; do not reproduce coverage matrices or certify clean phases/deliverables individually.
+- Give every finding a stable ID, severity, evidence, and concrete action.
+- State `No findings` when the review finds no material problem.
+
+Verdict rules:
+
+- `Ready` requires `Reduction Required: No` and zero Critical/Major findings.
+- Any executable phase or deliverable without clear authorization or present necessity is at least Major and requires `Needs Revision`.
+- Use `Major Gaps` when missing intent or authorization prevents a defensible reduction decision and needs user input.
 
 ---
 
 ## Rules
 
 - The reviewer must approach the plan **without prior context**. Do not include plan content in the delegation prompt — the reviewer reads it themselves.
-- Findings are **advisory**. The primary decides whether and how to act.
+- Findings are **advisory decisions**, not automatic edits. The primary must accept or explicitly reject blocking findings before progression.
 - Do not rewrite or modify the plan during review — only produce the review artifact.
 - Retain the reviewer `task_id` until finding clarification is complete.
 - Ensure the `reviews/` directory exists before delegating (create if needed).
-- A review may report zero findings when no evidence-backed gaps are found. Do not manufacture findings or search for missing extra scope.
-- Flag omissions only when required by an explicit objective, use case, requirement, or acceptance criterion. Do not add product, policy, security, privacy, compliance, authorization, operational, infrastructure, deployment, or documentation scope during review.
+- Zero findings is valid. Flag only concrete gaps or unnecessary planned work; do not invent requirements, policy, infrastructure, or replacement scope.
+- Pay particular attention to foundations, shared abstractions, cleanup, generic infrastructure, and future-phase preparation, but report only concrete unnecessary work.
+- Once a review is invoked, `Reduction Required: Yes` or unresolved Critical/Major findings block progression until the primary remediates or explicitly rejects them with rationale.
+- One review plus one accepted remediation pass is the default bound. Never start an automatic review/fix/re-review loop.
 
 ---
 
 ## Templates
 
-- `tpl-plan-review.md` — Canonical review output format with embedded review criteria
+- `tpl-plan-review.md` — Canonical compact review output
 - `tpl-review-plan-prompt.md` — Primary → reviewer delegation prompt

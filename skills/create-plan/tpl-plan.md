@@ -31,13 +31,15 @@ updated: "{{date}}"
 
 ## Requirements
 
-<!-- Functional and non-functional requirements -->
+<!-- Confirmed requirements only. Do not infer generic quality requirements. -->
 
 ### Functional
 
 - [ ] {{requirement}}
 
 ### Non-Functional
+
+<!-- Optional: include only explicit requirements or obligations supported by a concrete invariant/risk. -->
 
 - [ ] {{requirement}}
 
@@ -65,15 +67,15 @@ updated: "{{date}}"
 
 ## Phases
 
-<!-- Only if plan exceeds single-session capacity -->
+<!-- Use the smallest sufficient phase set. For multi-phase plans, state briefly why each phase needs a separate execution boundary. -->
 
-| Phase | Title | Contribution | Detail | Status |
-|-------|-------|--------------|--------|--------|
-| 1 | {{title}} | {{brief_contribution_to_target_outcome}} | [Phase](phases/phase-1.md) | pending |
+| Phase | Title | Contribution | Why Separate | Detail | Status |
+|-------|-------|--------------|--------------|--------|--------|
+| 1 | {{title}} | {{contribution_to_target_outcome}} | {{necessity_or_single_phase}} | [Phase](phases/phase-1.md) | pending |
 
 ## Risks & Open Questions
 
-<!-- Known risks, unresolved questions, assumptions -->
+<!-- Optional: only decision-relevant known risks or unresolved questions. Omit rather than inventing hypothetical risks. -->
 
 | Risk/Question | Impact | Mitigation/Answer |
 |---------------|--------|-------------------|

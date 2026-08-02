@@ -22,7 +22,7 @@ Review mode: `{{review_mode}}` (`single-phase` or `batch`).
 
 {{focus}}
 
-Prioritize findings related to this focus. Formal criteria (DoD checklists, NFR conformance, reference pedantry) are secondary — only include them when they reveal real problems, not as standard checkboxes.
+Use this focus for additional prioritization. Do not turn formal criteria into a checklist.
 
 ## What to Review
 
@@ -34,26 +34,17 @@ Use these as the authoritative review scope:
 - Ordered batch phase/implementation-plan/output tuples (batch only): `{{batch_review_refs}}`
 - Project docs (if available): `{{docs_refs}}`
 
-Then examine the **actual codebase** to verify:
-- Do the file paths and symbols referenced in the implementation plan exist?
-- Does the proposed approach align with existing code patterns?
-- Are the "Code Anchors" in the Reality Check section accurate?
+Use the actual codebase selectively to resolve material questions about feasibility, minimality, or a referenced target. Do not certify every path, symbol, or Reality Check entry when no concrete concern exists.
 
-Use `retriever` by default for separable codebase, reference, or test evidence collection, or `doc-explorer` for a genuinely documentation- or module-oriented child task. Retriever delegation is evidence-oriented, not phase-oriented: collect shared or overlapping evidence once, reuse it, and do not create nested per-phase retriever fan-out by default. Read the authoritative scope artifacts and decisive evidence for actual findings yourself. You own synthesis, findings, severity, verdict, scope interpretation, and the final review; do not repeat broad child retrieval.
-
-For a batch, use this one fresh reviewer session by default. After reviewing phases sequentially, perform exactly one integrated cross-phase consistency assessment and include it in one per-phase artifact. Do not create a consolidated artifact. Return one aggregate digest. Do not fan out reviewers per phase unless explicitly requested for independent perspectives, required by genuinely unrelated domains or specialist expertise, or needed because combined evidence exceeds practical context capacity. Partition oversized work into contiguous dependency/domain groups; do not repeat completed reviews, and centrally check only cross-partition interfaces.
+For a batch, use this one fresh reviewer session by default. Review phases sequentially, report only material cross-phase conflicts in the affected per-phase artifact, and return one aggregate digest. Do not create a consolidated artifact or formal no-issue consistency report.
 
 ## Review Criteria
 
-Evaluate against these criteria (the template comments contain detailed guidance):
+1. Check that phase obligations are covered.
+2. Check that steps and new artifacts are presently necessary and use a direct existing path where sufficient.
+3. Inspect current code only as needed to identify concrete feasibility, reference, sequencing, or verification problems.
 
-1. **Scope Alignment** — Does it implement exactly what the phase requires (no gaps, no creep)?
-2. **Technical Feasibility** — Is the approach sound and appropriate for this codebase?
-3. **Step Quality** — Are steps concrete (real paths/symbols) and actionable?
-4. **Required Context** — Are all necessary files listed? Any unnecessary ones?
-5. **Testing Plan** — Does the verify command exercise changed behavior with checks proportional to explicit scope and concrete risk?
-6. **Reference Consistency** — Do all file/symbol references match current repo state?
-7. **Reality Check Validation** — Is the grounding section honest and complete?
+Review the relevant material, but write only exceptions. Do not produce coverage or disposition tables for clean items, and do not require testing or Reality Check detail without a concrete reason.
 
 ## Output
 
@@ -64,10 +55,8 @@ Write your review to:
 Use the canonical template:
 - `skills/review-implementation-plan/tpl-impl-plan-review.md`
 
-**Be honest and thorough — with focus.** Prioritize findings that matter for the stated focus. Give each finding a stable ID (`F-1`, `F-2`, ...), and rate it by severity (Critical/Major/Minor/Note). Formal criteria that show no real problems may be omitted entirely.
-
-Require testing, rollback, edge-case, security, deployment, and documentation detail only where explicit scope or concrete risk warrants it; justified `N/A` is acceptable. Do not invent policy or infrastructure. Verify step authorization and ensure ungated blocking decisions stop dependent planning. Zero findings is valid.
+Give each finding a stable ID (`F-1`, `F-2`, ...), severity, concise evidence, and action. Flag only concrete gaps or unnecessary existing work; do not invent requirements, policy, infrastructure, or replacement work. Zero findings is valid.
 
 Return to the primary only:
-- Single-phase: the overall verdict, count of findings by severity, and top 3 findings with IDs.
-- Batch: one aggregate digest with overall and per-phase verdicts, aggregate severity counts, the top 3 findings across the batch, and the integrated consistency result.
+- Single-phase: verdict, reduction required (Yes / No), severity counts, top 3 actionable findings, and required next action.
+- Batch: one aggregate digest with overall/per-phase verdicts and reduction flags, aggregate severity counts, top 3 actionable findings, and required next action.

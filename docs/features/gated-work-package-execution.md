@@ -40,8 +40,8 @@ A bounded implementation unit is executed through a visible blueprint, an explic
 |--------|---------|------|
 | [Workflow Skills](../modules/workflow-skills.md) | `execute-work-package` Primary Inputs (`skills/execute-work-package/SKILL.md:117`), Statefulness (`skills/execute-work-package/SKILL.md:81`), Rules (`skills/execute-work-package/SKILL.md:233`) | Defines proportional authority inputs, mandatory gate-session reuse, staged verification, and bounded return contracts. |
 | [Agent Personas](../modules/agent-personas.md) | `implementer` Inputs (`agents/implementer.md:31`), MODE: BLUEPRINT (`agents/implementer.md:44`), MODE: EXECUTE (`agents/implementer.md:58`) | Performs the two execution turns, may gather bounded leaf evidence, stages verification, and avoids Git/docs/plan ownership. |
-| [Agent Personas](../modules/agent-personas.md) | `maintainer` Persistent Lifecycle (`agents/maintainer.md:121`), Execution Summary (`agents/maintainer.md:160`), Verification Policy (`agents/maintainer.md:183`) | Chooses persistent versus inline authority, owns the gate and same-session continuation, and requires the final broad verification. |
-| [Cursor Adapter](../modules/cursor-adapter.md) | Gated implementation mapping (`cursor/task-delegation.md:53`) | Maps the two-turn protocol to Cursor `Task` plus `resume`. |
+| [Agent Personas](../modules/agent-personas.md) | `maintainer` Persistent Lifecycle (`agents/maintainer.md:130`), Execution Summary (`agents/maintainer.md:173`), Verification Policy (`agents/maintainer.md:196`) | Chooses persistent versus inline authority, owns the gate and same-session continuation, and requires the final broad verification. |
+| [Cursor Adapter](../modules/cursor-adapter.md) | Gated implementation mapping (`cursor/task-delegation.md:54`) | Maps the two-turn protocol to Cursor `Task` plus `resume`. |
 
 ## Configuration
 

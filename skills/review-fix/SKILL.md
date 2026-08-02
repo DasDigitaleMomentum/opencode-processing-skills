@@ -45,10 +45,9 @@ Use `tpl-review-fix-prompt.md`. Resume the same reviewer `task_id` only when ret
 
 1. Read the existing review artifact and use the existing session context.
 2. Confirm the requested fixes still serve the reviewed objective.
-3. Apply the necessary related corrections. Size alone does not require a new work package.
-4. During fixing, run the smallest targeted tests that exercise or reproduce the changed or problematic behavior. Do not use a supplied broad/full command after every change or as the first iterative diagnostic step when a targeted test is known or can be identified.
-5. When remediation is ready, run the supplied broad/full verification once as the final gate. If it fails, return to targeted diagnosis, fix, and retest; only after targeted tests pass may the broad/full final gate run again. Never weaken or omit that final gate. For implementation-plan remediation, use the equivalent focused and final consistency checks.
-6. Return the compact digest below.
+3. Apply the necessary related corrections. For implementation-plan scope findings, remove, merge, or simplify the accepted steps/artifacts instead of adding compensating design. Size alone does not require a new work package.
+4. For implementation fixes, use targeted tests while editing and preserve any supplied broad/full final gate. For implementation-plan fixes, check only the changed steps and directly affected references; do not invent a formal verification suite.
+5. Return the compact digest below and stop. This is one remediation pass, not the start of a review loop.
 
 ### Remediation posture
 
@@ -75,17 +74,17 @@ Return only:
 - **Findings**: fixed and unresolved finding IDs
 - **Edits**: changed files with one-line descriptions
 - **Verify**: command/checks and result
-- **Next**: whether targeted verification is sufficient or an independent re-review is recommended
+- **Next**: stop | primary decision required; an independent re-review was not started
 
 ## Independent Re-review
 
-The remediation pass is not an independent review. A fresh review is optional and requires an explicit primary or user decision. Recommend it when:
+The remediation pass is not an independent review. A fresh review is optional and requires an explicit primary or user decision. The primary may choose it when:
 
 - the primary wants an independent final opinion;
 - the fix exposes uncertainty that the current reviewer cannot resolve;
 - security, persistence, public API, or migration risk warrants another perspective.
 
-Do not start a fresh review merely because a fix spans several files or changes runtime code. Do not automatically chain review -> fix -> review -> fix. After one remediation pass, stop at the primary's decision unless another review is explicitly requested.
+Do not start or recommend a fresh review merely because findings were fixed, steps were removed, or the change spans several files. Do not chain review -> fix -> review -> fix. After one remediation pass, stop at the primary's decision unless another review is explicitly requested or a materially new risk/uncertainty is exposed.
 
 ## Rules
 
@@ -94,3 +93,4 @@ Do not start a fresh review merely because a fix spans several files or changes 
 - Do not re-open already rejected findings unless the primary explicitly asks for reconsideration.
 - Do not describe self-verification as an independent review.
 - Never weaken, delete, or skip tests to make verification pass.
+- Do not replace removed gold-plating with new abstraction, infrastructure, tests, or documentation unless an accepted finding and the reviewed objective require it.

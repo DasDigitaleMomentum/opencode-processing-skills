@@ -26,6 +26,7 @@ Keeps planning artifacts synchronized with actual progress:
 - After completing work: to mark items and phases as done
 - When blockers are discovered: to document them
 - When the implementation approach changes: to update the implementation plan
+- After a plan review: to apply accepted Remove / Merge / Simplify findings while keeping scope artifacts consistent
 - When the user asks to "update the plan" or "mark phase as done"
 
 ## Execution Model (Recommended)
@@ -78,6 +79,15 @@ Find the active plan:
 - Requirements changed → update `plan.md`
 - New risks identified → add to risks table
 - Scope adjustment → update scope section
+
+**Option E: Plan-review remediation**
+- Inputs: immutable plan-review artifact, accepted finding IDs, explicitly rejected IDs with rationale, and user/primary decisions
+- Apply accepted `Remove`, `Merge`, and `Simplify` dispositions across `plan.md`, pending phase files, `todo.md`, and affected references
+- Do not invent replacement phases, abstractions, infrastructure, requirements, or acceptance criteria
+- Record applied finding IDs and material scope decisions in the changelog
+- If execution has not started, remove obsolete pending phase artifacts after explicit approval; if history exists, preserve it and mark the phase `skipped` or superseded with a concise pointer
+- Keep the review artifact immutable
+- Update references directly affected by the reduction, then stop; do not create a general plan-audit pass
 
 ### Step 3: Apply Updates
 
@@ -149,6 +159,13 @@ Summarize what was updated. If the phase is complete, highlight:
 - Whether all acceptance criteria were met
 - What comes next
 
+For plan-review remediation, return:
+
+- **Outcome**: succeeded | partial | blocked
+- **Findings**: applied and unresolved IDs
+- **Edits**: changed artifacts with one-line descriptions
+- **Next**: stop | primary decision required; no independent re-review was started
+
 ## Rules
 
 1. **Always read before writing**: Read the current state of all affected files before making changes.
@@ -159,6 +176,9 @@ Summarize what was updated. If the phase is complete, highlight:
 6. **Track deviations**: If the actual implementation deviated from the plan, document the deviation in the implementation plan rather than silently updating.
 7. **Use subagents sparingly**: Plan updates are typically small enough for the primary agent. Only use subagents if verifying acceptance criteria requires codebase analysis.
 8. **File-based interface**: All updates are written to plan files. Do not return updated content as chat messages.
+9. **Review remediation is bounded**: Apply accepted findings once and stop. Do not automatically re-review, continue until zero findings, or reopen rejected findings.
+10. **Reduction over compensation**: When fixing gold-plating, remove or simplify work. Do not add replacement architecture, infrastructure, tests, or documentation unless the confirmed objective requires it.
+11. **Review artifact immutability**: Never modify the review that authorized remediation; record decisions and resulting scope in the plan changelog.
 
 ## Templates
 

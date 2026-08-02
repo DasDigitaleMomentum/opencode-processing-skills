@@ -14,7 +14,7 @@ updated: "{{date}}"
 
 ## Approach
 
-<!-- High-level technical approach. Above code level - describe WHAT changes WHERE and WHY -->
+<!-- Describe the smallest sufficient technical change, what existing structures it reuses, and why any new structure is necessary now. -->
 
 ## Affected Modules
 
@@ -40,66 +40,25 @@ updated: "{{date}}"
 - **What**: {{description}}
 - **Where**: {{module/file/area}}
 - **Authorized By**: {{requirement_scope_item_acceptance_criterion_or_existing_invariant}}
-- **Why**: {{rationale}}
-- **Considerations**: {{relevant_edge_cases_or_constraints_or_N/A_with_reason}}
+- **Why**: {{present_need_and_rationale}}
+- **Considerations**: {{relevant_constraints_or_N/A}}
 
 ## Testing Plan
 
-<!-- How to verify the implementation.
-     Prefer a single primary "verify" command when possible (e.g. `pytest ...`, `npm test`, `go test ./...`).
-     The verify command must exercise the CHANGED BEHAVIOR, not just compile or lint.
-     
-     Keep testing proportional to changed behavior and concrete risk; N/A is acceptable with a short reason.
-     Do not create test or deployment infrastructure merely to fill this section.
+<!-- One command that exercises changed behavior. Do not add test infrastructure merely to fill this section. -->
 
-     Integrity constraints:
-      - Existing tests MUST NOT be disabled, deleted, or weakened to make the implementation pass.
-      - Update affected tests only where authorized behavior changes.
-      - Use integration/E2E/manual checks when warranted by the changed behavior and risk. -->
+**Primary Verify Command**: `{{command}}`
 
-| Test Type | What to Test | Expected Outcome |
-|-----------|-------------|-----------------|
-| {{type}} | {{description}} | {{outcome}} |
+### Additional Checks (optional)
 
-### Test Integrity Constraints
+- {{check_required_by_scope_or_concrete_risk}}
 
-<!-- List any existing tests that will be AFFECTED by this phase's changes.
-     For each: state whether it needs updating (because behavior intentionally changed)
-     or must remain untouched (unchanged behavior).
-     If no existing tests are affected, state "No existing tests affected." -->
-
-- {{constraint}}
-
-## Rollback Strategy
+## Rollback Strategy (optional)
 
 <!-- How to undo changes if relevant. Otherwise state N/A with a short reason. Do not invent infrastructure. -->
 
-## Open Decisions
+## Reality Check (optional)
 
-| Decision | Options | Chosen | Rationale |
-|----------|---------|--------|-----------|
-| {{decision}} | {{options}} | {{chosen}} | {{rationale}} |
+<!-- Optional: include only material code/plan mismatches or decisions that block dependent work. Omit when none exist. -->
 
-## Reality Check
-
-<!-- Ground this implementation plan against current repository reality.
-     Use this section to record what you verified in the codebase (anchors) and any mismatches.
-     Do NOT change the gated phase scope here; raise scope changes to the primary. -->
-
-### Code Anchors Used
-
-| File | Symbol/Area | Why it matters |
-|------|-------------|----------------|
-| {{path}} | {{symbol_or_area}} | {{why}} |
-
-### Mismatches / Notes
-
-- {{note}}
-
-### Blocking Decisions
-
-<!-- List necessary decisions not authorized by the gated plan/phase. Do not choose an answer or plan dependent work.
-     Unspecified product, policy, security, privacy, compliance, authorization, or operational behavior is not authorized.
-     If none, state "None." -->
-
-- {{blocking_decision_or_None}}
+- {{mismatch_or_blocking_decision}}
