@@ -1225,7 +1225,8 @@ await claudeEnd({{ hook_event_name: "SessionEnd", session_id: "claude-sess", cwd
             and not line.startswith("Checkpoint sessions")
         ]
         self.assertEqual(sum("OPEN" in row for row in data_rows), 6)
-        self.assertEqual(sum("UNKNOWN" in row for row in data_rows), 1)
+        # The dated pilot fixture is hidden by the default three-hour cutoff.
+        self.assertEqual(sum("UNKNOWN" in row for row in data_rows), 0)
         closed_rows = [row for row in data_rows if "CLOSED" in row]
         self.assertEqual(len(closed_rows), 1)
         self.assertIn("—", closed_rows[0])

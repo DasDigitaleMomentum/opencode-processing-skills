@@ -926,6 +926,163 @@ install_opencode_checkpoint_file() {
     echo "  Installed: $label"
 }
 
+CHECKPOINT_WATCH_NATIVE_PATH=""
+
+install_optional_native_checkpoint_watch() (
+    local native_dir="$HOME/.local/bin"
+    local native_dest="$native_dir/checkpoint-watch"
+    local stage=""
+    local live_pid=""
+    local atomic_temp=""
+
+    cleanup_native_checkpoint_watch() {
+        if [ -n "$live_pid" ] && kill -0 "$live_pid" 2>/dev/null; then
+            kill -TERM "$live_pid" 2>/dev/null || true
+            sleep 0.05
+            if kill -0 "$live_pid" 2>/dev/null; then
+                kill -KILL "$live_pid" 2>/dev/null || true
+            fi
+            wait "$live_pid" 2>/dev/null || true
+        fi
+        [ -z "$atomic_temp" ] || rm -f "$atomic_temp"
+        [ -z "$stage" ] || rm -rf "$stage"
+    }
+
+    native_fallback() {
+        echo "  Native watcher unavailable: $1; using installed Node fallback."
+        return 1
+    }
+
+    wait_for_native_output() {
+        local output_file="$1"
+        local expected="$2"
+        local attempt=0
+        while [ "$attempt" -lt 100 ]; do
+            if grep -Fq "$expected" "$output_file" 2>/dev/null; then
+                return 0
+            fi
+            if [ -n "$live_pid" ] && ! kill -0 "$live_pid" 2>/dev/null; then
+                return 1
+            fi
+            sleep 0.05
+            attempt=$((attempt + 1))
+        done
+        return 1
+    }
+
+    trap cleanup_native_checkpoint_watch EXIT INT TERM
+
+    if [ -L "$native_dest" ]; then
+        native_fallback "preserving user-managed symlink $native_dest"
+        return 1
+    fi
+    if ! command -v scriptc >/dev/null 2>&1; then
+        native_fallback "scriptc was not found"
+        return 1
+    fi
+    if ! stage="$(mktemp -d "${TMPDIR:-/tmp}/checkpoint-watch-native.XXXXXX")"; then
+        native_fallback "could not create disposable build staging"
+        return 1
+    fi
+    if ! mkdir -p "$stage/bin" "$stage/src" "$stage/once/.agent-checkpoints" "$stage/live/.agent-checkpoints"; then
+        native_fallback "could not prepare disposable build staging"
+        return 1
+    fi
+    if ! cp "$SCRIPT_DIR/packages/checkpoint-core/bin/checkpoint-watch.js" "$stage/bin/checkpoint-watch.js" \
+        || ! cp "$SCRIPT_DIR/packages/checkpoint-core/src/index.js" "$stage/src/index.js"; then
+        native_fallback "could not stage watcher sources"
+        return 1
+    fi
+    if ! scriptc coverage "$stage/bin/checkpoint-watch.js" >"$stage/coverage.txt" 2>&1; then
+        native_fallback "scriptc coverage failed"
+        return 1
+    fi
+    if grep -q "SC2002" "$stage/coverage.txt" \
+        || grep -Eq "Number of unknown values.*SC2020|SC2020.*Number of unknown values" "$stage/coverage.txt"; then
+        native_fallback "scriptc coverage retained a required-path type fence"
+        return 1
+    fi
+    if ! scriptc build "$stage/bin/checkpoint-watch.js" -o "$stage/checkpoint-watch" --no-keep-c \
+        >"$stage/build.txt" 2>&1; then
+        native_fallback "scriptc build failed"
+        return 1
+    fi
+    if [ ! -x "$stage/checkpoint-watch" ]; then
+        native_fallback "scriptc did not produce an executable"
+        return 1
+    fi
+    if ! "$stage/checkpoint-watch" --help >"$stage/help.txt" 2>"$stage/help.err" \
+        || ! grep -Fq "Usage: checkpoint-watch" "$stage/help.txt"; then
+        native_fallback "native --help smoke failed"
+        return 1
+    fi
+    if ! (cd "$stage/once" && ../checkpoint-watch --once >"$stage/once.txt" 2>"$stage/once.err"); then
+        local once_error=""
+        IFS= read -r once_error < "$stage/once.err" || true
+        native_fallback "native --once smoke failed${once_error:+: $once_error}"
+        return 1
+    fi
+    if ! grep -Fq "Checkpoint sessions" "$stage/once.txt"; then
+        native_fallback "native --once smoke produced no dashboard"
+        return 1
+    fi
+
+    (
+        cd "$stage/live"
+        exec env CHECKPOINT_WATCH_REFRESH_MS=60000 ../checkpoint-watch \
+            </dev/null >"$stage/live.txt" 2>"$stage/live.err"
+    ) &
+    live_pid=$!
+    if ! wait_for_native_output "$stage/live.txt" "Checkpoint sessions"; then
+        native_fallback "native live startup failed"
+        return 1
+    fi
+    sleep 0.2
+    local marker_timestamp
+    marker_timestamp="$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')"
+    printf '%s\n' \
+        "{\"timestamp\":\"$marker_timestamp\",\"session_id\":\"native-installer-smoke\",\"done\":\"Native refresh observed\",\"next\":\"Continue Node fallback\",\"step_failed\":false,\"context_used\":null,\"agent\":\"installer\",\"session_title\":\"native-refresh\"}" \
+        > "$stage/live/.agent-checkpoints/native-installer-smoke.jsonl"
+    if ! wait_for_native_output "$stage/live.txt" "native-refresh"; then
+        native_fallback "native live filesystem refresh failed"
+        return 1
+    fi
+    if ! kill -TERM "$live_pid" 2>/dev/null; then
+        native_fallback "native live signal failed"
+        return 1
+    fi
+    if ! wait "$live_pid"; then
+        live_pid=""
+        native_fallback "native live exit failed"
+        return 1
+    fi
+    live_pid=""
+    if ! grep -Fq "$(printf '\033[?25h')" "$stage/live.txt"; then
+        native_fallback "native live cursor restoration failed"
+        return 1
+    fi
+
+    if ! mkdir -p "$native_dir"; then
+        native_fallback "could not create $native_dir"
+        return 1
+    fi
+    if ! atomic_temp="$(mktemp "$native_dir/.checkpoint-watch.XXXXXX")"; then
+        native_fallback "could not create atomic destination staging"
+        return 1
+    fi
+    if ! cp "$stage/checkpoint-watch" "$atomic_temp" || ! chmod 755 "$atomic_temp"; then
+        native_fallback "could not prepare atomic executable"
+        return 1
+    fi
+    if ! mv -f "$atomic_temp" "$native_dest"; then
+        native_fallback "could not atomically install $native_dest"
+        return 1
+    fi
+    atomic_temp=""
+    echo "  Native watcher installed: $native_dest"
+    return 0
+)
+
 required_checkpoint_reader_symlink_error() {
     local dest="$1"
     local label="$2"
@@ -1022,6 +1179,11 @@ install_opencode_checkpoint() {
             "$SCRIPT_DIR/packages/checkpoint-core/src/index.js" \
             "$watch_dir/src/index.js" \
             "lib/opencode-processing-skills/checkpoint-watch/src/index.js"
+    fi
+    if [ "$PROJECT_MODE" = false ]; then
+        if install_optional_native_checkpoint_watch; then
+            CHECKPOINT_WATCH_NATIVE_PATH="$HOME/.local/bin/checkpoint-watch"
+        fi
     fi
     install_opencode_checkpoint_file \
         "$SCRIPT_DIR/opencode/checkpoint-runtime.mjs" \
@@ -1670,7 +1832,12 @@ echo "  Checkpoint support: $OPENCODE_TARGET_HOME/lib/opencode-processing-skills
 echo "  Checkpoint watcher: $OPENCODE_TARGET_HOME/lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js"
 echo "  Startup order (dashboard before status-writing harnesses):"
 echo "  1. Start the compatible checkpoint dashboard first:"
-echo "  Launch command: node \"$OPENCODE_TARGET_HOME/lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js\""
+if [ -n "$CHECKPOINT_WATCH_NATIVE_PATH" ]; then
+    echo "  Launch command: \"$CHECKPOINT_WATCH_NATIVE_PATH\""
+    echo "  Node fallback: node \"$OPENCODE_TARGET_HOME/lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js\""
+else
+    echo "  Launch command: node \"$OPENCODE_TARGET_HOME/lib/opencode-processing-skills/checkpoint-watch/bin/checkpoint-watch.js\""
+fi
 echo "  2. Restart OpenCode to load the checkpoint and checkpoint_path tools and lifecycle writer."
 echo "  OpenCode usage: select the new primary agent (e.g. '@maintainer')"
 echo "  Generate project documentation: load the 'generate-docs' skill"

@@ -13,6 +13,22 @@ function nonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
+function workspaceRoot(context, pluginContext) {
+  const usableWorktree = (value) => {
+    const candidate = nonEmptyString(value);
+    if (candidate === null) return null;
+    const resolved = path.resolve(candidate);
+    return resolved === path.parse(resolved).root ? null : candidate;
+  };
+  const root =
+    usableWorktree(context?.worktree) ??
+    usableWorktree(pluginContext?.worktree) ??
+    nonEmptyString(context?.directory) ??
+    nonEmptyString(pluginContext?.directory);
+  if (root === null) throw new TypeError("OpenCode workspace directory is unavailable");
+  return root;
+}
+
 export function createOpenCodeSessionTitle(client) {
   return async function getOpenCodeSessionTitle(context) {
     try {
@@ -153,7 +169,7 @@ export function createOpenCodeCheckpointPlugin({
         const sessionId = nonEmptyString(event?.properties?.info?.id);
         if (sessionId === null) return;
         await checkpointCore.appendSessionStatus({
-          workspaceRoot: pluginContext.worktree,
+          workspaceRoot: workspaceRoot(null, pluginContext),
           sessionId,
           status: "open",
         });
@@ -198,7 +214,7 @@ export function createOpenCodeCheckpointPlugin({
               telemetry = unknownTelemetry();
             }
             const feedback = await checkpointCore.checkpoint({
-              workspaceRoot: context.worktree ?? pluginContext.worktree,
+              workspaceRoot: workspaceRoot(context, pluginContext),
               sessionId: context.sessionID,
               done: args.done,
               next: args.next,
@@ -226,3 +242,4 @@ export function createOpenCodeCheckpointPlugin({
     };
   };
 }
+import path from "node:path";

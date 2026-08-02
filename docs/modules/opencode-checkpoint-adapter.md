@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "opencode-checkpoint-adapter"
-version: 1.3
+version: 1.4
 ---
 
 # Module: OpenCode Checkpoint Adapter
@@ -27,7 +27,7 @@ The generic event callback still accepts only verified `session.created`; plugin
 |---|---|---|
 | `@opencode-ai/plugin` | optional host package | Supplies the native `tool` helper when a matching published version is resolvable; the shim has a no-dependency JSON-Schema fallback for local development builds. |
 | Checkpoint Core | module | Owns persistence, path mapping, parsing, and analysis. |
-| `install.sh` | module | Deploys shim/support files and appends the instruction to OpenCode-installed personas. |
+| `install.sh` | module | Deploys shim/support files, optionally installs a verified global native watcher, and appends the instruction to OpenCode-installed personas. |
 
 ## Structure
 
@@ -60,11 +60,12 @@ The generic event callback still accepts only verified `session.created`; plugin
 5. The runtime scans backward to the latest assistant message with positive output, sums input/output/reasoning/cache-read/cache-write, and matches `providerID`/`modelID` to its context limit. The output-zero active tool-calling step is not selected.
 6. The core persists exact `open` → eight-field checkpoint → optional exact `closed`; feedback and checkpoint-only metrics remain unchanged.
 7. Missing or malformed telemetry and SDK failures persist `context_used: null` and report both values as `unknown`; metadata failures likewise persist `null` without blocking the record.
-8. `checkpoint_path(session_id)` returns the selected relative path for direct reading or core inspection. The stable ID, not mutable title text, selects the log.
+8. Global installation always refreshes the portable Node reader before writer assets and may select a separately staged, smoke-tested scriptc executable as the preferred watcher command. Optional build failure leaves writer installation and the Node reader available; project mode remains Node-only and global-bin isolated.
+9. `checkpoint_path(session_id)` returns the selected relative path for direct reading or core inspection. The stable ID, not mutable title text, selects the log.
 
 ## Configuration
 
-No new YAML key exists. `targets.opencode.home` is also the global checkpoint plugin home; project mode uses `./.opencode/`. During upgrades, stop readers/writers, install reader-first, start the dashboard, then restart OpenCode. Required reader symlinks still stop installation. Ordinary persona symlinks remain untouched. Non-symlink personas receive one exact start/end-bounded block: exact current bytes are stable, only the exact known legacy fragment migrates with prefix/suffix preservation, and unknown/customized marked content stops path-specifically without mutation.
+No new YAML key exists. `targets.opencode.home` is also the global checkpoint plugin home; project mode uses `./.opencode/`. During upgrades, stop readers/writers, install reader-first, start the dashboard, then restart OpenCode. Required reader symlinks still stop installation. Global scriptc detection is opportunistic and configuration-free; only a verified native build changes that run's preferred launch, while the exact Node fallback remains printed. Project mode never probes scriptc or touches `$HOME/.local/bin`. Ordinary persona symlinks remain untouched. Non-symlink personas receive one exact start/end-bounded block: exact current bytes are stable, only the exact known legacy fragment migrates with prefix/suffix preservation, and unknown/customized marked content stops path-specifically without mutation.
 
 ## Inventory Notes
 

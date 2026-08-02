@@ -11,6 +11,7 @@ import {
   formatDashboard,
   loadSessionRows,
   main,
+  OLD_ROW_MS,
   parseArgs,
   runLiveDashboard,
 } from "../bin/checkpoint-watch.js";
@@ -96,6 +97,65 @@ test("age and stale thresholds never infer or change lifecycle state", async (t)
   });
   assert.deepEqual(states(longReference), states(shortReference));
   assert.deepEqual(longReference, shortReference);
+});
+
+test("old rows hide at the exact three-hour boundary without changing lifecycle", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-old-boundary-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, ".agent-checkpoints"));
+  const now = Date.parse("2026-07-26T12:00:00.000Z");
+  const freshTimestamp = new Date(now - OLD_ROW_MS + 1).toISOString();
+  const oldTimestamp = new Date(now - OLD_ROW_MS).toISOString();
+  await writeLog(root, "fresh.jsonl", [record("fresh", freshTimestamp, {
+    agent: "maintainer-direct", session_title: "fresh boundary marker",
+  })]);
+  await writeLog(root, "old-open.jsonl", [
+    record("old-open", oldTimestamp, {
+      agent: "implementer", session_title: "old open marker",
+    }),
+    status("old-open", oldTimestamp, "open"),
+  ]);
+  await writeLog(root, "old-closed.jsonl", [
+    record("old-closed", oldTimestamp, {
+      agent: "delegate", session_title: "old closed marker",
+    }),
+    status("old-closed", oldTimestamp, "closed"),
+  ]);
+  await writeFile(path.join(root, ".agent-checkpoints", "broken.jsonl"), "{broken\n");
+
+  const rows = await loadSessionRows(root, { now });
+  assert.deepEqual(
+    Object.fromEntries(rows.filter((row) => row.state !== "ERROR").map((row) => [row.session, row.state])),
+    { fresh: "UNKNOWN", "old-open": "OPEN", "old-closed": "CLOSED" },
+  );
+  assert.equal(rows.find((row) => row.session === "fresh").ageMs, OLD_ROW_MS - 1);
+  assert.equal(rows.find((row) => row.session === "old-open").ageMs, OLD_ROW_MS);
+
+  const hidden = formatDashboard(rows, { columns: 180 });
+  assert.match(hidden, /fresh boundary marker/);
+  assert.doesNotMatch(hidden, /old open marker|old closed marker/);
+  assert.match(hidden, /ERROR/);
+
+  const shown = formatDashboard(rows, { columns: 180, showOldRows: true });
+  assert.match(shown, /fresh boundary marker[\s\S]*\n\n[\s\S]*old open marker/);
+  assert.match(shown, /old open marker[\s\S]*\n\n[\s\S]*old closed marker/);
+  assert.match(shown, /old closed marker[\s\S]*\n\n[\s\S]*ERROR/);
+});
+
+test("old-row filtering keeps the discovered header when every valid row is hidden", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-old-empty-view-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, ".agent-checkpoints"));
+  const now = Date.parse("2026-07-26T12:00:00.000Z");
+  await writeLog(root, "old.jsonl", [record(
+    "old",
+    new Date(now - OLD_ROW_MS).toISOString(),
+    { agent: "implementer", session_title: "hidden old marker" },
+  )]);
+  const rows = await loadSessionRows(root, { now });
+  const output = formatDashboard(rows, { columns: 120 });
+  assert.match(output, /Checkpoint sessions/);
+  assert.doesNotMatch(output, /hidden old marker|No direct \.agent-checkpoints/);
 });
 
 test("status-only, duplicate, and reopened rows use neutral checkpoint details", async (t) => {
@@ -186,7 +246,7 @@ test("dashboard truncates deterministically within terminal width", () => {
   assert.doesNotMatch(first, /session-name-that-is-much-too-long|SESSION|NAME\/TITLE|CHAIN|3-WORD|NEXT/);
 });
 
-test("dashboard distributes added terminal width across title, done, and next", () => {
+test("dashboard preserves complete agent identity at 120 columns and truncates name first", () => {
   const row = {
     session: "session-with-long-id", agent: "maintainer-direct",
     title: "A descriptive human readable checkpoint session title",
@@ -195,13 +255,23 @@ test("dashboard distributes added terminal width across title, done, and next", 
     done: "A deliberately oversized completed work description",
     next: "A deliberately oversized next work description",
   };
-  const narrow = formatDashboard([row], { columns: 80, staleMs: 1000 });
+  const narrowBoundary = formatDashboard([row], { columns: 64, staleMs: 1000 });
+  const genuinelyNarrow = formatDashboard([row], { columns: 63, staleMs: 1000 });
+  const ordinary = formatDashboard([row], { columns: 120, staleMs: 1000 });
   const medium = formatDashboard([row], { columns: 140, staleMs: 1000 });
   const wide = formatDashboard([row], { columns: 240, staleMs: 1000 });
-  assert.ok(narrow.split("\n").every((line) => line.length <= 80));
+  assert.ok(narrowBoundary.split("\n").every((line) => line.length <= 64));
+  assert.ok(genuinelyNarrow.split("\n").every((line) => line.length <= 63));
+  assert.ok(ordinary.split("\n").every((line) => line.length <= 120));
   assert.ok(medium.split("\n").every((line) => line.length <= 140));
   assert.ok(wide.split("\n").every((line) => line.length <= 240));
-  assert.match(narrow, /…/);
+  assert.match(ordinary, /maintainer-direct/);
+  assert.match(ordinary, /A descriptive human [^\n]*…/);
+  assert.doesNotMatch(ordinary, /A descriptive human readable checkpoint session title/);
+  assert.match(narrowBoundary, /maintainer-direct/);
+  assert.match(genuinelyNarrow, /maintainer-[^\s]*…/);
+  assert.doesNotMatch(genuinelyNarrow, /maintainer-direct/);
+  assert.match(genuinelyNarrow, /NAME/);
   assert.match(medium, /…/);
   assert.match(wide, /A descriptive human readable checkpoint session title/);
   assert.match(wide, /A deliberately oversized completed work description/);
@@ -311,11 +381,169 @@ test("live refresh disposes watcher and timer and restores cursor", async (t) =>
   assert.match(output, /\x1b\[H\x1b\[2J/);
 });
 
+test("live lowercase v toggles old rows and restores owned input and signal state", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-live-input-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, ".agent-checkpoints"));
+  const now = Date.parse("2026-07-26T12:00:00.000Z");
+  await writeLog(root, "old.jsonl", [record(
+    "old",
+    new Date(now - OLD_ROW_MS).toISOString(),
+    { agent: "implementer", session_title: "toggle-old-marker" },
+  )]);
+  await writeLog(root, "fresh.jsonl", [record(
+    "fresh",
+    new Date(now - 1000).toISOString(),
+    { agent: "maintainer-direct", session_title: "toggle-fresh-marker" },
+  )]);
+
+  const input = new EventEmitter();
+  input.isTTY = true;
+  input.isRaw = false;
+  input.readableFlowing = null;
+  const inputTransitions = [];
+  input.setRawMode = (enabled) => { inputTransitions.push(["raw", enabled]); input.isRaw = enabled; };
+  input.resume = () => { inputTransitions.push(["flow", "resume"]); input.readableFlowing = true; };
+  input.pause = () => { inputTransitions.push(["flow", "pause"]); input.readableFlowing = false; };
+  const signals = new EventEmitter();
+  const watcher = { close() {} };
+  let output = "";
+
+  await runLiveDashboard(root, { refreshMs: 60_000, staleMs: 1000 }, {
+    columns: 120,
+    now: () => now,
+    stdout: (text) => { output += text; },
+    stdin: input,
+    onSignal: (signal, listener) => { signals.on(signal, listener); },
+    offSignal: (signal, listener) => { signals.off(signal, listener); },
+    watch: () => watcher,
+    setInterval: () => ({ id: 1 }),
+    clearInterval: () => {},
+    waitForExit: async ({ refresh }) => {
+      input.emit("data", "Vx");
+      await refresh();
+      input.emit("data", Buffer.from("v"));
+      await refresh();
+      input.emit("data", "v");
+      await refresh();
+      input.emit("data", "\u0003");
+    },
+  });
+
+  assert.match(output, /toggle-fresh-marker/);
+  assert.equal(output.split("toggle-old-marker").length - 1, 2);
+  assert.deepEqual(inputTransitions, [
+    ["raw", true], ["flow", "resume"], ["raw", false], ["flow", "pause"],
+  ]);
+  assert.equal(input.listenerCount("data"), 0);
+  assert.equal(signals.listenerCount("SIGINT"), 0);
+  assert.equal(signals.listenerCount("SIGTERM"), 0);
+  assert.ok(output.endsWith("\x1b[?25h"));
+});
+
+test("live signal shutdown and setup failures share complete cleanup", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-live-cleanup-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, ".agent-checkpoints"));
+
+  const signals = new EventEmitter();
+  let watcherClosed = false;
+  let timerCleared = false;
+  let output = "";
+  await runLiveDashboard(root, { refreshMs: 60_000, staleMs: 1000 }, {
+    stdout: (text) => { output += text; },
+    stdin: { isTTY: false },
+    onSignal: (signal, listener) => { signals.on(signal, listener); },
+    offSignal: (signal, listener) => { signals.off(signal, listener); },
+    watch: () => ({ close: () => { watcherClosed = true; } }),
+    setInterval: () => {
+      queueMicrotask(() => { signals.emit("SIGTERM"); });
+      return { id: 1 };
+    },
+    clearInterval: () => { timerCleared = true; },
+  });
+  assert.equal(watcherClosed, true);
+  assert.equal(timerCleared, true);
+  assert.equal(signals.listenerCount("SIGINT"), 0);
+  assert.equal(signals.listenerCount("SIGTERM"), 0);
+  assert.ok(output.endsWith("\x1b[?25h"));
+
+  const failingSignals = new EventEmitter();
+  const failingInput = new EventEmitter();
+  failingInput.isTTY = true;
+  failingInput.isRaw = false;
+  failingInput.readableFlowing = false;
+  failingInput.setRawMode = () => { throw new Error("raw setup failed"); };
+  let failingOutput = "";
+  await assert.rejects(
+    runLiveDashboard(root, { refreshMs: 10, staleMs: 1000 }, {
+      stdout: (text) => { failingOutput += text; },
+      stdin: failingInput,
+      onSignal: (signal, listener) => { failingSignals.on(signal, listener); },
+      offSignal: (signal, listener) => { failingSignals.off(signal, listener); },
+    }),
+    /raw setup failed/,
+  );
+  assert.equal(failingSignals.listenerCount("SIGINT"), 0);
+  assert.equal(failingSignals.listenerCount("SIGTERM"), 0);
+  assert.equal(failingInput.listenerCount("data"), 0);
+  assert.ok(failingOutput.endsWith("\x1b[?25h"));
+
+  const partialSignals = new EventEmitter();
+  let partialOutput = "";
+  await assert.rejects(
+    runLiveDashboard(root, { refreshMs: 10, staleMs: 1000 }, {
+      stdout: (text) => { partialOutput += text; },
+      stdin: { isTTY: false },
+      onSignal: (signal, listener) => {
+        if (signal === "SIGTERM") throw new Error("signal setup failed");
+        partialSignals.on(signal, listener);
+      },
+      offSignal: (signal, listener) => { partialSignals.off(signal, listener); },
+    }),
+    /signal setup failed/,
+  );
+  assert.equal(partialSignals.listenerCount("SIGINT"), 0);
+  assert.ok(partialOutput.endsWith("\x1b[?25h"));
+
+  const preservedInput = new EventEmitter();
+  preservedInput.isTTY = true;
+  preservedInput.isRaw = true;
+  preservedInput.readableFlowing = true;
+  let rawCalls = 0;
+  let flowCalls = 0;
+  preservedInput.setRawMode = () => { rawCalls += 1; };
+  preservedInput.resume = () => { flowCalls += 1; };
+  preservedInput.pause = () => { flowCalls += 1; };
+  const watchFailureSignals = new EventEmitter();
+  let watchFailureTimerCleared = false;
+  let watchFailureOutput = "";
+  await assert.rejects(
+    runLiveDashboard(root, { refreshMs: 10, staleMs: 1000 }, {
+      stdout: (text) => { watchFailureOutput += text; },
+      stdin: preservedInput,
+      onSignal: (signal, listener) => { watchFailureSignals.on(signal, listener); },
+      offSignal: (signal, listener) => { watchFailureSignals.off(signal, listener); },
+      setInterval: () => ({ id: 1 }),
+      clearInterval: () => { watchFailureTimerCleared = true; },
+      watch: () => { throw new Error("watch setup failed"); },
+    }),
+    /watch setup failed/,
+  );
+  assert.equal(rawCalls, 0);
+  assert.equal(flowCalls, 0);
+  assert.equal(preservedInput.listenerCount("data"), 0);
+  assert.equal(watchFailureSignals.listenerCount("SIGINT"), 0);
+  assert.equal(watchFailureSignals.listenerCount("SIGTERM"), 0);
+  assert.equal(watchFailureTimerCleared, true);
+  assert.ok(watchFailureOutput.endsWith("\x1b[?25h"));
+});
+
 test("watcher main runs when invoked through a symlinked directory path", async (t) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-link-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, ".agent-checkpoints"));
-  await writeLog(root, "linked.jsonl", [record("linked", "2026-07-26T10:00:00.000Z")]);
+  await writeLog(root, "linked.jsonl", [record("linked", new Date().toISOString())]);
 
   const binDir = await realpath(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin"));
   const linkParent = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-linkdir-"));
