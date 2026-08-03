@@ -290,8 +290,9 @@ test("claude MCP runtime handles the protocol and appends telemetry-fed contract
   });
   assert.equal(parentCall.result.isError, undefined);
   assert.match(parentCall.result.content[0].text, /Checkpoint saved\./);
-  assert.match(parentCall.result.content[0].text, /harness telemetry\): ~42%/);
-  assert.match(parentCall.result.content[0].text, /headroom\): ~116k/);
+  assert.match(parentCall.result.content[0].text, /latest-response harness telemetry\): ~42%/);
+  assert.match(parentCall.result.content[0].text, /Used K-tokens .*: ~84k/);
+  assert.match(parentCall.result.content[0].text, /headroom from latest-response input-only telemetry\): ~116k/);
 
   const subagentCall = await runtime.handleMessage({
     jsonrpc: "2.0",
@@ -341,7 +342,7 @@ test("claude MCP runtime handles the protocol and appends telemetry-fed contract
   for (const raw of [parentRaw, subagentRaw]) {
     assert.doesNotMatch(
       raw,
-      /_checkpoint_session_id|_telemetry_session_id|_agent_type|remainingKTokens|used_percentage|context_window_size|total_input_tokens|updated_at/,
+      /_checkpoint_session_id|_telemetry_session_id|_agent_type|usedKTokens|remainingKTokens|used_percentage|context_window_size|total_input_tokens|updated_at/,
     );
   }
 
@@ -468,11 +469,17 @@ test("claude readTelemetry degrades to explicit unknowns on mismatch and invalid
   });
   const nullPercentage = await readTelemetry(worktree, "sess-a");
   assert.equal(nullPercentage.contextUsed, null);
+  assert.equal(nullPercentage.usedKTokens, 50);
   assert.equal(nullPercentage.remainingKTokens, 150);
   assert.equal(nullPercentage.sessionTitle, null);
 
   const absent = await readTelemetry(worktree, "sess-absent");
-  assert.deepEqual(absent, { contextUsed: null, remainingKTokens: null, sessionTitle: null });
+  assert.deepEqual(absent, {
+    contextUsed: null,
+    usedKTokens: null,
+    remainingKTokens: null,
+    sessionTitle: null,
+  });
 
   const otherProject = path.join(worktree, "elsewhere");
   await mkdir(otherProject);
@@ -494,12 +501,22 @@ test("claude readTelemetry degrades to explicit unknowns on mismatch and invalid
     })}\n`,
   );
   const projectMismatch = await readTelemetry(worktree, "sess-foreign");
-  assert.deepEqual(projectMismatch, { contextUsed: null, remainingKTokens: null, sessionTitle: null });
+  assert.deepEqual(projectMismatch, {
+    contextUsed: null,
+    usedKTokens: null,
+    remainingKTokens: null,
+    sessionTitle: null,
+  });
 
   const invalidSidecar = sidecarPathFor(worktree, "sess-broken");
   await writeFile(invalidSidecar, "not json\n");
   const invalid = await readTelemetry(worktree, "sess-broken");
-  assert.deepEqual(invalid, { contextUsed: null, remainingKTokens: null, sessionTitle: null });
+  assert.deepEqual(invalid, {
+    contextUsed: null,
+    usedKTokens: null,
+    remainingKTokens: null,
+    sessionTitle: null,
+  });
 
   const outOfRangeSidecar = sidecarPathFor(worktree, "sess-range");
   await writeFile(
@@ -516,6 +533,7 @@ test("claude readTelemetry degrades to explicit unknowns on mismatch and invalid
   );
   const outOfRange = await readTelemetry(worktree, "sess-range");
   assert.equal(outOfRange.contextUsed, null);
+  assert.equal(outOfRange.usedKTokens, 250);
   assert.equal(outOfRange.remainingKTokens, 0);
 });
 
@@ -617,7 +635,8 @@ test("claude MCP stdio server flushes tool-call responses before exiting", async
   assert.equal(responses.length, 3);
   assert.equal(responses[0].result.protocolVersion, "2025-03-26");
   assert.match(responses[1].result.content[0].text, /Checkpoint saved\./);
-  assert.match(responses[1].result.content[0].text, /harness telemetry\): unknown/);
+  assert.match(responses[1].result.content[0].text, /latest-response harness telemetry\): unknown/);
+  assert.match(responses[1].result.content[0].text, /Used K-tokens .*: unknown/);
   assert.equal(responses[2].result.content[0].text, ".agent-checkpoints/stdio-session.jsonl");
   const raw = await readFile(
     path.join(worktree, ...checkpointCore.checkpointPath("stdio-session").split("/")),
@@ -683,6 +702,18 @@ test("claude hook injects the checkpoint instruction on SessionStart and Subagen
   ));
   assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
     "Maintainer or parent leaves it false",
+  ));
+  assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
+    "Approximately 75% context use",
+  ));
+  assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
+    "approximately 220k used tokens are soft planning signals only",
+  ));
+  assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
+    "Continuing toward approximately 300k used tokens is acceptable",
+  ));
+  assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
+    "previous completed step or latest harness snapshot",
   ));
   assert.ok(
     parentOutput.hookSpecificOutput.additionalContext.includes("Session checkpoint ID: sess-123"),
@@ -1112,10 +1143,13 @@ test("claude installer deploys the plugin and preserves base configuration", asy
 
   assert.equal(await readFile(baseSettings, "utf8"), baseSettingsContent);
   assert.equal(await readFile(claudeJson, "utf8"), claudeJsonContent);
-  assert.match(
-    await readFile(path.join(claudeHome, "skills/execute-work-package/SKILL.md"), "utf8"),
-    /Execute Work Package/,
+  const executionSkill = await readFile(
+    path.join(claudeHome, "skills/execute-work-package/SKILL.md"),
+    "utf8",
   );
+  assert.match(executionSkill, /Execute Work Package/);
+  assert.match(executionSkill, /Package Sizing Note/);
+  assert.match(executionSkill, /Call `checkpoint_path` with the failed Implementer `task_id`/);
   assert.match(
     await readFile(path.join(claudeHome, "agents/delegate.md"), "utf8"),
     /Delegate/,

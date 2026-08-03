@@ -221,8 +221,10 @@ Gated execution protocol:
 > Execute this bounded inline brief without creating a persistent plan
 ```
 
-The authoritative input can be persistent plan references or an inline gated brief containing task, DoD, constraints, and final verification. The primary verifies understanding before any code gets written. BLUEPRINT and EXECUTE are separate calls but must reuse the same compact implementer `task_id`, because execution depends on the approved Blueprint context. Git operations stay with you.
+The authoritative input can be persistent plan references or an inline gated brief containing task, DoD, constraints, and final verification. The primary verifies understanding before any code gets written. A Blueprint may include an optional concise Package Sizing Note with natural cuts, but only the primary may approve the full package or issue a smaller fresh one. Normal BLUEPRINT and EXECUTE calls reuse the same compact implementer `task_id`; Git operations stay with you.
 
 Verification is staged during execution and remediation: use the smallest targeted test to exercise or reproduce behavior while iterating, then run the approved broad/full command only when ready as the final gate. If that gate fails, return to targeted diagnosis, fix, and retest before rerunning it. Targeted tests never replace or weaken the final broad verification.
 
 During Execute, complete potentially verbose command and verification output is spooled to a predictable path under `/tmp/opencode/`. The owning context retains the path, command, exit status, and compact metadata/evidence; `retriever` may inspect the complete spool when needed. These temporary files aid same-machine continuation after an interruption, but are not reboot-durable.
+
+The Implementer checkpoints after approved Blueprint steps or bounded parts of a large step. If a started execution returns an empty or missing digest, the primary does not resume that bloated session: it resolves `checkpoint_path(task_id)`, inspects the selected log and current tree, maps progress to the approved Blueprint, and issues a smaller fresh package. This recovery reuses existing evidence and adds no digest outcome, handoff format, or partial-state schema.

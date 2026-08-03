@@ -163,8 +163,9 @@ test("codex MCP runtime handles the protocol and appends shared-contract records
   });
   assert.equal(called.result.isError, undefined);
   assert.match(called.result.content[0].text, /Checkpoint saved\./);
-  assert.match(called.result.content[0].text, /harness telemetry\): unknown/);
-  assert.match(called.result.content[0].text, /headroom\): unknown/);
+  assert.match(called.result.content[0].text, /latest harness telemetry\): unknown/);
+  assert.match(called.result.content[0].text, /Used K-tokens .*: unknown/);
+  assert.match(called.result.content[0].text, /headroom from latest harness telemetry\): unknown/);
 
   const relativePath = checkpointCore.checkpointPath("codex-session");
   const recordFile = path.join(worktree, ...relativePath.split("/"));
@@ -176,7 +177,7 @@ test("codex MCP runtime handles the protocol and appends shared-contract records
   assert.equal(record.agent, null);
   assert.equal(record.session_title, null);
   assert.equal(record.step_failed, false);
-  assert.doesNotMatch(raw, /_checkpoint_session_id|_workspace_root|turn|remaining/i);
+  assert.doesNotMatch(raw, /_checkpoint_session_id|_workspace_root|turn|usedKTokens|remaining/i);
 
   const again = await runtime.handleMessage({
     jsonrpc: "2.0",
@@ -406,6 +407,10 @@ test("codex SessionStart sources append open and preserve exact instruction outp
     assert.ok(context.includes(`Session checkpoint ID: ${sessionId}`));
     assert.ok(context.includes("subagent sets `close_session=true` only on its final checkpoint"));
     assert.ok(context.includes("Maintainer or parent leaves it false"));
+    assert.ok(context.includes("Approximately 75% context use"));
+    assert.ok(context.includes("approximately 220k used tokens are soft planning signals only"));
+    assert.ok(context.includes("Continuing toward approximately 300k used tokens is acceptable"));
+    assert.ok(context.includes("previous completed step or latest harness snapshot"));
 
     const raw = await readFile(
       path.join(adapterDir, ...checkpointCore.checkpointPath(sessionId).split("/")),
@@ -654,10 +659,13 @@ test("codex installer deploys adapter/profile and preserves the base config", as
 
   assert.equal(await readFile(baseConfig, "utf8"), baseContent);
   assert.match(await readFile(path.join(opencodeHome, "plugins/checkpoint.ts"), "utf8"), /CheckpointPlugin/);
-  assert.match(
-    await readFile(path.join(codexHome, "skills/execute-work-package/SKILL.md"), "utf8"),
-    /Execute Work Package/,
+  const executionSkill = await readFile(
+    path.join(codexHome, "skills/execute-work-package/SKILL.md"),
+    "utf8",
   );
+  assert.match(executionSkill, /Execute Work Package/);
+  assert.match(executionSkill, /Package Sizing Note/);
+  assert.match(executionSkill, /Call `checkpoint_path` with the failed Implementer `task_id`/);
 
   const adapterDir = path.join(codexHome, "agent-checkpoint");
   for (const name of [

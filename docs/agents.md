@@ -85,7 +85,7 @@ Doc Explorer is the documentation-specialized Delegate. It sends separable broad
 Executes exactly one phase/work package following the gated two-call protocol. Start a fresh Implementer for each package.
 
 The implementer directly reads scoped source, docs/plans, symbols, and compact targeted results, and uses `retriever` for separable bulk or coherent multi-file evidence while retaining ownership of its Blueprint, edits, and verification.
-In BLUEPRINT it uses native parallel reads for compact independent results and `retriever` for broad, large, or exploratory evidence. BLUEPRINT remains command-free; focused Bash/Python extraction is limited to EXECUTE mode. In EXECUTE, potentially verbose command and verification output is spooled under `/tmp/opencode/` rather than ingested directly.
+In BLUEPRINT it uses native parallel reads for compact independent results and `retriever` for broad, large, or exploratory evidence. BLUEPRINT remains command-free and may include a concise non-binding Package Sizing Note; only the Maintainer may approve the full package or issue a smaller fresh one. In EXECUTE, potentially verbose output is spooled under `/tmp/opencode/`, and checkpoints follow approved Blueprint steps or bounded parts of a large step.
 
 **Protocol:** BLUEPRINT → GATE → EXECUTE → DIGEST
 
@@ -93,6 +93,7 @@ BLUEPRINT and EXECUTE for that package always use the same compact `task_id`: th
 
 **Does:**
 - Proposes step lists (blueprint mode)
+- Proposes advisory natural sizing cuts when useful, without choosing or executing a split
 - Implements changes and stages verification: smallest targeted tests while changing/fixing, then the approved broad/full command as the final gate
 - Returns compact digests
 
@@ -151,7 +152,9 @@ Batch implementation-plan review is another deliberate reuse case: the reviewer 
 
 ### Aborted delegate recovery
 
-Work likely to exhaust one session should be split before delegation by focused question, dependency group, or bounded work package. If a subagent aborts or returns no usable digest, its scope is treated as too large: the maintainer neither resumes the bloated session nor absorbs the remaining task. It uses the current working tree and any user-provided facts to create smaller focused tasks for fresh sessions. Primary takeover is reserved for a remainder that independently meets the normal self-execution threshold; fresh recovery inspects current state instead of replaying the original package.
+Work likely to exhaust one session should be split before delegation by focused question, dependency group, or bounded work package. If a started subagent returns no usable digest, the maintainer neither resumes the bloated session nor absorbs the remainder. It resolves `checkpoint_path(task_id)`, inspects the selected log and current working tree, maps last attempted/next announced work to the approved Blueprint when present or the original delegated objective otherwise, and issues a smaller fresh task that begins from current state. This uses existing evidence rather than a new handoff, digest state, recovery schema, or automatic split.
+
+Checkpoint telemetry is soft and may lag the active turn. Approximately 75% context use and 220k used tokens are planning signals, not stop conditions; bounded remaining work may continue toward approximately 300k after the agent assesses headroom. Unknown telemetry stays unknown, and agents do not deliberately start another context-heavy unit without considering remaining work.
 
 ### When to use delegate variants
 

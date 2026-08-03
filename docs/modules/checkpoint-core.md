@@ -15,7 +15,7 @@ version: 1.5
 
 ### Responsibility
 
-The module owns harness-neutral persistence and analysis. Harness adapters supply native session identity, workspace root, nullable agent/title snapshots, honest telemetry, and strict optional `closeSession`. Current checkpoints contain `agent` and `session_title`; legacy parsing adds both as `null` in memory without rewriting bytes. Status events remain exactly `timestamp`, `session_id`, `event: "session_status"`, and `status: "open" | "closed"`. Every checkpoint validates all records from one timestamp before writing and appends `open` → checkpoint → optional `closed` as separate lines. Status events never contribute to metrics; `remainingKTokens` and `closeSession` are never persisted.
+The module owns harness-neutral persistence and analysis. Harness adapters supply native session identity, workspace root, nullable agent/title snapshots, honest telemetry, and strict optional `closeSession`. Current checkpoints contain `agent` and `session_title`; legacy parsing adds both as `null` in memory without rewriting bytes. Status events remain exactly `timestamp`, `session_id`, `event: "session_status"`, and `status: "open" | "closed"`. Every checkpoint validates all records from one timestamp before writing and appends `open` → checkpoint → optional `closed` as separate lines. Status events never contribute to metrics; runtime feedback values `usedKTokens`/`remainingKTokens` and the `closeSession` control are never persisted.
 
 ### Dependencies
 
@@ -49,7 +49,7 @@ The module owns harness-neutral persistence and analysis. Harness adapters suppl
 | `createCheckpointRecord` | function | public | `packages/checkpoint-core/src/index.js` | Creates a timestamped current checkpoint with false/null defaults. |
 | `createSessionStatusRecord` | function | public | `packages/checkpoint-core/src/index.js` | Creates an exact timestamped lifecycle event. |
 | `checkpointPath` | function | public | `packages/checkpoint-core/src/index.js` | Percent-encodes a non-empty session ID into `.agent-checkpoints/<id>.jsonl`. |
-| `checkpoint` | async function | public | `packages/checkpoint-core/src/index.js:230` | Strictly validates optional `closeSession` and appends exact `open` → checkpoint → optional `closed` lines from one captured timestamp. |
+| `checkpoint` | async function | public | `packages/checkpoint-core/src/index.js:230` | Strictly validates optional `closeSession`, appends exact `open` → checkpoint → optional `closed` lines, and returns optional used/remaining K-token feedback without adding fields to JSONL. |
 | `appendSessionStatus` | async function | public | `packages/checkpoint-core/src/index.js` | Appends one compact status line through the same path/containment boundary. |
 | `parseCheckpointLogJsonl` | function | public | `packages/checkpoint-core/src/index.js` | Strictly parses all three exact variants in physical line order. |
 | `filterCheckpointRecords` | function | public | `packages/checkpoint-core/src/index.js` | Returns normalized checkpoint copies from an already parsed mixed array. |

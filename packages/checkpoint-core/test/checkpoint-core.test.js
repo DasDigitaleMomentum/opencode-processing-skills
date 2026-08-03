@@ -160,11 +160,16 @@ test("appends independently parseable records without rewriting prior bytes", as
     contextUsed: null,
     agent: "maintainer",
     sessionTitle: "Parent checkpoint session",
+    usedKTokens: 144,
     remainingKTokens: 56,
     clock,
   });
   const firstBytes = await readFile(expectedFile, "utf8");
-  assert.deepEqual(firstFeedback, { contextUsed: null, remainingKTokens: 56 });
+  assert.deepEqual(firstFeedback, {
+    contextUsed: null,
+    usedKTokens: 144,
+    remainingKTokens: 56,
+  });
   assert.equal(path.dirname(expectedFile), path.join(workspaceRoot, ".agent-checkpoints"));
 
   await checkpoint({
@@ -187,6 +192,7 @@ test("appends independently parseable records without rewriting prior bytes", as
   assert.equal(records[1].agent, "implementer");
   assert.equal(records[1].session_title, "Subagent checkpoint session");
   assert.deepEqual(Object.keys(records[1]), Object.keys(validRecord()));
+  assert.doesNotMatch(complete, /usedKTokens|remainingKTokens/);
 });
 
 test("appends checkpoint and status records in either order without rewriting prior bytes", async (context) => {

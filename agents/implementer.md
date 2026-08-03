@@ -56,6 +56,7 @@ Rules:
 - No commands.
 - No "planning extras" (no risks/alternatives/architecture essays).
 - Do not restate phase text; concretize using docs inventories and a brief code cross-check.
+- When natural execution slices exist, you may include the template's optional concise **Package Sizing Note**. It is non-binding: do not split scope or select a slice. The Maintainer either approves the full package or issues a smaller fresh package.
 - **Only return the Blueprint.** Do NOT proceed to execute. The primary must gate/approve the Blueprint before execution happens in a separate call.
 
 Output:
@@ -79,7 +80,7 @@ Output:
 
 ## Hard Constraints
 
-- When checkpoint feedback is available, use it to manage your own context: keep the remaining work bounded, avoid starting a context-heavy next step without sufficient headroom, and return a checkpointed compact handoff before an uncontrolled context-limit abort.
+- Checkpoint after each approved Blueprint step, or after bounded parts of a large step. Before deliberately starting another context-heavy unit, consider the latest feedback, remaining work, and headroom. Telemetry may lag the active turn; unknown remains unknown. Approximately 75% context use and 220k used tokens are soft planning signals, not stop conditions; continuing toward approximately 300k is acceptable when the remaining work is bounded. Return a checkpointed compact handoff before an uncontrolled context-limit abort.
 - No Git operations (no commit/push/rebase/branch changes).
 - **Prefer `ast-grep`** over text-based search when locating symbols, definitions, or call sites in code. Use grep/ripgrep for config files or plain text patterns.
 - Run exactly the approved broad/full verify command as the final gate. Targeted diagnostic tests are permitted during implementation and failure isolation but do not replace or weaken the approved command.

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.5.6 — 2026-08-03
+
+### Changed
+- **Checkpoint capacity feedback**: Supported adapters now report defensible context percentage, used K-tokens, and remaining K-tokens with explicit previous-step/latest-snapshot lag semantics and honest independent unknowns; runtime feedback does not expand the six/eight/four-field JSONL contracts.
+- **Soft context guidance**: Approximately 75% context use and 220k used tokens are planning signals rather than stop conditions; bounded work may continue toward approximately 300k after assessing remaining work and headroom.
+- **Proportional cadence**: Implementers checkpoint after approved Blueprint steps or bounded parts of large steps, while Delegates checkpoint after bounded investigation, synthesis, or artifact units.
+- **Advisory package sizing**: Blueprints may include a concise optional Package Sizing Note, but only the Maintainer may approve the full package or issue a smaller fresh package.
+
+### Fixed
+- **Interrupted digest recovery**: Maintainers now resolve `checkpoint_path(task_id)`, inspect the selected log and current tree, map progress to the approved Blueprint or original delegated objective, and issue a smaller fresh task instead of resuming a bloated session.
+
 ## 0.5.5 — 2026-08-02
 
 ### Changed

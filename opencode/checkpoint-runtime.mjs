@@ -1,6 +1,7 @@
 function unknownTelemetry() {
   return {
     contextUsed: null,
+    usedKTokens: null,
     remainingKTokens: null,
   };
 }
@@ -74,15 +75,16 @@ export function createOpenCodeContextTelemetry(client) {
         typeof context.directory === "string" && context.directory.length > 0
           ? { directory: context.directory }
           : undefined;
-      const [messageResponse, providerResponse] = await Promise.all([
+      const [messageResult, providerResult] = await Promise.allSettled([
         client.session.messages({ path: { id: context.sessionID }, ...(query ? { query } : {}) }),
         client.provider.list(query ? { query } : undefined),
       ]);
-      if (messageResponse?.error || providerResponse?.error) return unknownTelemetry();
+      if (messageResult.status !== "fulfilled" || messageResult.value?.error) {
+        return unknownTelemetry();
+      }
 
-      const messages = messageResponse?.data;
-      const providers = providerResponse?.data?.all;
-      if (!Array.isArray(messages) || !Array.isArray(providers)) return unknownTelemetry();
+      const messages = messageResult.value?.data;
+      if (!Array.isArray(messages)) return unknownTelemetry();
 
       let message;
       for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -107,20 +109,29 @@ export function createOpenCodeContextTelemetry(client) {
       ];
       if (!tokenCounts.every(validTokenCount)) return unknownTelemetry();
 
+      const total = tokenCounts.reduce((sum, value) => sum + value, 0);
+      const usedKTokens = total / 1000;
+      const providers =
+        providerResult.status === "fulfilled" && !providerResult.value?.error
+          ? providerResult.value?.data?.all
+          : null;
+      if (!Array.isArray(providers)) {
+        return { contextUsed: null, usedKTokens, remainingKTokens: null };
+      }
       const provider = providers.find((item) => item?.id === message.providerID);
       const limit = provider?.models?.[message.modelID]?.limit?.context;
-      const total = tokenCounts.reduce((sum, value) => sum + value, 0);
       if (
         typeof limit !== "number" ||
         !Number.isFinite(limit) ||
         limit <= 0 ||
         !Number.isFinite(total)
       ) {
-        return unknownTelemetry();
+        return { contextUsed: null, usedKTokens, remainingKTokens: null };
       }
 
       return {
         contextUsed: Math.min(Math.max(total / limit, 0), 1),
+        usedKTokens,
         remainingKTokens: Math.max(limit - total, 0) / 1000,
       };
     } catch {
@@ -129,10 +140,11 @@ export function createOpenCodeContextTelemetry(client) {
   };
 }
 
-function formatCheckpointResult({ contextUsed, remainingKTokens }) {
+function formatCheckpointResult({ contextUsed, usedKTokens, remainingKTokens }) {
   const context = contextUsed === null ? "unknown" : `~${Math.round(contextUsed * 100)}%`;
+  const used = usedKTokens === null ? "unknown" : `~${usedKTokens}k`;
   const remaining = remainingKTokens === null ? "unknown" : `~${remainingKTokens}k`;
-  return `Checkpoint saved.\nContext (previous completed step, TUI-equivalent): ${context}\nRemaining K-tokens (context-window headroom): ${remaining}`;
+  return `Checkpoint saved.\nContext (previous completed step, TUI-equivalent): ${context}\nUsed K-tokens (previous completed step, TUI-equivalent): ${used}\nRemaining K-tokens (context-window headroom after previous completed step): ${remaining}`;
 }
 
 export function createOpenCodeCheckpointPlugin({
@@ -206,6 +218,10 @@ export function createOpenCodeCheckpointPlugin({
                   !Number.isFinite(telemetry.contextUsed) ||
                   telemetry.contextUsed < 0 ||
                   telemetry.contextUsed > 1)) ||
+              (telemetry.usedKTokens !== null &&
+                (typeof telemetry.usedKTokens !== "number" ||
+                  !Number.isFinite(telemetry.usedKTokens) ||
+                  telemetry.usedKTokens < 0)) ||
               (telemetry.remainingKTokens !== null &&
                 (typeof telemetry.remainingKTokens !== "number" ||
                   !Number.isFinite(telemetry.remainingKTokens) ||
@@ -223,6 +239,7 @@ export function createOpenCodeCheckpointPlugin({
               contextUsed: telemetry.contextUsed,
               agent: nonEmptyString(context.agent),
               sessionTitle,
+              usedKTokens: telemetry.usedKTokens,
               remainingKTokens: telemetry.remainingKTokens,
             });
             return formatCheckpointResult(feedback);
