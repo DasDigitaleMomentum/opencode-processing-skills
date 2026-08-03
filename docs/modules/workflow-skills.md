@@ -49,8 +49,8 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `skills/delegate-analysis/` | dir | Read/analyze/verify package for routine delegated investigation. |
 | `skills/delegate-analysis/SKILL.md` | file | Defines four analysis modes, chooses retrieval by expected output size/relevance, and keeps open-ended web research with the delegate. |
 | `skills/execute-work-package/` | dir | Stateful, gated implementation-execution package. |
-| `skills/execute-work-package/SKILL.md` | file | Defines plan-bound or inline authority, mandatory same-session gating, retriever isolation for broad evidence, and staged verification invariants. |
-| `skills/execute-work-package/tpl-execution-blueprint.md` | file | Canonical concrete step-list contract with plan references or an inline gated brief, returned before execution. |
+| `skills/execute-work-package/SKILL.md` | file | Defines plan-bound or inline authority, normal same-session gating, optional advisory sizing, selected-log/current-tree interruption recovery, retriever isolation, and staged verification. |
+| `skills/execute-work-package/tpl-execution-blueprint.md` | file | Canonical concrete step-list contract with an optional non-binding Package Sizing Note controlled by the Maintainer. |
 | `skills/execute-work-package/tpl-execution-digest.md` | file | Canonical compact outcome, edit, verification, and next-step digest. |
 | `skills/execute-work-package/tpl-implementer-execute-prompt.md` | file | Same-session resume prompt that locks EXECUTE to approved steps and targeted-then-broad verification. |
 | `skills/execute-work-package/tpl-implementer-preflight-prompt.md` | file | Initial read-only BLUEPRINT prompt accepting persistent plan references or a complete inline gated brief. |
@@ -107,7 +107,7 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `todo` (`create-plan`) | template | public | `skills/create-plan/tpl-todo.md:3` | Canonical persistent task-state and changelog schema. |
 | `delegate-analysis` | workflow | public | `skills/delegate-analysis/SKILL.md:2` | Skill entry point for scoped investigation in four explicit analysis modes. |
 | `execute-work-package` | workflow | public | `skills/execute-work-package/SKILL.md:2` | Skill entry point for plan-bound or inline gated implementation with mandatory gate-session reuse and staged verification. |
-| `blueprint` | template | public | `skills/execute-work-package/tpl-execution-blueprint.md:3` | Canonical pre-execution step-list schema supporting plan references or an inline brief. |
+| `blueprint` | template | public | `skills/execute-work-package/tpl-execution-blueprint.md:3` | Canonical pre-execution step list plus optional advisory natural slices that do not split scope. |
 | `digest` | template | public | `skills/execute-work-package/tpl-execution-digest.md:3` | Canonical compact execution-result schema. |
 | `subagent-execute-prompt` | template | public | `skills/execute-work-package/tpl-implementer-execute-prompt.md:3` | Approved-step continuation contract that stages targeted tests before the broad/full final gate. |
 | `subagent-preflight-prompt` | template | public | `skills/execute-work-package/tpl-implementer-preflight-prompt.md:3` | No-write BLUEPRINT contract with persistent-plan or inline-brief authority. |

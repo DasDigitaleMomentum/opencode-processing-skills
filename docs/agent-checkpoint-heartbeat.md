@@ -15,7 +15,7 @@ Jeder Agent, einschließlich des Parents, segmentiert seine Arbeit selbstständi
 - ob der versuchte Schritt fehlgeschlagen ist und nun korrigiert wird,
 - Session-ID und Zeitstempel.
 
-Das Checkpoint-Tool übernimmt zusätzlich eine vom Harness defensibel bereitgestellte ungefähre Context-Auslastung. Der OpenCode-Pilot leitet sie über `PluginInput.client` aus dem letzten vorherigen abgeschlossenen Assistant-Schritt ab: Er verwendet dieselben Token-Felder wie die TUI und die Context-Grenze des passenden Providers und Modells. Fehlende oder ungültige Daten sowie SDK-Fehler werden weiterhin als `null` gespeichert und als `unknown` zurückgegeben.
+Das Checkpoint-Tool übernimmt zusätzlich defensible Harness-Telemetrie und meldet Context-Auslastung, verwendete K-Tokens und verbleibende K-Tokens jeweils als bekannten Näherungswert oder `unknown`. OpenCode leitet die Werte über `PluginInput.client` aus dem letzten vorherigen abgeschlossenen Assistant-Schritt ab; Claude und Hermes verwenden ihre jeweils letzte Harness-Momentaufnahme, Codex bleibt ehrlich unbekannt. Feedback kann deshalb hinter dem aktiven Turn zurückliegen. Verwendete und verbleibende K-Tokens sind reine Laufzeitwerte und erweitern das persistierte Schema nicht.
 
 Das Log ergänzt den Blueprint oder ursprünglichen Subagent-Prompt. Es soll diese Informationen nicht duplizieren und ist kein vollständiges Recovery-Schema.
 
@@ -107,27 +107,31 @@ Das Tool:
 3. protokolliert den gemeldeten Erfolg oder Fehlschlag des Schritts,
 4. übernimmt den vom Adapter bereitgestellten Agentennamen und den aktuellen Session-Titel oder jeweils `null`,
 5. validiert `close_session` strikt als Boolean und hängt `open`, den Checkpoint und bei `true` anschließend `closed` als einzelne JSONL-Zeilen in dieser physischen Reihenfolge an,
-6. gibt Context-Auslastung und verbleibende K-Tokens zurück, sofern vorhanden, sonst `unknown`.
+6. gibt Context-Auslastung, verwendete K-Tokens und verbleibende K-Tokens mit ihrer Previous-Step-/Harness-Semantik zurück, sofern vorhanden, sonst je Feld `unknown`.
 
 Antwort des OpenCode-Adapters bei verfügbaren Daten:
 
 ```text
 Checkpoint saved.
 Context (previous completed step, TUI-equivalent): ~72%
-Remaining K-tokens (context-window headroom): ~56k
+Used K-tokens (previous completed step, TUI-equivalent): ~144k
+Remaining K-tokens (context-window headroom after previous completed step): ~56k
 ```
 
-OpenCode wählt rückwärts den neuesten Assistant-Schritt mit positiven Output-Tokens aus und summiert Input, Output, Reasoning, Cache-Read und Cache-Write. `context_used` ist diese Summe geteilt durch die Context-Grenze des über `providerID` und `modelID` passenden Modells. Die verbleibenden K-Tokens sind `(Context-Grenze - Tokensumme) / 1000`, mindestens null.
+OpenCode wählt rückwärts den neuesten Assistant-Schritt mit positiven Output-Tokens aus und summiert Input, Output, Reasoning, Cache-Read und Cache-Write. Die verwendeten K-Tokens sind diese Summe geteilt durch 1000 und bleiben auch dann defensibel, wenn nur die Provider-/Modellgrenze fehlt. `context_used` ist die Summe geteilt durch eine gültige passende Context-Grenze; die verbleibenden K-Tokens sind `(Context-Grenze - Tokensumme) / 1000`, mindestens null.
 
 Der gerade `checkpoint` aufrufende Assistant-Schritt ist noch nicht finalisiert und wird daher nicht ausgewählt. Die Angaben sind folglich Schätzwerte für den vorherigen abgeschlossenen Schritt, keine Live-Werte des aktiven Schritts. „Context-window headroom“ bezeichnet außerdem **nicht** den Abstand zu OpenCodes Compaction-Schwelle oder reservierten Compaction-Tokens.
 
-Wenn SDK-Methoden, Session-ID oder ein abgeschlossener Schritt fehlen, Antworten fehlschlagen, Token-/Provider-/Modelldaten ungültig sind oder keine gültige Context-Grenze gefunden wird, bleibt die Antwort ausdrücklich:
+Wenn Session-/Message-Methoden, Session-ID, ein abgeschlossener Schritt oder gültige Token-Felder fehlen, bleiben alle drei Werte ausdrücklich unbekannt:
 
 ```text
 Checkpoint saved.
 Context (previous completed step, TUI-equivalent): unknown
-Remaining K-tokens (context-window headroom): unknown
+Used K-tokens (previous completed step, TUI-equivalent): unknown
+Remaining K-tokens (context-window headroom after previous completed step): unknown
 ```
+
+Wenn dagegen nur Provider-Antwort, Modellzuordnung oder Context-Grenze fehlt, bleibt der bereits defensibel summierte Used-K-Token-Wert sichtbar; nur Context-Anteil und Headroom sind `unknown`.
 
 ## Pfad- und Lesezugriff
 
@@ -217,19 +221,19 @@ Lifecycle-Reduktion folgt ausschließlich der physischen JSONL-Reihenfolge, niem
 
 Der Reader-first-Rollout ist für alle vier Adapter aktiv. Host-Hooks bleiben additiv: OpenCode schreibt bei `session.created`, Codex bei `SessionStart`, Claude bei Parent-/Subagent-Start sowie Parent-`SessionEnd`, und Hermes beim neuen Parent-`on_session_start`. Unabhängig davon bestätigt jeder erfolgreiche Checkpoint `open`; `close_session=true` deklariert nach genau diesem Checkpoint `closed`. Kein Adapter leitet Status aus Alter, Idle, Tool-Ende oder Prozessende ab.
 
-`session_title` ist eine Momentaufnahme und kann sich durch Umbenennung zwischen zwei Checkpoints derselben Session ändern. Für Identität, Pfadwahl und Zusammenführung bleibt deshalb `session_id` maßgeblich; Titel und Agent dienen der Anzeige. Chain-/Work-/Drei-Worte-Prozent, Token-Restmenge und Dateiname gehören nicht in die JSONL-Einträge. Sie sind Laufzeitinformationen oder aus den Rohdaten ableitbare Werte und werden bei Bedarf extern berechnet. OpenCode schreibt bei gültigen SDK-Daten die geschätzte TUI-äquivalente Context-Auslastung des vorherigen abgeschlossenen Schritts in `context_used`; andernfalls bleibt das Feld `null`.
+`session_title` ist eine Momentaufnahme und kann sich durch Umbenennung zwischen zwei Checkpoints derselben Session ändern. Für Identität, Pfadwahl und Zusammenführung bleibt deshalb `session_id` maßgeblich; Titel und Agent dienen der Anzeige. Chain-/Work-/Drei-Worte-Prozent, verwendete und verbleibende K-Tokens sowie der Dateiname gehören nicht in die JSONL-Einträge. Sie sind Laufzeitinformationen oder aus den Rohdaten ableitbare Werte. Nur der weiterhin vorhandene ungefähre Anteil `context_used` wird bei defensibler Adapter-Telemetrie persistiert; die exakten Sechs-/Acht-/Vier-Felder-Verträge bleiben unverändert.
 
 ## Agenten-Instruktion
 
 Die Agentendefinition erhält eine kurze Meta-Instruktion:
 
-> Segmentiere deine Arbeit selbstständig in sinnvolle Subtasks. Rufe nach jedem abgeschlossenen Subtask `checkpoint` mit dem erledigten und dem nächsten Subtask auf. Formuliere beide Stichpunkte mit genau drei Wörtern. Verwende beim folgenden Aufruf den zuvor angekündigten `next`-Text unverändert als `done`. Wenn die zurückgemeldete Context-Auslastung zu hoch wird, setze einen letzten Checkpoint und gib dem Parent zurück, wie weit du gekommen bist und welcher Schritt als Nächstes übernommen werden soll.
+> Segmentiere deine Arbeit in sinnvolle, rollenangemessene bounded Units und checkpointiere proportional statt nach jeder Kleinigkeit. Implementer checkpointen nach genehmigten Blueprint-Schritten oder bounded Teilen eines großen Schritts; Delegates nach bounded Investigation-, Synthese- oder Artefakt-Units. Formuliere `done` und `next` mit genau drei Wörtern und verwende den zuvor angekündigten `next`-Text unverändert als folgendes `done`.
 
 > Wenn ein versuchter Subtask fehlschlägt, rufe `checkpoint` trotzdem auf. Verwende den angekündigten Subtask als `done`, setze `step_failed=true` und beschreibe in `next` den Korrekturschritt. Ein fachlicher Fehlschlag ist kein Canary-Fehler, solange der Checkpoint und die Verkettungsregel korrekt eingehalten werden.
 
 > Jeder Checkpoint bestätigt die persistierte Session als offen; `close_session` bleibt standardmäßig `false`. Ein Subagent setzt `close_session=true` ausschließlich auf seinem letzten Checkpoint unmittelbar vor Digest, Summary oder Handoff. Maintainer und Parents lassen den Wert `false`, außer sie beenden bewusst die gesamte persistierte Session. Closure ist unabhängig von `step_failed`, beweist keinen Arbeitserfolg, und ein späterer Checkpoint öffnet die Session wieder.
 
-Es gibt keinen festen globalen Grenzwert für den kontrollierten Abbruch. Der Agent entscheidet anhand der zurückgegebenen ungefähren Auslastung und der noch anstehenden Arbeit.
+Feedback kann vom vorherigen abgeschlossenen Schritt beziehungsweise der letzten Harness-Momentaufnahme stammen und den aktiven Turn nicht enthalten. Unbekannte Telemetrie bleibt unbekannt. Ungefähr 75 % Context-Nutzung und ungefähr 220k verwendete Tokens sind ausschließlich weiche Planungssignale, keine Stop-Bedingungen. Eine kontrollierte Fortsetzung in Richtung ungefähr 300k ist bei bounded Restarbeit zulässig; vor einer weiteren context-heavy Unit werden Restarbeit und Headroom bewertet. Es gibt weder einen festen globalen Grenzwert noch einen automatischen Split.
 
 Diese Anweisung gilt auch für den Parent. Er protokolliert damit seine eigenen Schritte, beispielsweise das Erstellen eines Subagent-Auftrags, die Prüfung eines zurückgegebenen Ergebnisses und die Entscheidung über die Fortsetzung.
 
@@ -255,11 +259,11 @@ Der aufrufbare Tool-Vertrag bleibt harnessübergreifend gleich. Adapter untersch
 
 | Harness | Tool-Anbindung | Session-ID | Context-Rückmeldung |
 |---------|----------------|------------|---------------------|
-| OpenCode | Native Custom Tools `checkpoint` und `checkpoint_path`; `session.created` sowie jeder Checkpoint bestätigen `open`, deklarierter finaler Close ist möglich, ohne Idle-/Host-Close-Heuristik; `agent` aus `ToolContext.agent`, Titel und Telemetrie über `PluginInput.client` | `ToolContext.sessionID` für Checkpoints, native `event.properties.info.id` für Creation-Status | Geschätzter Context-Anteil des vorherigen abgeschlossenen Assistant-Schritts und verbleibende Context-Window-K-Tokens; bei fehlenden/ungültigen Daten oder SDK-Fehlern `null`/`unknown` |
-| Codex | Stdio-MCP plus `SessionStart`-/`PreToolUse`-Bridge; Starts und Checkpoints bestätigen `open`, final deklarierter Close ist möglich, `Stop` bleibt write-free; `agent`/`session_title` immer `null` | Native Hook-`session_id` auf Session-Ebene; Children teilen diese Zeile | Immer `null`/`unknown` |
+| OpenCode | Native Custom Tools `checkpoint` und `checkpoint_path`; `session.created` sowie jeder Checkpoint bestätigen `open`, deklarierter finaler Close ist möglich, ohne Idle-/Host-Close-Heuristik; `agent` aus `ToolContext.agent`, Titel und Telemetrie über `PluginInput.client` | `ToolContext.sessionID` für Checkpoints, native `event.properties.info.id` für Creation-Status | Context-Anteil, verwendete und verbleibende K-Tokens des vorherigen abgeschlossenen Assistant-Schritts; ohne gültige Modellgrenze kann der Token-Summenwert dennoch bekannt sein, andere Felder bleiben `unknown` |
+| Codex | Stdio-MCP plus `SessionStart`-/`PreToolUse`-Bridge; Starts und Checkpoints bestätigen `open`, final deklarierter Close ist möglich, `Stop` bleibt write-free; `agent`/`session_title` immer `null` | Native Hook-`session_id` auf Session-Ebene; Children teilen diese Zeile | Context, verwendet und verbleibend immer `null`/`unknown` |
 | PydanticAI | Native Python Function Tool | `run_id` beziehungsweise `conversation_id` | Aus verfügbarer Run Usage und Modellgrenze ableitbar, sonst `null` |
-| Claude Code | Skills-Verzeichnis-Plugin mit Stdio-MCP; Host-Starts/Parent-End bleiben additiv, Checkpoints bestätigen `open` und können final `closed` deklarieren; kein Host-Child-End | Parent: native Hook-`session_id`; Subagent: komposit `<session_id>--<agent_id>` | Statusline-Sidecar; fehlende/ungültige Werte → `null`/`unknown` |
-| Hermes | Natives User-Plugin mit vollständiger `pre_llm_call`-Instruktion; Parent-Start und jeder Checkpoint bestätigen `open`, final deklarierter Close möglich, kein Host-End-Hook | Native Hook-`session_id`; Child-IDs werden intern zum Root-Parent-Log aufgelöst, ohne Beziehungspersistenz | Pro nativer Session isolierter Schätzwert, sonst `null`/`unknown`; Headroom mindestens `0k` |
+| Claude Code | Skills-Verzeichnis-Plugin mit Stdio-MCP; Host-Starts/Parent-End bleiben additiv, Checkpoints bestätigen `open` und können final `closed` deklarieren; kein Host-Child-End | Parent: native Hook-`session_id`; Subagent: komposit `<session_id>--<agent_id>` | Letzte Statusline-Antwort: Anteil aus `used_percentage`, verwendete K-Tokens input-only aus `total_input_tokens`, Headroom aus Context-Grenze minus Input; jedes fehlende Feld bleibt unabhängig `unknown` |
+| Hermes | Natives User-Plugin mit vollständiger `pre_llm_call`-Instruktion; Parent-Start und jeder Checkpoint bestätigen `open`, final deklarierter Close möglich, kein Host-End-Hook | Native Hook-`session_id`; Child-IDs werden intern zum Root-Parent-Log aufgelöst, ohne Beziehungspersistenz | Letzter `pre_api_request`-Input-Schätzwert liefert verwendete K-Tokens; Anteil/Headroom zusätzlich bei bekannter Modellgrenze, sonst unabhängig `unknown`; Headroom mindestens `0k` |
 
 MCP kann den gemeinsamen Aufruf `checkpoint(done, next, step_failed, close_session)` transportieren. `close_session` ist optional, standardmäßig `false` und bei Angabe strikt Boolean. Harness-spezifische Adapter ergänzen Session-ID und Context-Werte, weil diese Informationen nicht Teil des allgemeinen MCP-Vertrags sind.
 
@@ -267,11 +271,11 @@ Der Codex-`PreToolUse`-Hook injiziert Workspace und native Session-ID; `SessionS
 
 Claude behält native Parent- und komposite Child-IDs sowie beobachtete Starts/Parent-End bei. Der `PreToolUse`-Hook validiert `close_session`, verwirft fremde interne Felder und injiziert Identität/Telemetrie-ID; der MCP validiert erneut und delegiert dieselbe Reihenfolge an den Core. Ein Child ohne final deklarierte Closure bleibt ungeschlossen; ein finaler Child-Checkpoint kann seine eigene komposite Zeile schließen. Der Statusline-Sidecar bleibt flüchtig und außerhalb von Rohlog/Inspector.
 
-Der implementierte Hermes-Adapter ist ein natives Python-User-Plugin (Hermes-Plugins sind Python; keine Node-Abhängigkeit für Hermes-Nutzer) und spiegelt die Kontraktsemantik von `packages/checkpoint-core/src/index.js` (`hermes/agent-checkpoint/agent_checkpoint.py`): Checkpoints tragen alle acht Felder mit `agent`/`session_title` gleich `null`, Statusereignisse exakt die vier Lifecycle-Felder, legacy Sechs-Felder-Logs bleiben ohne Migration lesbar und keine abgeleiteten Werte gelangen in die JSONL. `on_session_start` erfasst die native Parent-Session und den Workspace und schreibt ein Parent-eigenes `open`; jeder Checkpoint bestätigt ebenfalls `open`, optional gefolgt von deklarierter Closure. Der verifizierte `subagent_start`-Payload ordnet Child-IDs transitiv dem Parent-eigenen Log zu. Bindung und Telemetrie bleiben pro nativer Parent-/Child-Session getrennt, während alle Child-Checkpoints weiterhin die Root-Parent-ID tragen und keine Child-ID oder Beziehung persistiert wird. Deshalb schließt ein Child mit `close_session=true` die gemeinsame Parent-Zeile bis zum nächsten Parent-/Child-Checkpoint. Der Pin v0.19.0 besitzt keinen übernommenen vertrauenswürdigen Main-Session-Close-Hook; Idle, Tool-Ende und Prozessende erzeugen weiterhin nichts. `pre_api_request` aktualisiert nur den adressierten Telemetrie-Slot; bei bekannter Modellgrenze wird ein Schätzwert mit nichtnegativem Headroom abgeleitet, sonst ehrlich `null`/`unknown`. `pre_llm_call` liefert Parent- und Child-Turns die vollständige Instruktion einschließlich finaler deklarierter Closure. Es werden keine Parent-/Child-Beziehungsfelder persistiert.
+Der implementierte Hermes-Adapter ist ein natives Python-User-Plugin (Hermes-Plugins sind Python; keine Node-Abhängigkeit für Hermes-Nutzer) und spiegelt die Kontraktsemantik von `packages/checkpoint-core/src/index.js` (`hermes/agent-checkpoint/agent_checkpoint.py`): Checkpoints tragen alle acht Felder mit `agent`/`session_title` gleich `null`, Statusereignisse exakt die vier Lifecycle-Felder, legacy Sechs-Felder-Logs bleiben ohne Migration lesbar und keine abgeleiteten Werte gelangen in die JSONL. `on_session_start` erfasst die native Parent-Session und den Workspace und schreibt ein Parent-eigenes `open`; jeder Checkpoint bestätigt ebenfalls `open`, optional gefolgt von deklarierter Closure. Der verifizierte `subagent_start`-Payload ordnet Child-IDs transitiv dem Parent-eigenen Log zu. Bindung und Telemetrie bleiben pro nativer Parent-/Child-Session getrennt, während alle Child-Checkpoints weiterhin die Root-Parent-ID tragen und keine Child-ID oder Beziehung persistiert wird. Deshalb schließt ein Child mit `close_session=true` die gemeinsame Parent-Zeile bis zum nächsten Parent-/Child-Checkpoint. Der Pin v0.19.0 besitzt keinen übernommenen vertrauenswürdigen Main-Session-Close-Hook; Idle, Tool-Ende und Prozessende erzeugen weiterhin nichts. `pre_api_request` aktualisiert nur den adressierten Telemetrie-Slot: ein gültiger Input-Schätzwert liefert verwendete K-Tokens; bei bekannter Modellgrenze kommen Context-Anteil und nichtnegativer Headroom hinzu, andernfalls bleiben nur diese limitabhängigen Felder `unknown`. `pre_llm_call` liefert Parent- und Child-Turns die vollständige Instruktion einschließlich finaler deklarierter Closure. Es werden keine Parent-/Child-Beziehungsfelder persistiert.
 
 ## Erwartetes Verhalten bei Context-Druck
 
-Wenn die Tool-Antwort eine hohe Auslastung meldet, soll der Subagent nicht unkontrolliert bis zum Context-Ende weiterarbeiten. Er kann:
+Die Tool-Antwort ist ein weiches, potenziell verzögertes Planungssignal. Vor einer weiteren context-heavy Unit bewertet der Agent letzte Telemetrie, Restarbeit und Headroom; ungefähr 75 % oder 220k sind keine Stop-Bedingungen, und bounded Arbeit darf kontrolliert in Richtung 300k fortgesetzt werden. Wenn Fortsetzung nicht mehr kontrolliert ist, soll der Subagent:
 
 1. den aktuellen Subtask sauber beenden,
 2. einen letzten Checkpoint mit dem nächsten konkreten Schritt schreiben,
@@ -292,7 +296,7 @@ Der Parent liest bei Bedarf das Session-Log und kombiniert es mit Blueprint, Pro
 
 OpenCode ist der erste implementierte Harness. Der Adapter verwendet `ToolContext.sessionID` als Checkpoint-Kennung, `ToolContext.worktree` als Workspace-Root und `ToolContext.agent` als nullable Persona-Momentaufnahme. Der generische Plugin-Event-Callback akzeptiert nur `session.created` und schreibt dafür `open`; zusätzlich macht jeder erfolgreiche Checkpoint auch ältere oder fortgesetzte Sessions `OPEN`, optional gefolgt von deklarierter Closure. Plugin-Laden, Nachrichten, `session.updated`, Status/Idle, Löschen, Dispose und Fehler bleiben ohne Lifecycle-Heuristik. Über `PluginInput.client.session.get` liest der Adapter bei jedem Checkpoint den dann aktuellen Titel. Titel- und Telemetrieabfragen werden unabhängig abgewartet; Fehler ergeben `null` und verhindern den Schreibvorgang nicht. Die globale Installation legt zuerst kompatiblen Core/Watcher und danach Runtime/Plugin ab; `./install.sh --project` verwendet `./.opencode/`.
 
-Die Checkpoint-Instruktion wird nur in installierte OpenCode-Personas eingefügt, einschließlich generierter Delegate-/Implementer-Varianten. Der verwaltete Block besitzt exakte Start-/Endmarker. Fehlt er, wird er einmal angehängt; der exakte aktuelle Block bleibt byte-identisch; nur das exakte bekannte Altfragment wird unter Erhalt aller umgebenden Bytes migriert. Unbekannter oder angepasster Markerinhalt stoppt laut und unverändert, Persona-Symlinks bleiben unberührt. Kanonische `agents/*.md` bleiben unverändert.
+Die gemeinsame Checkpoint-Instruktion wird in installierte OpenCode-Personas eingefügt, einschließlich generierter Delegate-/Implementer-Varianten; die kanonischen Rollen ergänzen in `agents/*.md` ihre spezifische Cadence und Recovery-Verantwortung. Der verwaltete Block besitzt exakte Start-/Endmarker. Fehlt er, wird er einmal angehängt; der exakte aktuelle Block bleibt byte-identisch; der exakt vorherige aktuelle Block und ältere bekannte Altfragmente werden unter Erhalt aller umgebenden Bytes migriert. Unbekannter oder angepasster Markerinhalt stoppt laut und unverändert, Persona-Symlinks bleiben unberührt.
 
 ## OpenCode Pilot Evaluation
 

@@ -164,12 +164,15 @@ class RegistrationTests(unittest.TestCase):
         ac.register(ctx)
         required = (
             "parents and subagents",
-            "meaningful subtasks",
+            "role-appropriate bounded units",
             "exactly three words",
             "reuse the previous `next` text verbatim",
             "same parallel tool-call block",
             "step_failed=true",
-            "unknown context telemetry as unknown",
+            "previous completed step or latest harness snapshot",
+            "Approximately 75% context use",
+            "approximately 220k used tokens are soft planning signals only",
+            "Continuing toward approximately 300k used tokens is acceptable",
             "final checkpoint",
             "close_session=true",
             "Maintainer or parent leaves it false",
@@ -532,6 +535,7 @@ class TelemetryTests(PluginTestCase):
         )
         result = ac.checkpoint("Done step label", "Next step label")
         self.assertIn("~42%", result)
+        self.assertIn("Used K-tokens (latest input-estimate harness telemetry): ~84k", result)
         _, records = self.read_records(".agent-checkpoints/hermes-sess.jsonl")
         self.assertAlmostEqual(records[0]["context_used"], 0.42)
 
@@ -565,16 +569,18 @@ class TelemetryTests(PluginTestCase):
             ac._on_pre_api_request(
                 session_id="hermes-sess", approx_input_tokens=invalid, model="claude-sonnet-4-6"
             )
-            context_used, remaining_k = ac._telemetry("hermes-sess")
+            context_used, used_k, remaining_k = ac._telemetry("hermes-sess")
             self.assertIsNone(context_used, msg=f"invalid={invalid!r}")
+            self.assertIsNone(used_k, msg=f"invalid={invalid!r}")
             self.assertIsNone(remaining_k, msg=f"invalid={invalid!r}")
 
     def test_null_fallback_on_unknown_model(self):
         ac._on_pre_api_request(
             session_id="hermes-sess", approx_input_tokens=1000, model="totally-unknown-model"
         )
-        context_used, remaining_k = ac._telemetry("hermes-sess")
+        context_used, used_k, remaining_k = ac._telemetry("hermes-sess")
         self.assertIsNone(context_used)
+        self.assertEqual(used_k, 1)
         self.assertIsNone(remaining_k)
 
     def test_estimate_clamped_to_unit_interval(self):
@@ -585,8 +591,9 @@ class TelemetryTests(PluginTestCase):
                 ac._on_pre_api_request(
                     session_id="hermes-sess", approx_input_tokens=approx, model="gpt-4"
                 )
-                context_used, remaining_k = ac._telemetry("hermes-sess")
+                context_used, used_k, remaining_k = ac._telemetry("hermes-sess")
                 self.assertEqual(context_used, 1.0)
+                self.assertEqual(used_k, round(approx / 1000))
                 self.assertEqual(remaining_k, 0)
                 result = ac.checkpoint("Done step label", "Next step label")
                 self.assertIn("~0k", result)
@@ -606,15 +613,16 @@ class TelemetryTests(PluginTestCase):
                 ac._on_pre_api_request(
                     session_id="hermes-sess", approx_input_tokens=approx, model=model
                 )
-                context_used, _ = ac._telemetry("hermes-sess")
+                context_used, _, _ = ac._telemetry("hermes-sess")
                 self.assertAlmostEqual(context_used, 0.5)
 
     def test_unlisted_gpt4_variant_falls_back_to_null(self):
         ac._on_pre_api_request(
             session_id="hermes-sess", approx_input_tokens=1000, model="gpt-4-nextgen"
         )
-        context_used, remaining_k = ac._telemetry("hermes-sess")
+        context_used, used_k, remaining_k = ac._telemetry("hermes-sess")
         self.assertIsNone(context_used)
+        self.assertEqual(used_k, 1)
         self.assertIsNone(remaining_k)
 
 

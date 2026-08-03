@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "agent-personas"
-version: 1.7
+version: 1.8
 ---
 
 # Module: Agent Personas
@@ -50,7 +50,7 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Delegate.Informal Scope Reminder` | policy | public | `agents/delegate.md:31` | Prevents gold-plating and adversarial scope expansion while preserving evidence-backed defect discovery. |
 | `Delegate.How You Work` | workflow | public | `agents/delegate.md:42` | Makes retriever delegation the default for separable evidence while keeping synthesis and decisive verification with the parent. |
 | `Delegate.Tool Preferences` | policy | internal | `agents/delegate.md:53` | Allows direct scoped reads and compact targeted evidence, routes uncurated bulk or coherent multi-file evidence to retriever, and requires verbose command output to be spooled under `/tmp/opencode/`. |
-| `Delegate.Constraints` | policy | public | `agents/delegate.md:61` | Sets the default read/analyze boundary, exceptions for explicit artifacts and `review-fix`, Blueprint expectations, and the Git prohibition. |
+| `Delegate.Constraints` | policy | public | `agents/delegate.md:61` | Sets the write/Git boundary and requires checkpoints after bounded investigation, synthesis, or artifact units with lag-aware soft context guidance. |
 | `Retriever frontmatter` | frontmatter | public | `agents/retriever.md:1` | Denies edits and further tasks while leaving read, search, Bash, crawl, and other evidence tools available. |
 | `Retriever` | persona | public | `agents/retriever.md:11` | Establishes focused evidence retrieval for maintainers, delegates, and implementers. |
 | `Retriever.How You Work` | workflow | public | `agents/retriever.md:15` | Authorizes complete large raw-artifact consumption and coherent evidence assembly across definitions, call sites, configuration, tests, and behavior, while returning referenced synthesis and routing open-ended web research back to delegates. |
@@ -68,9 +68,9 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Implementer.Ground Truth` | section | public | `agents/implementer.md:22` | Makes the execution skill and its templates authoritative for the gated protocol. |
 | `Implementer.Inputs` | section | public | `agents/implementer.md:31` | Accepts persistent plan references or an authoritative inline gated brief, routes uncurated bulk evidence to retriever, and spools verbose EXECUTE output under `/tmp/opencode/`. |
 | `Implementer.Modes` | workflow | public | `agents/implementer.md:40` | Separates Blueprint and Execute into distinct primary task calls. |
-| `Implementer.MODE: BLUEPRINT` | workflow | public | `agents/implementer.md:44` | Produces the execution step list without commands, edits, or premature execution. |
+| `Implementer.MODE: BLUEPRINT` | workflow | public | `agents/implementer.md:44` | Produces the execution step list and optional non-binding Package Sizing Note without commands, edits, or autonomous splitting. |
 | `Implementer.MODE: EXECUTE` | workflow | public | `agents/implementer.md:58` | Applies an approved Blueprint in the retained session, requires an approval token, stages targeted tests before the broad/full final gate, and emits the canonical digest. |
-| `Implementer.Hard Constraints` | policy | public | `agents/implementer.md:74` | Prohibits Git operations, preserves the approved broad/full final command while permitting targeted diagnosis, and separates verification ownership from raw-output ingestion. |
+| `Implementer.Hard Constraints` | policy | public | `agents/implementer.md:74` | Prohibits Git, preserves the final gate, and checkpoints after approved steps or bounded parts while treating context telemetry as lagging soft guidance. |
 | `Implementer.Failure / BLOCKED` | workflow | public | `agents/implementer.md:83` | Defines the minimum execute action and the structured blocked response when execution cannot proceed. |
 | `Legacy Curator frontmatter` | frontmatter | public | `agents/legacy-curator.md:1` | Declares subagent mode, edit permission, denied delegation, and exclusive access to `archive-legacy-docs`. |
 | `Legacy Curator` | persona | public | `agents/legacy-curator.md:17` | Establishes the repository-hygiene role for legacy documentation onboarding. |
@@ -85,7 +85,7 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Maintainer Direct.Delegation Anti-Patterns` | table | internal | `agents/maintainer-direct.md:57` | Maps common context-expensive behaviors to the intended self-execution or delegation route. |
 | `Maintainer Direct.Delegation Quick-Reference` | table | public | `agents/maintainer-direct.md:70` | Provides standard labels and prompt patterns for exploration, targeted reading, web research, and deep dives. |
 | `Maintainer Direct.Delegate Session Reuse` | policy | public | `agents/maintainer-direct.md:83` | Chooses continuation from retained reasoning value versus context cost and favors fresh lean work for self-contained checks or fixes. |
-| `Maintainer Direct.Aborted Delegate Recovery` | policy | public | `agents/maintainer-direct.md:97` | Splits aborted oversized delegations into smaller fresh tasks instead of resuming the bloated session or transferring the remainder to the primary. |
+| `Maintainer Direct.Aborted Delegate Recovery` | policy | public | `agents/maintainer-direct.md:97` | Uses `checkpoint_path(task_id)`, the selected log, current tree, and Blueprint or delegated objective to issue a smaller fresh recovery task. |
 | `Maintainer Direct.Delegate Write Boundary` | policy | public | `agents/maintainer-direct.md:101` | Routes code, review remediation, explicit artifacts, documentation, and ad-hoc writes to their owning workflows. |
 | `Maintainer Direct.When to Use Which Agent` | section | public | `agents/maintainer-direct.md:111` | Provides the authoritative semantic role-to-persona routing guidance. |
 | `Maintainer Direct.Persistent Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer-direct.md:126` | Applies proportional durable planning and routes multiple implementation plans through one dependency-ordered reviewer session by default, with contiguous partitioning only when combined review context is impractical. |
@@ -103,7 +103,7 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Maintainer.Delegation Anti-Patterns` | table | internal | `agents/maintainer.md:60` | Maps common context-expensive behaviors to the intended self-execution or delegation route. |
 | `Maintainer.Delegation Quick-Reference` | table | public | `agents/maintainer.md:74` | Provides standard labels and prompt patterns for exploration, targeted reading, web research, and deep dives. |
 | `Maintainer.Delegate Session Reuse` | policy | public | `agents/maintainer.md:87` | Chooses continuation from retained reasoning value versus context cost and favors fresh lean work for self-contained checks or fixes. |
-| `Maintainer.Aborted Delegate Recovery` | policy | public | `agents/maintainer.md:101` | Splits aborted oversized delegations into smaller fresh tasks instead of resuming the bloated session or transferring the remainder to the primary. |
+| `Maintainer.Aborted Delegate Recovery` | policy | public | `agents/maintainer.md:101` | Uses `checkpoint_path(task_id)`, the selected log, current tree, and Blueprint or delegated objective to issue a smaller fresh recovery task. |
 | `Maintainer.Delegate Write Boundary` | policy | public | `agents/maintainer.md:105` | Routes code, review remediation, explicit artifacts, documentation, and ad-hoc writes to their owning workflows. |
 | `Maintainer.When to Use Which Agent` | section | public | `agents/maintainer.md:115` | Provides the authoritative semantic role-to-persona routing guidance. |
 | `Maintainer.Persistent Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer.md:130` | Applies proportional durable planning and routes multiple implementation plans through one dependency-ordered reviewer session by default, with contiguous partitioning only when combined review context is impractical. |
@@ -121,7 +121,7 @@ This module is the canonical source for the interactive and non-interactive prim
 3. Task permissions admit only declared personas. The primary sends paths and a focused objective; the receiving persona loads the skill that owns the task contract rather than relying on pasted history.
 4. A maintainer, delegate/reviewer, or implementer may directly read scoped source, docs/plans, symbols, and compact targeted results. It uses a reliable focused filter when sufficient and routes uncurated bulk artifacts, verbose output, mass-search results, or coherent multi-file evidence to leaf `retriever`. Potentially verbose commands spool complete output under `/tmp/opencode/`, leaving only the path, command, exit status, and compact evidence in the owning context. The parent retains judgment, artifact, and execution ownership.
 5. `delegate` returns analysis or writes an explicitly templated artifact, `doc-explorer` maintains allowed documentation/planning files, `implementer` performs approved code execution, and `legacy-curator` writes only the legacy archive.
-6. Subagents return compact status or digests. BLUEPRINT → EXECUTE reuses one implementer session because approval context is required. Implementation-plan batch review starts fresh from authoring but reuses one reviewer across dependency-ordered phases so shared evidence can be consolidated; material cross-phase conflicts are recorded in affected artifacts and one compact aggregate digest is returned. Automatic reviewer-per-phase and nested phase-retriever fan-out are avoided. Other follow-ups reuse sessions only when retained reasoning outweighs context cost. Retriever may consume complete raw artifacts and returns referenced synthesis rather than concatenation. There is no universal hard numeric read/output cap; tool truncation is a safety net rather than the routing rule. `/tmp/opencode/` spools aid same-machine interruption recovery but are not reboot-durable.
+6. Subagents return compact status or digests. Normal BLUEPRINT → EXECUTE reuses one implementer session because approval context is required; an interrupted execution with no usable digest is recovered through its selected checkpoint log and current tree into a smaller fresh package. Optional Blueprint sizing remains advisory and Maintainer-controlled. There is no universal hard context cap: approximately 75%/220k are soft signals, and bounded work may continue toward approximately 300k after assessing remaining work and lagging telemetry.
 7. Selected subagent bodies are also consumed by the [Cursor Adapter](cursor-adapter.md), which strips OpenCode frontmatter and maps the canonical personas onto Cursor Task types.
 
 ## Configuration
@@ -131,7 +131,7 @@ This module is the canonical source for the interactive and non-interactive prim
 - On OpenCode v1.18.2+, level-2 retriever/doc-explorer calls require top-level `subagent_depth: 2`; older versions do not support the setting. The installer prints a version-aware reminder without modifying runtime JSON/JSONC. See [Installation → Nested Delegation](../installation.md#nested-delegation-opencode).
 - `additional_delegates` creates model-specific aliases from `agents/delegate.md`; the repository keeps one behavioral source of truth. See [Installation → Additional Delegate Variants](../installation.md#additional-delegate-variants).
 - Persona behavior depends on the installed skill set. Changing a workflow contract or artifact schema belongs in its skill, not in these personas.
-- OpenCode-installed personas receive the bounded shared instruction from `opencode/checkpoint-instruction.md`. It preserves heartbeat cadence and tells subagents to set `close_session=true` only on the final checkpoint before a digest/summary/handoff; Maintainers/parents keep false unless intentionally ending the whole persisted session. Closure is neither work success nor parent/child metadata. See [OpenCode Checkpoint Adapter](opencode-checkpoint-adapter.md).
+- OpenCode-installed personas receive the bounded shared instruction from `opencode/checkpoint-instruction.md`. It adds proportional cadence, previous-step/latest-snapshot lag honesty, and soft 75%/220k/300k planning guidance while preserving final-close lifecycle semantics. Role-specific cadence and interrupted-digest recovery remain in canonical personas. See [OpenCode Checkpoint Adapter](opencode-checkpoint-adapter.md).
 
 ## Inventory Notes
 

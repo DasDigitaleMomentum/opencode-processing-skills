@@ -1,5 +1,6 @@
 const CODEX_TELEMETRY = Object.freeze({
   contextUsed: null,
+  usedKTokens: null,
   remainingKTokens: null,
   source: "unavailable",
 });
@@ -53,10 +54,11 @@ function checkpointPathToolSchema() {
   };
 }
 
-function formatCheckpointResult({ contextUsed, remainingKTokens }) {
+function formatCheckpointResult({ contextUsed, usedKTokens, remainingKTokens }) {
   const context = contextUsed === null ? "unknown" : `~${Math.round(contextUsed * 100)}%`;
+  const used = usedKTokens === null ? "unknown" : `~${usedKTokens}k`;
   const remaining = remainingKTokens === null ? "unknown" : `~${remainingKTokens}k`;
-  return `Checkpoint saved.\nContext (harness telemetry): ${context}\nRemaining K-tokens (context-window headroom): ${remaining}`;
+  return `Checkpoint saved.\nContext (latest harness telemetry): ${context}\nUsed K-tokens (latest harness telemetry): ${used}\nRemaining K-tokens (context-window headroom from latest harness telemetry): ${remaining}`;
 }
 
 function toolTextResult(text, { isError = false } = {}) {
@@ -124,6 +126,7 @@ export function createMcpRuntime({
       contextUsed: telemetry.contextUsed,
       agent: null,
       sessionTitle: null,
+      usedKTokens: telemetry.usedKTokens,
       remainingKTokens: telemetry.remainingKTokens,
     });
     return toolTextResult(formatCheckpointResult(feedback));

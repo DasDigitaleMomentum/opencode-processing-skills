@@ -106,12 +106,14 @@ final calls cannot synthesize `closed`.
   snapshot at `.agent-checkpoints/.runtime/claude/<native-session-id>.json`
   (session/project identity, update timestamp, `used_percentage`,
   `context_window_size`, `total_input_tokens`, `session_name` when present).
-- `context_used` = `used_percentage / 100`; remaining K-tokens are
-  **approximate**: `max(0, context_window_size - total_input_tokens) / 1000`.
+- `context_used` = `used_percentage / 100`; used K-tokens are the
+  latest-response input-only `total_input_tokens / 1000`; remaining K-tokens
+  are **approximate**: `max(0, context_window_size - total_input_tokens) / 1000`.
 - Values are **latest-response** and **input-only**: `used_percentage` is
   `null` before the first response and after compaction; the sidecar may be
-  absent entirely. Every absent/null/mismatched case yields
-  `context_used: null` and an explicit `unknown` in the tool feedback.
+  absent entirely. Fields degrade independently to explicit `unknown` values;
+  a valid input count can still report used K-tokens even when percentage or
+  context-window headroom is unavailable. The snapshot may lag the active turn.
 - `agent` = subagent `agent_type` from the hook when present, else `null`;
   `session_title` = statusline `session_name` when present, else `null`.
 - The sidecar is ignored local runtime state — never JSONL, recovery data, or

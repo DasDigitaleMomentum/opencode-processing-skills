@@ -35,6 +35,11 @@ created: "{{date}}"
 1. <concrete step; include file path and/or symbol/component>
 2. ...
 
+## Package Sizing Note (optional)
+
+- natural_slices: {{natural_slices}}
+- authority: Advisory only. The Maintainer approves the full package or issues a smaller fresh package; the Implementer does not split scope or choose a slice.
+
 ## Touched Files
 
 - path/to/file

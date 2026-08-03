@@ -322,27 +322,29 @@ def _env_context_limit():
 
 
 def _telemetry(native_session_id=None):
-    """Return ``(context_used, remaining_k_tokens)`` or ``(None, None)``.
+    """Return context fraction, used K-tokens, and remaining K-tokens.
 
-    Estimate only: the latest valid ``pre_api_request`` token count divided
-    by a known model context limit (table or AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS).
-    Absent/invalid data or an unknown limit degrades to honest unknowns.
+    Estimate only: the latest valid ``pre_api_request`` token count supplies
+    used K-tokens. A known model context limit (table or
+    AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS) additionally supplies the fraction
+    and remaining K-tokens. Absent/invalid data degrades to honest unknowns.
     """
     with _LOCK:
         if native_session_id is None:
             if len(_TELEMETRY) != 1:
-                return None, None
+                return None, None, None
             native_session_id = next(iter(_TELEMETRY))
         slot = _TELEMETRY.get(native_session_id)
     if slot is None:
-        return None, None
+        return None, None, None
+    approx = slot["approx_input_tokens"]
+    used_k = round(approx / 1000)
     limit = _env_context_limit() or _context_limit_for_model(slot.get("model"))
     if limit is None:
-        return None, None
-    approx = slot["approx_input_tokens"]
+        return None, used_k, None
     context_used = min(max(approx / limit, 0.0), 1.0)
     remaining_k = max(0, round((limit - approx) / 1000))
-    return context_used, remaining_k
+    return context_used, used_k, remaining_k
 
 
 # ---------------------------------------------------------------------------
@@ -449,7 +451,7 @@ def checkpoint(
     if not isinstance(close_session, bool):
         raise TypeError("close_session must be a boolean")
     native_session_id, session_id, workspace_root = _resolve_invocation(_native_session_id)
-    context_used, remaining_k = _telemetry(native_session_id)
+    context_used, used_k, remaining_k = _telemetry(native_session_id)
     timestamp = _timestamp_from_clock(_clock)
 
     def record_clock():
@@ -477,11 +479,13 @@ def checkpoint(
     if closed_record is not None:
         _append_record(workspace_root, session_id, closed_record)
     context = "unknown" if context_used is None else f"~{round(context_used * 100)}%"
+    used = "unknown" if used_k is None else f"~{used_k}k"
     remaining = "unknown" if remaining_k is None else f"~{remaining_k}k"
     return (
         "Checkpoint saved.\n"
-        f"Context (harness telemetry): {context}\n"
-        f"Remaining K-tokens (context-window headroom): {remaining}"
+        f"Context (latest harness telemetry): {context}\n"
+        f"Used K-tokens (latest input-estimate harness telemetry): {used}\n"
+        f"Remaining K-tokens (context-window headroom from latest harness telemetry): {remaining}"
     )
 
 

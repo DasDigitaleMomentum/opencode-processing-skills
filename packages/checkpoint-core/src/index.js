@@ -236,6 +236,7 @@ export async function checkpoint({
   contextUsed = null,
   agent = null,
   sessionTitle = null,
+  usedKTokens,
   remainingKTokens,
   clock = () => new Date(),
   workspaceRoot = process.cwd(),
@@ -275,6 +276,7 @@ export async function checkpoint({
 
   return {
     contextUsed,
+    ...(usedKTokens === undefined ? {} : { usedKTokens }),
     ...(remainingKTokens === undefined ? {} : { remainingKTokens }),
   };
 }

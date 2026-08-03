@@ -57,12 +57,14 @@ Do **not** use this skill to:
 - **Subagent (implementer)**
   - Does execution only for exactly one phase/work package in a fresh session.
   - First returns a **step list**.
+  - May add a concise optional Package Sizing Note when natural execution slices exist, but never splits scope or chooses a slice; the Primary decides whether to approve the full package or issue a smaller fresh package.
   - After approval, executes those steps and returns a **digest**.
   - Uses `retriever` by default for separable evidence collection while retaining ownership of the Blueprint, edits, and verification.
   - Directly reads scoped source and compact targeted evidence, but keeps uncurated bulk evidence out of its context. It uses reliable focused filtering when sufficient and `retriever` for complete raw or coherent multi-file evidence.
   - BLUEPRINT remains command-free. In EXECUTE, potentially verbose output is spooled to a predictable path under `/tmp/opencode/`; the immediate context receives only path, command, exit status, and compact metadata/evidence.
   - Retires after the digest; another phase/work package starts with a fresh implementer.
   - Does not do Git operations.
+  - Checkpoints after approved Blueprint steps or bounded parts of a large step, consulting the latest possibly lagged telemetry before deliberately starting another context-heavy unit.
 
 ## Routing Matrix (Who does what)
 
@@ -148,6 +150,8 @@ Primary delegates to `implementer` with a prompt based on `tpl-implementer-prefl
 - Requests revision (feedback)
 - Aborts and replans
 
+When the Blueprint contains an optional Package Sizing Note, it is advisory only. The Primary either approves the complete package or aborts and issues a smaller fresh work package. The Implementer must not split the approved scope, select a slice, or emit a hard FIT/SPLIT state.
+
 #### Invariant: explicit approval token
 
 Primary provides an explicit approval token before execution (primary-internal gate). Example:
@@ -189,6 +193,16 @@ Read the digest carefully. The subagent's verification result determines next st
 - **Verification failed or incomplete:** Decide the remaining bounded scope, then start a fresh Implementer work package rather than resuming the retired `task_id`. Do not run large test suites in the primary session.
 - **BLOCKED / no verification ran:** Decide whether to provide missing input and re-delegate, or run a targeted check yourself.
 
+If the Implementer began work but the digest is empty or missing, treat the call as interrupted rather than successful. Do not resume the bloated session. Use this recovery sequence:
+
+1. Call `checkpoint_path` with the failed Implementer `task_id` to select its JSONL log.
+2. Inspect that log and identify the last attempted and next announced units.
+3. Inspect the current working tree without discarding or overwriting partial changes.
+4. Map the logged units and current edits to the approved Blueprint, distinguishing completed, attempted, and remaining work.
+5. Issue the unfinished bounded scope as a smaller fresh work package; its Implementer inspects current state rather than blindly replaying the original package.
+
+This uses the existing Blueprint, checkpoint log, and working tree. It creates no new handoff format, digest outcome, partial state, or recovery schema.
+
 Then:
 
 - If a persistent plan exists, updates `plans/<plan>/todo.md` and phase status via `update-plan`.
@@ -208,6 +222,8 @@ Optional but recommended (Primary):
 Subagent returns an **Execution Blueprint** in the format of `tpl-execution-blueprint.md`.
 
 The blueprint is expected to be **concrete** (file paths and/or symbol/component targets), not a restatement of plan text.
+
+It may contain the template's optional **Package Sizing Note** only when natural execution slices would help the Primary gate a context-heavy package. The note is concise and non-binding; it proposes cuts but neither changes scope nor chooses one.
 
 #### Mode: BLUEPRINT
 
@@ -242,6 +258,7 @@ In EXECUTE mode, the subagent must:
 - Start a fresh Implementer for each phase/work package. Reuse its `task_id` only for that package's BLUEPRINT → EXECUTE pair, then retire it after the digest.
 - Skill-first: when this skill is invoked, follow its MODE + output contracts before doing anything else.
 - Keep the Blueprint to **one** explicit approved broad/full verify command unless the work package DoD requires more. It must exercise the changed behavior (for example, run relevant tests, hit the affected endpoint, or trigger the modified flow), not just compile, lint, or type-check.
+- During EXECUTE, checkpoint after each approved Blueprint step or a bounded part of a large step. Treat approximately 75% context use and 220k used tokens as soft planning signals only; continuing toward approximately 300k is acceptable when remaining work is bounded. Telemetry may lag the active turn, and unknown remains unknown. Before deliberately starting another context-heavy unit, assess remaining work and headroom.
 - During implementation and fixing, run the smallest targeted tests that exercise or reproduce the changed or problematic behavior. Do not run the approved broad/full command after every change or use it as the first iterative diagnostic step when a targeted test is known or can be identified.
 - Run the approved broad/full command once only when implementation is ready, as the final gate. If that final gate exposes a failure, return to targeted diagnosis, fix, and retest. Only after targeted tests pass may the broad/full final gate run again. Never weaken or omit the final broad gate.
 - No raw diffs or long logs in responses.

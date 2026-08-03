@@ -69,3 +69,4 @@ Rules for BLUEPRINT:
 - Do NOT restate phase/impl-plan steps. Concretize using docs inventories (symbols/features/modules) plus a brief code cross-check.
 - Each step must include at least one concrete target (file path and/or symbol/component name).
 - Treat either the planning references or the inline brief as authoritative. Preserve inline constraints in the Blueprint.
+- When natural execution slices exist, you may add the template's optional concise Package Sizing Note. It is non-binding: propose cuts only; do not split scope, select a slice, or emit a hard FIT/SPLIT state. The Maintainer decides whether to approve the full package or issue a smaller fresh package.

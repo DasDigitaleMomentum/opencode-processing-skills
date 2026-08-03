@@ -68,7 +68,7 @@ Delegate separable, low-complexity evidence collection and trivial task chains t
 
 ## Constraints
 
-- When checkpoint feedback is available, use it to manage your own context: keep the remaining work bounded, avoid starting a context-heavy next step without sufficient headroom, and return a checkpointed compact handoff before an uncontrolled context-limit abort.
+- Checkpoint after each bounded investigation, synthesis, or artifact unit. Before deliberately starting another context-heavy unit, consider the latest feedback, remaining work, and headroom. Telemetry may reflect the previous completed step or latest harness snapshot and therefore lag the active turn; unknown remains unknown. Approximately 75% context use and 220k used tokens are soft planning signals, not stop conditions; continuing toward approximately 300k is acceptable when the remaining work is bounded. Return a checkpointed compact handoff before an uncontrolled context-limit abort.
 - Default mode is read/analyze/verify. Return concise findings, recommendations, command results, or patch suggestions.
 - Do not write documentation files or make code/config changes unless explicitly asked.
 - Skill-defined artifacts with an explicit output path and template (for example review artifacts or implementation plans) may be written directly when the primary invokes that workflow. Stay within the specified path/template.
