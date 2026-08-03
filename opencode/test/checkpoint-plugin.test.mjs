@@ -268,6 +268,15 @@ async function writeFakeScriptc(root, behavior) {
   const bin = path.join(root, "fake-scriptc-bin");
   const invocationLog = path.join(root, "scriptc-invocations.log");
   await mkdir(bin, { recursive: true });
+  const fakePython = path.join(bin, "python3");
+  await writeFile(fakePython, `#!/bin/sh
+if [ ${JSON.stringify(behavior)} = pty-failure ]; then
+  printf '%s\\n' 'native-checkpoint-watch-smoke: fake PTY restoration failure' >&2
+  exit 31
+fi
+exit 0
+`);
+  await chmod(fakePython, 0o755);
   const script = path.join(bin, "scriptc");
   const nativeBody = `#!/bin/sh
 behavior=${JSON.stringify(behavior)}
@@ -896,6 +905,7 @@ test("optional native installer keeps the Node fallback and prior binary on ever
     "live-refresh-failure",
     "live-exit-failure",
     "cursor-failure",
+    "pty-failure",
   ];
   for (const behavior of scenarios) {
     const root = await mkdtemp(path.join(os.tmpdir(), `checkpoint-opencode-native-${behavior}-`));
