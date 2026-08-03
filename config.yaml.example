@@ -36,8 +36,9 @@
 # home receives skills, agents, and the auto-loaded checkpoint plugin/runtime.
 # Codex installs skills (no agents) plus, in global mode, the agent-checkpoint
 # adapter: hook/MCP bridge files under CODEX_HOME/agent-checkpoint/ and an
-# additive CODEX_HOME/agent-checkpoint.config.toml profile (activate with
-# `codex --profile-v2 agent-checkpoint`). The base config.toml is never modified;
+# additive CODEX_HOME/agent-checkpoint.config.toml profile. Activate Codex Desktop
+# 26.727.51351/current runtimes with `codex -p agent-checkpoint`, or standalone
+# codex-cli 0.131.0 with `codex --profile-v2 agent-checkpoint`. The base config.toml is never modified;
 # a symlinked whole adapter directory is preserved and its copy is skipped.
 # Claude installs both skills and agents plus, in global mode, the agent-checkpoint
 # skills-directory plugin under CLAUDE_HOME/skills/agent-checkpoint/ and an opt-in

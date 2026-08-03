@@ -1,7 +1,8 @@
 # Codex checkpoint adapter
 
-Dependency-free Codex (codex-cli) integration for the agent-checkpoint heartbeat,
-installed by `./install.sh` when the Codex target is enabled (global mode only).
+Dependency-free Codex Desktop/codex-cli integration for the agent-checkpoint
+heartbeat, installed by `./install.sh` when the Codex target is enabled (global
+mode only).
 
 ## What gets installed
 
@@ -12,7 +13,7 @@ installed by `./install.sh` when the Codex target is enabled (global mode only).
 | `checkpoint-mcp-runtime.mjs` | `$CODEX_HOME/agent-checkpoint/` | Tool/protocol runtime for the stdio MCP server |
 | `checkpoint-mcp-server.mjs` | `$CODEX_HOME/agent-checkpoint/` | Executable stdio MCP server (NDJSON JSON-RPC) |
 | `checkpoint-core.mjs` | `$CODEX_HOME/agent-checkpoint/` | Shared mixed-log checkpoint/status contract and append implementation |
-| generated profile | `$CODEX_HOME/agent-checkpoint.config.toml` | Additive profile-v2 file; base `config.toml` is never modified |
+| generated profile | `$CODEX_HOME/agent-checkpoint.config.toml` | Additive layered-profile file; base `config.toml` is never modified |
 
 Existing symlinks are never overwritten. Because the status-capable hook depends
 on a compatible bundled core, a symlinked `checkpoint-core.mjs` or whole
@@ -25,8 +26,9 @@ adapter; all other Codex configuration is untouched.
 
 ## Prerequisites
 
-- Pinned `codex` CLI **0.131.0** (`codex --version`). The adapter targets the
-  revalidated hook/MCP/profile-v2 surface of that build.
+- Codex Desktop **26.727.51351** (bundled runtime `codex-cli
+  0.146.0-alpha.9.2`) or pinned standalone `codex-cli` **0.131.0**. Both
+  hook/MCP/profile surfaces are revalidated; their profile flags differ.
 - `node` on `PATH` (the MCP server and hook are Node scripts; the installer
   fails clearly when `node` is absent).
 
@@ -36,6 +38,10 @@ The adapter is opt-in per invocation through the additive profile file. Start it
 only after the compatible `checkpoint-watch` dashboard is running:
 
 ```bash
+# Codex Desktop 26.727.51351 / current runtime
+codex -p agent-checkpoint
+
+# standalone codex-cli 0.131.0
 codex --profile-v2 agent-checkpoint
 ```
 
@@ -50,12 +56,15 @@ runtime commands; `codex mcp list` has no profile support):
    hook → installed MCP server → `checkpoint-inspect` reads the exact
    eight-field record.
 
-The profile enables `[features] hooks = true` and registers
+The profile enables `[features] hooks = true`, registers
 `[mcp_servers.agent_checkpoint]` plus `[[hooks.SessionStart]]` and
-`[[hooks.PreToolUse]]` groups. New or changed hooks require Codex's hook trust
-review on first use; approve the two `checkpoint-hook.mjs` command hooks to let
-them run. Sandboxed/test installations may use the documented trust bypass only
-inside an isolated `CODEX_HOME`.
+`[[hooks.PreToolUse]]` groups, and explicitly sets per-tool
+`approval_mode = "approve"` for only `checkpoint` and `checkpoint_path`.
+The explicit entries preserve unattended heartbeat calls on the Desktop runtime;
+the broader MCP approval policy remains unchanged. New or changed hooks require
+Codex's hook trust review on first use; approve the two `checkpoint-hook.mjs`
+command hooks to let them run. Sandboxed/test installations may use the
+documented trust bypass only inside an isolated `CODEX_HOME`.
 
 ## How it works
 
@@ -105,13 +114,14 @@ inside an isolated `CODEX_HOME`.
 
 ## Upgrade order
 
-1. Stop every live `checkpoint-watch`, OpenCode, and
-   `codex --profile-v2 agent-checkpoint` session.
+1. Stop every live `checkpoint-watch`, OpenCode, and checkpoint-profile Codex
+   Desktop/CLI session.
 2. Run `./install.sh`; compatible reader/core assets are installed before the
    hook and generated profile. Resolve any required-core symlink diagnostic and
    rerun rather than continuing with an unverified target.
 3. Start the dashboard with the installer's exact `Launch command`.
-4. Restart OpenCode, then start/restart Codex with the profile command above.
+4. Restart OpenCode, then start/restart Codex with the profile command matching
+   its runtime above.
 
 The installer prints this order but does not detect or stop processes.
 

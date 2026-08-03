@@ -20,7 +20,7 @@ The installer auto-detects which harnesses to sync into. Out of the box:
 
 Hermes is a target for installation, parsing, and discovery plus the agent-checkpoint plugin; installing the skills does not port their OpenCode-specific delegate personas, `Task` calls, or `task_id` continuation contracts to Hermes.
 
-For an upgrade, stop every live `checkpoint-watch` process and every running OpenCode, `codex --profile-v2 agent-checkpoint`, Claude Code, or Hermes session using the checkpoint integration before invoking the installer. After installation, run the exact printed dashboard `Launch command` first, then start/restart each enabled harness. This order prevents status-capable writers from reaching an old live reader. After OpenCode restarts, select the `@maintainer` agent; it knows when to load which skill and how to delegate to the right subagent.
+For an upgrade, stop every live `checkpoint-watch` process and every running OpenCode, checkpoint-profile Codex Desktop/CLI, Claude Code, or Hermes session using the checkpoint integration before invoking the installer. After installation, run the exact printed dashboard `Launch command` first, then start/restart each enabled harness. This order prevents status-capable writers from reaching an old live reader. After OpenCode restarts, select the `@maintainer` agent; it knows when to load which skill and how to delegate to the right subagent.
 
 ### OpenCode checkpoint plugin
 
@@ -39,9 +39,9 @@ When the Codex target is enabled, global installs also deploy the Codex adapter 
 | Artifact | Location |
 |---|---|
 | Hook bridge, instruction, MCP runtime/server, core | `~/.codex/agent-checkpoint/` |
-| Additive profile-v2 file | `~/.codex/agent-checkpoint.config.toml` |
+| Additive layered-profile file | `~/.codex/agent-checkpoint.config.toml` |
 
-Activate per invocation with `codex --profile-v2 agent-checkpoint`, but only after the compatible dashboard is running. The profile registers `checkpoint`/`checkpoint_path` and `SessionStart`/`PreToolUse`; each verified `SessionStart` appends `open`, and every checkpoint then writes `open` → checkpoint → optional declared `closed`. The pin has no `SessionEnd`; `Stop`, process exit, crashes, age, and unsupported events remain write-free. `close_session` is strictly boolean and defaults false. Logging is session-level under the native hook `session_id`, so a child declaration closes that shared row until the next session checkpoint reopens it; no child identity field is added. The base config and existing symlink protections remain unchanged. See [codex/README.md](../codex/README.md) for proof commands and details.
+Activate per invocation with `codex -p agent-checkpoint` on Codex Desktop 26.727.51351/current runtimes, or `codex --profile-v2 agent-checkpoint` on standalone codex-cli 0.131.0, but only after the compatible dashboard is running. The profile registers `checkpoint`/`checkpoint_path`, grants only those two tools explicit `approval_mode = "approve"`, and registers `SessionStart`/`PreToolUse`; each verified `SessionStart` appends `open`, and every checkpoint then writes `open` → checkpoint → optional declared `closed`. The pin has no `SessionEnd`; `Stop`, process exit, crashes, age, and unsupported events remain write-free. `close_session` is strictly boolean and defaults false. Logging is session-level under the native hook `session_id`, so a child declaration closes that shared row until the next session checkpoint reopens it; no child identity field is added. The base config and existing symlink protections remain unchanged. See [codex/README.md](../codex/README.md) for proof commands and details.
 
 ### Claude Code checkpoint plugin
 
@@ -71,7 +71,7 @@ When the Hermes target is enabled, global installs also deploy the Hermes user p
 | User plugin (manifest, tools/hooks module, heartbeat instruction, README) | `~/.hermes/plugins/agent-checkpoint/` |
 | Opt-in enablement | additive `plugins.enabled` entry in `~/.hermes/config.yaml` |
 
-The plugin is verified against the pinned Hermes Agent v0.19.0 build (upstream `e0b9ab5a`). Hermes loads user plugins only when listed in `plugins.enabled`; the installer performs the documented enablement flow's additive config delta as a text edit (idempotent, everything else preserved byte-for-byte, symlinked destinations skipped), while `hermes plugins enable|disable agent-checkpoint` remains the documented user-facing flow. An exact single-quoted, double-quoted, or unquoted `agent-checkpoint` under block or inline `plugins.disabled` stops installation before any config edit and prints that manual enablement command. Removal: `hermes plugins disable agent-checkpoint`, then delete `~/.hermes/plugins/agent-checkpoint/`; a restart starts sessions with the changed plugin set.
+The plugin is unit- and live-E2E-verified against pinned Hermes Agent v0.19.1. Hermes loads user plugins only when listed in `plugins.enabled`; the installer performs the documented enablement flow's additive config delta as a text edit (idempotent, everything else preserved byte-for-byte, symlinked destinations skipped), while `hermes plugins enable|disable agent-checkpoint` remains the documented user-facing flow. An exact single-quoted, double-quoted, or unquoted `agent-checkpoint` under block or inline `plugins.disabled` stops installation before any config edit and prints that manual enablement command. Removal: `hermes plugins disable agent-checkpoint`, then delete `~/.hermes/plugins/agent-checkpoint/`; a restart starts sessions with the changed plugin set.
 
 The plugin registers `checkpoint`/`checkpoint_path`, injects the complete role-aware instruction through `pre_llm_call`, and preserves native binding through `on_session_start`/`pre_tool_call`. New-parent start appends `open`; every checkpoint mirrors strict `open` → checkpoint → optional declared `closed` ordering. Continued sessions therefore become `OPEN` on their next checkpoint. `subagent_start` only maps native children to the root-parent log; a child declaration closes that shared row until any later parent/child checkpoint reopens it, without persisting child identity or relationship metadata. The pinned host still supplies no adopted main-session end hook, so process exit, age, and tool completion remain write-free. A valid latest `pre_api_request` estimate supplies input usage/K-tokens/headroom against 372k; absent input makes all three unknown. K-token feedback does not expand JSONL.
 
@@ -95,7 +95,7 @@ The printed command reflects a configured OpenCode home or the absolute project 
 2. Run the installer. It preflights every component of required reader/core paths before any target mutation, then installs compatible OpenCode core/watcher readers before any writer, each bundled core before its harness hook/configuration, and Hermes plugin code before enablement.
 3. Run the exact printed `Launch command` to start the compatible dashboard.
 4. Restart OpenCode.
-5. If enabled, start/restart `codex --profile-v2 agent-checkpoint`.
+5. If enabled, start/restart Codex with the printed Desktop/current-runtime or pinned-CLI profile command.
 6. If enabled, start/restart Claude Code with its opt-in settings.
 7. If enabled, start/restart Hermes.
 

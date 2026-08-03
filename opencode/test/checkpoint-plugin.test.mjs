@@ -1203,6 +1203,9 @@ test("project installer preflights required readers before project-local writer 
 
 test("lifecycle documentation preserves honest events and ordered upgrade steps", async () => {
   const installation = await readFile(path.join(REPOSITORY_ROOT, "docs/installation.md"), "utf8");
+  const configExample = await readFile(path.join(REPOSITORY_ROOT, "config.yaml.example"), "utf8");
+  assert.match(configExample, /Codex Desktop.*`codex -p agent-checkpoint`/s);
+  assert.match(configExample, /codex-cli 0\.131\.0.*`codex --profile-v2 agent-checkpoint`/s);
   assert.match(installation, /every adapter now performs lazy open plus optional declared close/);
   assert.match(installation, /`open` → checkpoint → optional declared `closed`/);
   assert.match(installation, /No child-end hook, host-idle heuristic, or parent-child field is added/);
@@ -1214,12 +1217,14 @@ test("lifecycle documentation preserves honest events and ordered upgrade steps"
   assert.match(installation, /atomically renamed to `\$HOME\/\.local\/bin\/checkpoint-watch`/);
   assert.match(installation, /`\.\/install\.sh --project` does not probe scriptc/);
   assert.match(installation, /Node 20 or newer/);
+  assert.match(installation, /`codex -p agent-checkpoint` on Codex Desktop/);
+  assert.match(installation, /`codex --profile-v2 agent-checkpoint` on standalone codex-cli/);
   assertOutputOrder(installation, [
     "Before `./install.sh`, stop every live dashboard",
     "Run the installer.",
     "Run the exact printed `Launch command`",
     "Restart OpenCode.",
-    "start/restart `codex --profile-v2 agent-checkpoint`",
+    "start/restart Codex with the printed Desktop/current-runtime or pinned-CLI profile command",
     "start/restart Claude Code",
     "start/restart Hermes",
   ]);
