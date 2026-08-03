@@ -3,14 +3,14 @@
 //
 // Reads one Codex hook JSON object from stdin and writes one hook output JSON
 // object to stdout (or nothing, for events/tools the adapter does not handle).
-// Output shapes are pinned to codex-cli 0.131.0 serde wires (camelCase,
-// deny_unknown_fields) — emit exactly the keys below, no more.
+// Output shapes are pinned to the verified Codex Desktop runtime's serde wires
+// (camelCase, deny_unknown_fields) — emit exactly the keys below, no more.
 //
 //   SessionStart -> {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"..."}}
 //   PreToolUse   -> {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{...}}}
 //
-// The pinned engine rejects permissionDecision "allow" unless updatedInput is
-// present, and rejects updatedInput without "allow" — always emit the pair.
+// The verified engine rejects permissionDecision "allow" unless updatedInput
+// is present, and rejects updatedInput without "allow" — always emit the pair.
 
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
@@ -22,6 +22,50 @@ const INSTRUCTION_FILE = "checkpoint-instruction.md";
 
 function nonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function validTokenCount(value) {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
+function latestPriorInputTokens(transcriptPath) {
+  const filePath = nonEmptyString(transcriptPath);
+  if (filePath === null) return null;
+
+  let lines;
+  try {
+    lines = readFileSync(filePath, "utf8").split(/\r?\n/);
+  } catch {
+    return null;
+  }
+
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index];
+    if (line.length === 0) continue;
+
+    let event;
+    try {
+      event = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (event?.type !== "event_msg" || event.payload?.type !== "token_count") {
+      continue;
+    }
+
+    const usage = event.payload.info?.last_token_usage;
+    const inputTokens = usage?.input_tokens;
+    const cachedInputTokens = usage?.cached_input_tokens;
+    if (
+      !validTokenCount(inputTokens) ||
+      !validTokenCount(cachedInputTokens) ||
+      cachedInputTokens > inputTokens
+    ) {
+      return null;
+    }
+    return inputTokens;
+  }
+  return null;
 }
 
 function readInstruction() {
@@ -69,10 +113,11 @@ export function handleCheckpointPreToolUse(input) {
       permissionDecision: "allow",
       updatedInput: {
         ...toolInput,
-        // input.cwd is a required string on the pinned 0.131.0 wire; the
+        // input.cwd is a required string on the verified Desktop wire; the
         // process.cwd() fallback only guards against older/custom emitters.
         _workspace_root: nonEmptyString(input.cwd) ?? process.cwd(),
         _checkpoint_session_id: input.session_id ?? null,
+        _checkpoint_input_tokens: latestPriorInputTokens(input.transcript_path),
       },
     },
   };

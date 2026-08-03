@@ -146,6 +146,10 @@ test("codex MCP runtime handles the protocol and appends shared-contract records
   const schema = listed.result.tools[0].inputSchema;
   assert.deepEqual(schema.required, ["done", "next"]);
   assert.deepEqual(schema.properties.close_session, { type: "boolean", default: false });
+  assert.deepEqual(schema.properties._checkpoint_input_tokens, {
+    type: ["integer", "null"],
+    description: "hook injected from the latest prior Codex token-count event; callers omit",
+  });
 
   const called = await runtime.handleMessage({
     jsonrpc: "2.0",
@@ -158,14 +162,16 @@ test("codex MCP runtime handles the protocol and appends shared-contract records
         next: "Inspect record now",
         _workspace_root: worktree,
         _checkpoint_session_id: "codex-session",
+        _checkpoint_input_tokens: 223_200,
       },
     },
   });
   assert.equal(called.result.isError, undefined);
   assert.match(called.result.content[0].text, /Checkpoint saved\./);
-  assert.match(called.result.content[0].text, /Input usage .*: unknown/);
-  assert.match(called.result.content[0].text, /Input K-tokens .*: unknown/);
-  assert.match(called.result.content[0].text, /Remaining input K-tokens .*: unknown/);
+  assert.match(called.result.content[0].text, /previous completed model call/);
+  assert.match(called.result.content[0].text, /Input usage .*: ~60%/);
+  assert.match(called.result.content[0].text, /Input K-tokens .*: ~223\.2k/);
+  assert.match(called.result.content[0].text, /Remaining input K-tokens .*: ~148\.8k/);
 
   const relativePath = checkpointCore.checkpointPath("codex-session");
   const recordFile = path.join(worktree, ...relativePath.split("/"));
@@ -173,11 +179,14 @@ test("codex MCP runtime handles the protocol and appends shared-contract records
   const [record] = checkpointCore.parseCheckpointJsonl(raw);
   assert.deepEqual(Object.keys(record), RECORD_KEYS);
   assert.equal(record.session_id, "codex-session");
-  assert.equal(record.context_used, null);
+  assert.equal(record.context_used, 0.6);
   assert.equal(record.agent, null);
   assert.equal(record.session_title, null);
   assert.equal(record.step_failed, false);
-  assert.doesNotMatch(raw, /_checkpoint_session_id|_workspace_root|turn|usedKTokens|remaining/i);
+  assert.doesNotMatch(
+    raw,
+    /_checkpoint_session_id|_checkpoint_input_tokens|_workspace_root|turn|usedKTokens|remaining/i,
+  );
 
   const again = await runtime.handleMessage({
     jsonrpc: "2.0",
@@ -199,6 +208,7 @@ test("codex MCP runtime handles the protocol and appends shared-contract records
   const records = checkpointCore.parseCheckpointJsonl(await readFile(recordFile, "utf8"));
   assert.equal(records.length, 2);
   assert.equal(records[1].step_failed, true);
+  assert.equal(records[1].context_used, null);
   let fullLog = checkpointCore.analyzeCheckpointLog(await readFile(recordFile, "utf8"));
   assert.equal(fullLog.state, "CLOSED");
   assert.deepEqual(
@@ -486,13 +496,45 @@ test("codex SessionStart sources append open and preserve exact instruction outp
   assert.match(writeFailure.stderr, /ENOTDIR|not a directory/i);
 });
 
-test("codex hook pairs allow with updatedInput for the checkpoint PreToolUse", async (t) => {
-  const { hookPath } = await stageHookAdapter(t);
+test("codex hook injects latest prior input telemetry without double-counting cache", async (t) => {
+  const { adapterDir, hookPath } = await stageHookAdapter(t);
+  const transcriptPath = path.join(adapterDir, "rollout.jsonl");
+  await writeFile(
+    transcriptPath,
+    [
+      JSON.stringify({
+        timestamp: "2026-08-03T18:00:00.000Z",
+        type: "event_msg",
+        payload: {
+          type: "token_count",
+          info: {
+            total_token_usage: {
+              input_tokens: 999_999,
+              cached_input_tokens: 900_000,
+              output_tokens: 10_000,
+              reasoning_output_tokens: 1_000,
+              total_tokens: 1_009_999,
+            },
+            last_token_usage: {
+              input_tokens: 223_200,
+              cached_input_tokens: 200_000,
+              output_tokens: 300,
+              reasoning_output_tokens: 20,
+              total_tokens: 223_500,
+            },
+            model_context_window: 258_400,
+          },
+        },
+      }),
+      JSON.stringify({ type: "response_item", payload: { type: "reasoning" } }),
+      "",
+    ].join("\n"),
+  );
   const result = runHook({
     hook_event_name: "PreToolUse",
     session_id: "sess-xyz",
     turn_id: "turn-1",
-    transcript_path: null,
+    transcript_path: transcriptPath,
     cwd: "/workspace with space",
     model: "gpt-x",
     permission_mode: "default",
@@ -504,6 +546,7 @@ test("codex hook pairs allow with updatedInput for the checkpoint PreToolUse", a
       close_session: false,
       _workspace_root: "/stale",
       _checkpoint_session_id: "stale-id",
+      _checkpoint_input_tokens: 999_999,
     },
     tool_use_id: "toolu_1",
   }, hookPath);
@@ -524,7 +567,70 @@ test("codex hook pairs allow with updatedInput for the checkpoint PreToolUse", a
     close_session: false,
     _workspace_root: "/workspace with space",
     _checkpoint_session_id: "sess-xyz",
+    _checkpoint_input_tokens: 223_200,
   });
+
+  await writeFile(
+    transcriptPath,
+    `${JSON.stringify({
+      type: "event_msg",
+      payload: {
+        type: "token_count",
+        info: {
+          last_token_usage: {
+            input_tokens: 10,
+            cached_input_tokens: 11,
+            total_tokens: 12,
+          },
+        },
+      },
+    })}\n`,
+    { flag: "a" },
+  );
+  const invalidLatest = runHook({
+    hook_event_name: "PreToolUse",
+    session_id: "sess-xyz",
+    turn_id: "turn-2",
+    transcript_path: transcriptPath,
+    cwd: "/workspace with space",
+    model: "gpt-x",
+    permission_mode: "default",
+    tool_name: "mcp__agent_checkpoint__checkpoint",
+    tool_input: {
+      done: "d e f",
+      next: "g h i",
+      _checkpoint_input_tokens: 999_999,
+    },
+    tool_use_id: "toolu_2",
+  }, hookPath);
+  assert.equal(invalidLatest.status, 0, invalidLatest.stderr);
+  assert.equal(
+    JSON.parse(invalidLatest.stdout).hookSpecificOutput.updatedInput._checkpoint_input_tokens,
+    null,
+  );
+
+  const unreadableTranscript = runHook({
+    hook_event_name: "PreToolUse",
+    session_id: "sess-xyz",
+    turn_id: "turn-3",
+    transcript_path: path.join(adapterDir, "missing-rollout.jsonl"),
+    cwd: "/workspace with space",
+    model: "gpt-x",
+    permission_mode: "default",
+    tool_name: "mcp__agent_checkpoint__checkpoint",
+    tool_input: {
+      done: "g h i",
+      next: "j k l",
+      _checkpoint_input_tokens: 999_999,
+    },
+    tool_use_id: "toolu_3",
+  }, hookPath);
+  assert.equal(unreadableTranscript.status, 0, unreadableTranscript.stderr);
+  assert.equal(
+    JSON.parse(unreadableTranscript.stdout).hookSpecificOutput.updatedInput
+      ._checkpoint_input_tokens,
+    null,
+  );
 });
 
 test("codex hook runs when invoked through a symlinked install path", async (t) => {
@@ -639,7 +745,7 @@ test("codex installer deploys adapter/profile and preserves the base config", as
   assert.match(output, /Codex checkpoint adapter/);
   assert.match(output, /agent-checkpoint\.config\.toml/);
   assert.match(output, /Codex Desktop runtime:\s+codex -p agent-checkpoint/);
-  assert.match(output, /codex --profile-v2 agent-checkpoint/);
+  assert.doesNotMatch(output, /codex --profile-v2 agent-checkpoint/);
   assertOutputOrder(output, [
     "Checkpoint adapter upgrade prerequisite:",
     "Step 1.1:",
@@ -704,6 +810,7 @@ test("codex installer deploys adapter/profile and preserves the base config", as
     /\[mcp_servers\.agent_checkpoint\.tools\.checkpoint_path\]\napproval_mode = "approve"/,
   );
   assert.match(profile, /Codex Desktop runtime: codex -p agent-checkpoint/);
+  assert.doesNotMatch(profile, /codex-cli 0\.131\.0|profile-v2/);
   assert.match(profile, /\[\[hooks\.SessionStart\]\]/);
   assert.match(profile, /\[\[hooks\.PreToolUse\]\]/);
   assert.doesNotMatch(profile, /hooks\.(?:Stop|SessionEnd)/);
@@ -719,6 +826,12 @@ test("codex installer deploys adapter/profile and preserves the base config", as
   const nodeMatch = profile.match(/^command = "(\/[^"]+)"/m);
   assert.ok(nodeMatch, profile);
   await access(nodeMatch[1]);
+
+  const readme = await readFile(path.join(REPOSITORY_ROOT, "codex/README.md"), "utf8");
+  assert.match(readme, /last prior `token_count`/);
+  assert.match(readme, /`last_token_usage\.input_tokens` already includes cached input/);
+  assert.match(readme, /missing, unreadable, or malformed.*`unknown`/s);
+  assert.match(readme, /standalone `codex-cli` 0\.131\.0.*not supported/s);
 
   const protectedHook = path.join(root, "protected-hook.mjs");
   await writeFile(protectedHook, "protected\n");

@@ -1214,7 +1214,8 @@ test("lifecycle documentation preserves honest events and ordered upgrade steps"
   const installation = await readFile(path.join(REPOSITORY_ROOT, "docs/installation.md"), "utf8");
   const configExample = await readFile(path.join(REPOSITORY_ROOT, "config.yaml.example"), "utf8");
   assert.match(configExample, /Codex Desktop.*`codex -p agent-checkpoint`/s);
-  assert.match(configExample, /codex-cli 0\.131\.0.*`codex --profile-v2 agent-checkpoint`/s);
+  assert.match(configExample, /codex-cli 0\.131\.0 is not supported/s);
+  assert.doesNotMatch(configExample, /profile-v2/);
   assert.match(installation, /every adapter now performs lazy open plus optional declared close/);
   assert.match(installation, /`open` → checkpoint → optional declared `closed`/);
   assert.match(installation, /No child-end hook, host-idle heuristic, or parent-child field is added/);
@@ -1226,14 +1227,15 @@ test("lifecycle documentation preserves honest events and ordered upgrade steps"
   assert.match(installation, /atomically renamed to `\$HOME\/\.local\/bin\/checkpoint-watch`/);
   assert.match(installation, /`\.\/install\.sh --project` does not probe scriptc/);
   assert.match(installation, /Node 20 or newer/);
-  assert.match(installation, /`codex -p agent-checkpoint` on Codex Desktop/);
-  assert.match(installation, /`codex --profile-v2 agent-checkpoint` on standalone codex-cli/);
+  assert.match(installation, /`codex -p agent-checkpoint` on the verified Codex Desktop/);
+  assert.match(installation, /Standalone `codex-cli` 0\.131\.0 is not supported/);
+  assert.doesNotMatch(installation, /profile-v2/);
   assertOutputOrder(installation, [
     "Before `./install.sh`, stop every live dashboard",
     "Run the installer.",
     "Run the exact printed `Launch command`",
     "Restart OpenCode.",
-    "start/restart Codex with the printed Desktop/current-runtime or pinned-CLI profile command",
+    "start/restart the verified Codex Desktop runtime with the printed profile command",
     "start/restart Claude Code",
     "start/restart Hermes",
   ]);
@@ -1258,13 +1260,13 @@ test("lifecycle documentation preserves honest events and ordered upgrade steps"
   ]);
 
   const codexReadme = await readFile(path.join(REPOSITORY_ROOT, "codex/README.md"), "utf8");
-  assert.match(codexReadme, /codex-cli 0\.131\.0 has no `SessionEnd`/);
+  assert.match(codexReadme, /no adopted `SessionEnd`/);
   assert.match(codexReadme, /`Stop`[\s\S]*never mapped to\s+`closed`/);
   assertOutputOrder(codexReadme, [
     "Stop every live `checkpoint-watch`",
     "Run `./install.sh`",
     "Start the dashboard with the installer's exact `Launch command`",
-    "Restart OpenCode, then start/restart Codex",
+    "Restart OpenCode, then start/restart the verified Codex Desktop runtime",
   ]);
 
   const overview = await readFile(path.join(REPOSITORY_ROOT, "docs/overview.md"), "utf8");
