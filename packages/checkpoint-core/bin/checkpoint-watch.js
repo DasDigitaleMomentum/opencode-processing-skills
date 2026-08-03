@@ -118,7 +118,7 @@ Environment:
  * @property {string} state
  * @property {number | string} checkpointCount
  * @property {string} metrics
- * @property {string} context
+ * @property {string} input
  * @property {string} agent
  * @property {string} title
  * @property {string} done
@@ -239,7 +239,7 @@ function compactMetrics(analysis) {
 }
 
 /** @param {number | null} value */
-function contextPercent(value) {
+function inputPercent(value) {
   return value === null ? "unknown" : `${Number((value * 100).toFixed(1))}%`;
 }
 
@@ -467,7 +467,7 @@ function validSessionRow(log, now) {
     state: log.state,
     checkpointCount: log.analysis.checkedRecords,
     metrics: compactMetrics(log.analysis),
-    context: contextPercent(latestCheckpoint?.context_used ?? null),
+    input: inputPercent(latestCheckpoint?.context_used ?? null),
     agent: latestCheckpoint?.agent ?? "-",
     title: latestCheckpoint?.session_title ?? "-",
     done: latestCheckpoint?.done ?? "-",
@@ -507,7 +507,7 @@ function errorSessionRow(name, error) {
     state: "ERROR",
     checkpointCount: "-",
     metrics: "-",
-    context: "-",
+    input: "-",
     agent: "-",
     title: "-",
     done: "read failed",
@@ -603,7 +603,7 @@ function dashboardRowValue(row, key) {
   if (key === "title") return row.title;
   if (key === "checkpointCount") return row.checkpointCount;
   if (key === "metrics") return row.metrics;
-  if (key === "context") return row.context;
+  if (key === "input") return row.input;
   if (key === "done") return row.done;
   if (key === "current") return row.state === "CLOSED" ? "—" : row.next;
   return "";
@@ -625,7 +625,7 @@ function formatDashboardView(rows, columns, showOldRows) {
     ["STATE", 7, "state"],
     ["CP", contentWidth("CP", "checkpointCount"), "checkpointCount"],
     ["C/W/3 %", contentWidth("C/W/3 %", "metrics"), "metrics"],
-    ["CONTEXT", 7, "context"],
+    ["INPUT", 7, "input"],
   ];
   const separatorWidth = 8;
   let fixedWidth = 0;
@@ -685,7 +685,7 @@ function formatDashboardView(rows, columns, showOldRows) {
     for (const row of group) {
       output.push(line([
         row.agent, row.title, formatAge(row.ageMs), row.state, row.checkpointCount,
-        row.metrics, row.context, row.done, row.state === "CLOSED" ? "—" : row.next,
+        row.metrics, row.input, row.done, row.state === "CLOSED" ? "—" : row.next,
       ]));
     }
     renderedGroup = true;

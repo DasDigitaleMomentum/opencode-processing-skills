@@ -5,8 +5,8 @@ All notable changes to this project will be documented in this file.
 ## 0.5.6 — 2026-08-03
 
 ### Changed
-- **Checkpoint capacity feedback**: Supported adapters now report defensible context percentage, used K-tokens, and remaining K-tokens with explicit previous-step/latest-snapshot lag semantics and honest independent unknowns; runtime feedback does not expand the six/eight/four-field JSONL contracts.
-- **Soft context guidance**: Approximately 75% context use and 220k used tokens are planning signals rather than stop conditions; bounded work may continue toward approximately 300k after assessing remaining work and headroom.
+- **Input-only capacity feedback**: Supported adapters now report input usage against a common 372k operational limit, input K-tokens, and remaining input K-tokens with explicit previous-step/latest-snapshot lag semantics. The existing `context_used` JSON key now carries this input fraction; older logs may retain its previous context-fraction meaning.
+- **Input-budget guidance**: Across providers, approximately 220k input tokens are a soft planning signal; at or above approximately 272k, agents stop expanding work and use the remaining budget for a coherent checkpointed digest or handoff. The 372k rejection boundary is emergency headroom rather than a working target.
 - **Proportional cadence**: Implementers checkpoint after approved Blueprint steps or bounded parts of large steps, while Delegates checkpoint after bounded investigation, synthesis, or artifact units.
 - **Advisory package sizing**: Blueprints may include a concise optional Package Sizing Note, but only the Maintainer may approve the full package or issue a smaller fresh package.
 

@@ -19,7 +19,7 @@ The adapter owns OpenCode tool schemas, metadata/telemetry derivation, and feedb
 
 The generic event callback still accepts only verified `session.created`; plugin load, activity, update/status/idle, deletion, disposal, and malformed events remain write-free. Every successful checkpoint independently appends `open` first, so a resumed checkpoint-only log becomes `OPEN`; `close_session=true` appends `closed` only after that checkpoint. This is agent-declared closure, not a host-idle or graceful-end inference.
 
-`createOpenCodeContextTelemetry` queries session messages and provider models through `PluginInput.client`, selects the latest previous assistant step with positive output tokens, sums the same five token categories as the TUI, and resolves that message's provider/model context limit. It reports the defensible token sum as used K-tokens even when the provider/model limit is unavailable; a valid limit additionally yields the clamped context fraction and remaining context-window K-tokens. The active assistant step invoking the tool is not finalized, so all known values describe the previous completed step, not live occupancy or compaction headroom. Missing or invalid message/token data remains unknown, while a provider lookup failure degrades only the limit-dependent fields.
+`createOpenCodeInputTelemetry` queries session messages through `PluginInput.client` and selects the latest previous assistant step with positive output tokens. That step's `tokens.input` supplies input usage against 372k, input K-tokens, and remaining input K-tokens. Provider/model metadata and output/reasoning/cache counts are ignored. The active assistant step invoking the tool is not finalized, so all known values describe the previous completed step. Missing or invalid input makes all three values unknown.
 
 ### Dependencies
 
@@ -44,12 +44,12 @@ The generic event callback still accepts only verified `session.created`; plugin
 |---|---|---|---|---|
 | `CheckpointPlugin` | plugin export | public | `opencode/checkpoint-plugin.ts:53` | Composes helper/core/runtime and creates title/telemetry readers from `pluginContext.client`. |
 | `createOpenCodeSessionTitle` | function | public | `opencode/checkpoint-runtime.mjs:16` | Calls `session.get` for the active ID/directory and returns a non-empty title or `null`. |
-| `createOpenCodeContextTelemetry` | function | public | `opencode/checkpoint-runtime.mjs:43` | Derives TUI-equivalent previous-completed-step estimates with null fallback. |
+| `createOpenCodeInputTelemetry` | function | public | `opencode/checkpoint-runtime.mjs:62` | Derives previous-completed-step input usage/K-tokens/headroom against 372k with null fallback. |
 | `createOpenCodeCheckpointPlugin` | function | public | `opencode/checkpoint-runtime.mjs:122` | Builds the two native tools plus the creation-only lifecycle event callback. |
 | `event` | plugin callback | public | `opencode/checkpoint-runtime.mjs` | Maps only verified `session.created` identity to shared-core `open`; ignores unsupported resume/close signals. |
 | `checkpoint.execute` | tool executor | public | `opencode/checkpoint-runtime.mjs:171` | Strictly validates raw `close_session`, settles metadata/telemetry, and forwards identity plus optional close to the core. |
 | `checkpoint_path.execute` | tool executor | public | `opencode/checkpoint-runtime.mjs:221` | Returns only the workspace-relative encoded JSONL path. |
-| `Checkpoint Heartbeat` | instruction | installed | `opencode/checkpoint-instruction.md:3` | Directs proportional cadence, chaining/failures, lag-aware soft context signals, and final-close role behavior. |
+| `Checkpoint Heartbeat` | instruction | installed | `opencode/checkpoint-instruction.md:3` | Directs proportional cadence, chaining/failures, lag-aware input-budget signals, and final-close role behavior. |
 
 ## Data Flow
 
@@ -57,15 +57,15 @@ The generic event callback still accepts only verified `session.created`; plugin
 2. On verified `session.created`, the event callback uses the event's native ID and the plugin worktree to append `open`. Unsupported activity/resume/close candidates are ignored.
 3. The shim exposes `checkpoint(done, next, step_failed=false, close_session=false)`; the native schema or fallback executor rejects a supplied non-boolean before persistence, then starts title/telemetry lookups.
 4. `session.get` supplies the point-in-time title while `context.agent` supplies the current persona. Either normalizes to `null` when absent/empty; title lookup failure is isolated and cannot prevent persistence.
-5. The runtime scans backward to the latest assistant message with positive output, sums input/output/reasoning/cache-read/cache-write, and matches `providerID`/`modelID` to its context limit. The output-zero active tool-calling step is not selected.
-6. The core persists exact `open` → eight-field checkpoint → optional exact `closed`; used and remaining K-token feedback stays runtime-only.
-7. Missing or malformed message/token telemetry persists `context_used: null` and reports unknown fields honestly. A missing model limit may still report the known used K-token sum while percentage/headroom stay unknown; metadata failures likewise persist `null` without blocking the record.
+5. The runtime scans backward to the latest assistant message with positive output and maps its input count to `min(input / 372000, 1)`, `input / 1000`, and `max(372000 - input, 0) / 1000`. The output-zero active tool-calling step is not selected.
+6. The core persists exact `open` → eight-field checkpoint → optional exact `closed`; input and remaining K-token feedback stays runtime-only.
+7. Missing or malformed input telemetry persists `context_used: null` and reports all fields unknown. Non-input categories and provider/model limits do not affect telemetry; metadata failures likewise persist `null` without blocking the record.
 8. Global installation always refreshes the portable Node reader before writer assets and may select a separately staged, smoke-tested scriptc executable as the preferred watcher command. Optional build failure leaves writer installation and the Node reader available; project mode remains Node-only and global-bin isolated.
 9. `checkpoint_path(session_id)` returns the selected relative path for direct reading or core inspection. The stable ID, not mutable title text, selects the log.
 
 ## Configuration
 
-No new YAML key exists. `targets.opencode.home` is also the global checkpoint plugin home; project mode uses `./.opencode/`. During upgrades, stop readers/writers, install reader-first, start the dashboard, then restart OpenCode. Required reader symlinks still stop installation. Global scriptc detection is opportunistic and configuration-free; only a verified native build changes that run's preferred launch, while the exact Node fallback remains printed. Project mode never probes scriptc or touches `$HOME/.local/bin`. Ordinary persona symlinks remain untouched. Non-symlink personas receive one exact start/end-bounded block: exact current bytes are stable, the exact previously current block and older known legacy fragments migrate with prefix/suffix preservation, and unknown/customized marked content stops path-specifically without mutation.
+No new YAML key exists. `targets.opencode.home` is also the global checkpoint plugin home; project mode uses `./.opencode/`. During upgrades, stop readers/writers, install reader-first, start the dashboard, then restart OpenCode. Required reader symlinks still stop installation. Global scriptc detection is opportunistic and configuration-free; only a verified native build changes that run's preferred launch, while the exact Node fallback remains printed. Project mode never probes scriptc or touches `$HOME/.local/bin`. Ordinary persona symlinks remain untouched. Non-symlink personas receive one exact start/end-bounded block: exact current bytes are stable, exact previously current blocks and older known legacy fragments migrate with prefix/suffix preservation, and unknown/customized marked content stops path-specifically without mutation.
 
 ## Inventory Notes
 

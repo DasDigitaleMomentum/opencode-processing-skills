@@ -154,7 +154,7 @@ Batch implementation-plan review is another deliberate reuse case: the reviewer 
 
 Work likely to exhaust one session should be split before delegation by focused question, dependency group, or bounded work package. If a started subagent returns no usable digest, the maintainer neither resumes the bloated session nor absorbs the remainder. It resolves `checkpoint_path(task_id)`, inspects the selected log and current working tree, maps last attempted/next announced work to the approved Blueprint when present or the original delegated objective otherwise, and issues a smaller fresh task that begins from current state. This uses existing evidence rather than a new handoff, digest state, recovery schema, or automatic split.
 
-Checkpoint telemetry is soft and may lag the active turn. Approximately 75% context use and 220k used tokens are planning signals, not stop conditions; bounded remaining work may continue toward approximately 300k after the agent assesses headroom. Unknown telemetry stays unknown, and agents do not deliberately start another context-heavy unit without considering remaining work.
+Checkpoint telemetry may lag the active turn. Capacity and cost decisions use only reported input usage and input K-tokens. Across providers, approximately 220k input tokens are a soft planning signal; at or above approximately 272k, agents stop expanding work and use the remaining budget for a coherent checkpointed digest or handoff. The 372k rejection boundary is emergency headroom, not a working target. Unknown telemetry stays unknown.
 
 ### When to use delegate variants
 

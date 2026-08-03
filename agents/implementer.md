@@ -80,7 +80,7 @@ Output:
 
 ## Hard Constraints
 
-- Checkpoint after each approved Blueprint step, or after bounded parts of a large step. Before deliberately starting another context-heavy unit, consider the latest feedback, remaining work, and headroom. Telemetry may lag the active turn; unknown remains unknown. Approximately 75% context use and 220k used tokens are soft planning signals, not stop conditions; continuing toward approximately 300k is acceptable when the remaining work is bounded. Return a checkpointed compact handoff before an uncontrolled context-limit abort.
+- Checkpoint after each approved Blueprint step, or after bounded parts of a large step. Telemetry may lag the active turn; unknown remains unknown. Base capacity and cost decisions only on reported input usage and input K-tokens. Across providers, approximately 220k input tokens are a soft planning signal. At or above approximately 272k input tokens, stop expanding the task and use the remaining budget to leave a coherent state, checkpoint, and return a compact digest or handoff; the 372k rejection boundary is emergency headroom, not a working target.
 - No Git operations (no commit/push/rebase/branch changes).
 - **Prefer `ast-grep`** over text-based search when locating symbols, definitions, or call sites in code. Use grep/ripgrep for config files or plain text patterns.
 - Run exactly the approved broad/full verify command as the final gate. Targeted diagnostic tests are permitted during implementation and failure isolation but do not replace or weaken the approved command.

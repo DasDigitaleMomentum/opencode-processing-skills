@@ -15,6 +15,7 @@ import path from "node:path";
 const CHECKPOINT_TOOL_NAME = "checkpoint";
 const CHECKPOINT_PATH_TOOL_NAME = "checkpoint_path";
 const DEFAULT_PROTOCOL_VERSION = "2024-11-05";
+const INPUT_LIMIT_TOKENS = 372_000;
 
 const UNKNOWN_TELEMETRY = Object.freeze({
   contextUsed: null,
@@ -87,10 +88,10 @@ function checkpointPathToolSchema() {
 }
 
 function formatCheckpointResult({ contextUsed, usedKTokens, remainingKTokens }) {
-  const context = contextUsed === null ? "unknown" : `~${Math.round(contextUsed * 100)}%`;
+  const input = contextUsed === null ? "unknown" : `~${Math.round(contextUsed * 100)}%`;
   const used = usedKTokens === null ? "unknown" : `~${usedKTokens}k`;
   const remaining = remainingKTokens === null ? "unknown" : `~${remainingKTokens}k`;
-  return `Checkpoint saved.\nContext (latest-response harness telemetry): ${context}\nUsed K-tokens (latest-response input-only harness telemetry): ${used}\nRemaining K-tokens (context-window headroom from latest-response input-only telemetry): ${remaining}`;
+  return `Checkpoint saved.\nInput usage (latest-response harness telemetry, 372k limit): ${input}\nInput K-tokens (latest-response harness telemetry): ${used}\nRemaining input K-tokens (to 372k limit): ${remaining}`;
 }
 
 function toolTextResult(text, { isError = false } = {}) {
@@ -111,9 +112,9 @@ function jsonRpcResult(id, result) {
 // Reads the latest statusline snapshot for the given native session ID.
 // Returns { contextUsed, usedKTokens, remainingKTokens, sessionTitle }; every field is
 // null when the snapshot is absent, unreadable, invalid, or belongs to a
-// different session or project. context_used maps used_percentage/100;
-// used K-tokens map total_input_tokens/1000; remaining K-tokens approximate max(0, context_window_size -
-// total_input_tokens)/1000 (latest-response, input-only semantics).
+// different session or project. context_used maps total_input_tokens/372000;
+// input K-tokens map total_input_tokens/1000; remaining K-tokens map
+// max(0, 372000 - total_input_tokens)/1000 (latest-response semantics).
 async function readTelemetry(workspaceRoot, telemetrySessionId) {
   const root = nonEmptyString(workspaceRoot);
   const sessionId = nonEmptyString(telemetrySessionId);
@@ -143,28 +144,18 @@ async function readTelemetry(workspaceRoot, telemetrySessionId) {
   ) {
     return { ...UNKNOWN_TELEMETRY };
   }
-  const usedPercentage = snapshot.used_percentage;
-  const contextWindowSize = snapshot.context_window_size;
   const totalInputTokens = snapshot.total_input_tokens;
   const validTotalInputTokens =
     typeof totalInputTokens === "number" &&
     Number.isFinite(totalInputTokens) &&
     totalInputTokens >= 0;
-  const contextUsed =
-    typeof usedPercentage === "number" &&
-    Number.isFinite(usedPercentage) &&
-    usedPercentage >= 0 &&
-    usedPercentage <= 100
-      ? usedPercentage / 100
-      : null;
+  const contextUsed = validTotalInputTokens
+    ? Math.min(totalInputTokens / INPUT_LIMIT_TOKENS, 1)
+    : null;
   const usedKTokens = validTotalInputTokens ? totalInputTokens / 1000 : null;
-  const remainingKTokens =
-    typeof contextWindowSize === "number" &&
-    Number.isFinite(contextWindowSize) &&
-    contextWindowSize > 0 &&
-    validTotalInputTokens
-      ? Math.round(Math.max(0, contextWindowSize - totalInputTokens) / 1000)
-      : null;
+  const remainingKTokens = validTotalInputTokens
+    ? Math.max(INPUT_LIMIT_TOKENS - totalInputTokens, 0) / 1000
+    : null;
   return {
     contextUsed,
     usedKTokens,

@@ -163,9 +163,9 @@ test("codex MCP runtime handles the protocol and appends shared-contract records
   });
   assert.equal(called.result.isError, undefined);
   assert.match(called.result.content[0].text, /Checkpoint saved\./);
-  assert.match(called.result.content[0].text, /latest harness telemetry\): unknown/);
-  assert.match(called.result.content[0].text, /Used K-tokens .*: unknown/);
-  assert.match(called.result.content[0].text, /headroom from latest harness telemetry\): unknown/);
+  assert.match(called.result.content[0].text, /Input usage .*: unknown/);
+  assert.match(called.result.content[0].text, /Input K-tokens .*: unknown/);
+  assert.match(called.result.content[0].text, /Remaining input K-tokens .*: unknown/);
 
   const relativePath = checkpointCore.checkpointPath("codex-session");
   const recordFile = path.join(worktree, ...relativePath.split("/"));
@@ -407,9 +407,11 @@ test("codex SessionStart sources append open and preserve exact instruction outp
     assert.ok(context.includes(`Session checkpoint ID: ${sessionId}`));
     assert.ok(context.includes("subagent sets `close_session=true` only on its final checkpoint"));
     assert.ok(context.includes("Maintainer or parent leaves it false"));
-    assert.ok(context.includes("Approximately 75% context use"));
-    assert.ok(context.includes("approximately 220k used tokens are soft planning signals only"));
-    assert.ok(context.includes("Continuing toward approximately 300k used tokens is acceptable"));
+    assert.ok(context.includes("reported **input usage**"));
+    assert.ok(context.includes("Across providers"));
+    assert.ok(context.includes("approximately 220k input tokens are a soft planning signal"));
+    assert.ok(context.includes("At or above approximately 272k input tokens"));
+    assert.ok(context.includes("372k input rejection boundary is emergency headroom"));
     assert.ok(context.includes("previous completed step or latest harness snapshot"));
 
     const raw = await readFile(

@@ -104,16 +104,15 @@ final calls cannot synthesize `closed`.
 
 - The configured statusline wrapper atomically replaces the **latest**
   snapshot at `.agent-checkpoints/.runtime/claude/<native-session-id>.json`
-  (session/project identity, update timestamp, `used_percentage`,
-  `context_window_size`, `total_input_tokens`, `session_name` when present).
-- `context_used` = `used_percentage / 100`; used K-tokens are the
-  latest-response input-only `total_input_tokens / 1000`; remaining K-tokens
-  are **approximate**: `max(0, context_window_size - total_input_tokens) / 1000`.
-- Values are **latest-response** and **input-only**: `used_percentage` is
-  `null` before the first response and after compaction; the sidecar may be
-  absent entirely. Fields degrade independently to explicit `unknown` values;
-  a valid input count can still report used K-tokens even when percentage or
-  context-window headroom is unavailable. The snapshot may lag the active turn.
+  (session/project identity, update timestamp, `total_input_tokens`, and
+  `session_name` when present).
+- `context_used` retains its historical JSON key but now equals
+  `min(total_input_tokens / 372000, 1)`. Input K-tokens are
+  `total_input_tokens / 1000`; remaining input K-tokens are
+  `max(0, 372000 - total_input_tokens) / 1000`.
+- Values are **latest-response** and input-only. The sidecar may be absent or
+  lack a valid input count; in that case all three feedback values are
+  `unknown`. The snapshot may lag the active turn.
 - `agent` = subagent `agent_type` from the hook when present, else `null`;
   `session_title` = statusline `session_name` when present, else `null`.
 - The sidecar is ignored local runtime state — never JSONL, recovery data, or

@@ -92,8 +92,8 @@ inside an isolated `CODEX_HOME`.
   only on its final checkpoint with `close_session=true`; because Codex logging
   is session-level, this closes the shared row until the next session checkpoint
   reopens it. Closure is independent of `step_failed` and is not success.
-- **Honest telemetry.** Context percentage, used K-tokens, and remaining
-  K-tokens are all reported as `unknown`; no documented occupancy or token-use
+- **Honest telemetry.** Input usage, input K-tokens, and remaining input
+  K-tokens are all reported as `unknown`; no documented input-token
   channel exists on the CLI/MCP path. Feedback labels it as latest harness
   telemetry without claiming a live active-turn reading.
   `agent` and `session_title` are always `null` for Codex records.

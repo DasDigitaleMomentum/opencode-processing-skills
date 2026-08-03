@@ -91,7 +91,6 @@ class FakeCtx:
 class PluginTestCase(unittest.TestCase):
     def setUp(self):
         ac._reset_state()
-        self._env_limit = os.environ.pop("AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS", None)
         self._tmp = tempfile.TemporaryDirectory(prefix="hermes-checkpoint-test-")
         self.addCleanup(self._tmp.cleanup)
         self.workspace = Path(self._tmp.name) / "workspace"
@@ -101,8 +100,6 @@ class PluginTestCase(unittest.TestCase):
         self.addCleanup(self._restore_cwd)
 
     def tearDown(self):
-        if self._env_limit is not None:
-            os.environ["AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS"] = self._env_limit
         ac._reset_state()
 
     def _restore_cwd(self):
@@ -170,14 +167,16 @@ class RegistrationTests(unittest.TestCase):
             "same parallel tool-call block",
             "step_failed=true",
             "previous completed step or latest harness snapshot",
-            "Approximately 75% context use",
-            "approximately 220k used tokens are soft planning signals only",
-            "Continuing toward approximately 300k used tokens is acceptable",
+            "reported **input usage**",
+            "Across providers",
+            "approximately 220k input tokens are a soft planning signal",
+            "At or above approximately 272k input tokens",
+            "372k input rejection boundary is emergency headroom",
             "final checkpoint",
             "close_session=true",
             "Maintainer or parent leaves it false",
             "Closure is independent",
-            "compact handoff",
+            "compact digest or handoff",
             "does not prove work quality",
         )
         for platform in ("cli", "subagent"):
@@ -527,24 +526,24 @@ class PathParityTests(PluginTestCase):
 
 
 class TelemetryTests(PluginTestCase):
-    def test_estimate_with_known_model_limit(self):
+    def test_estimate_with_common_input_limit(self):
         self.start_session()
         self.bind_call()
         ac._on_pre_api_request(
-            approx_input_tokens=84000, model="claude-sonnet-4-6", session_id="hermes-sess"
+            approx_input_tokens=186000, model="claude-sonnet-4-6", session_id="hermes-sess"
         )
         result = ac.checkpoint("Done step label", "Next step label")
-        self.assertIn("~42%", result)
-        self.assertIn("Used K-tokens (latest input-estimate harness telemetry): ~84k", result)
+        self.assertIn("Input usage (latest harness telemetry, 372k limit): ~50%", result)
+        self.assertIn("Input K-tokens (latest harness telemetry): ~186k", result)
+        self.assertIn("Remaining input K-tokens (to 372k limit): ~186k", result)
         _, records = self.read_records(".agent-checkpoints/hermes-sess.jsonl")
-        self.assertAlmostEqual(records[0]["context_used"], 0.42)
+        self.assertAlmostEqual(records[0]["context_used"], 0.5)
 
-    def test_env_override_supplies_limit_for_unknown_model(self):
-        os.environ["AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS"] = "100000"
+    def test_model_does_not_change_common_input_limit(self):
         self.start_session()
         self.bind_call()
         ac._on_pre_api_request(
-            session_id="hermes-sess", approx_input_tokens=25000, model="mystery-model"
+            session_id="hermes-sess", approx_input_tokens=93000, model="mystery-model"
         )
         result = ac.checkpoint("Done step label", "Next step label")
         self.assertIn("~25%", result)
@@ -574,19 +573,19 @@ class TelemetryTests(PluginTestCase):
             self.assertIsNone(used_k, msg=f"invalid={invalid!r}")
             self.assertIsNone(remaining_k, msg=f"invalid={invalid!r}")
 
-    def test_null_fallback_on_unknown_model(self):
+    def test_unknown_model_still_uses_common_input_limit(self):
         ac._on_pre_api_request(
             session_id="hermes-sess", approx_input_tokens=1000, model="totally-unknown-model"
         )
         context_used, used_k, remaining_k = ac._telemetry("hermes-sess")
-        self.assertIsNone(context_used)
+        self.assertAlmostEqual(context_used, 1000 / 372000)
         self.assertEqual(used_k, 1)
-        self.assertIsNone(remaining_k)
+        self.assertEqual(remaining_k, 371)
 
     def test_estimate_clamped_to_unit_interval(self):
         self.start_session()
         self.bind_call()
-        for approx in (8193, 999999):
+        for approx in (372001, 999999):
             with self.subTest(approx=approx):
                 ac._on_pre_api_request(
                     session_id="hermes-sess", approx_input_tokens=approx, model="gpt-4"
@@ -599,31 +598,24 @@ class TelemetryTests(PluginTestCase):
                 self.assertIn("~0k", result)
                 self.assertNotRegex(result, r"~-\d+k")
 
-    def test_gpt4_family_model_limits(self):
-        cases = {
-            "gpt-4": 4096,
-            "gpt-4-32k": 16384,
-            "gpt-4-turbo": 64000,
-            "gpt-4-turbo-2024-04-09": 64000,
-            "gpt-4o": 64000,
-        }
-        for model, approx in cases.items():
+    def test_all_model_families_share_input_limit(self):
+        for model in ("gpt-4", "gpt-4o", "claude-sonnet-4-6", "mystery-model"):
             with self.subTest(model=model):
                 ac._reset_state()
                 ac._on_pre_api_request(
-                    session_id="hermes-sess", approx_input_tokens=approx, model=model
+                    session_id="hermes-sess", approx_input_tokens=186000, model=model
                 )
                 context_used, _, _ = ac._telemetry("hermes-sess")
                 self.assertAlmostEqual(context_used, 0.5)
 
-    def test_unlisted_gpt4_variant_falls_back_to_null(self):
+    def test_missing_model_still_uses_common_input_limit(self):
         ac._on_pre_api_request(
-            session_id="hermes-sess", approx_input_tokens=1000, model="gpt-4-nextgen"
+            session_id="hermes-sess", approx_input_tokens=186000, model=None
         )
         context_used, used_k, remaining_k = ac._telemetry("hermes-sess")
-        self.assertIsNone(context_used)
-        self.assertEqual(used_k, 1)
-        self.assertIsNone(remaining_k)
+        self.assertAlmostEqual(context_used, 0.5)
+        self.assertEqual(used_k, 186)
+        self.assertEqual(remaining_k, 186)
 
 
 class LegacyReadTests(unittest.TestCase):
@@ -1222,7 +1214,7 @@ await claudeEnd({{ hook_event_name: "SessionEnd", session_id: "claude-sess", cwd
         )
         self.assertEqual(watch.returncode, 0, watch.stderr)
         self.assertIn(
-            "AGENT NAME AGE STATE CP C/W/3 % CONTEXT DONE CURRENT",
+            "AGENT NAME AGE STATE CP C/W/3 % INPUT DONE CURRENT",
             " ".join(watch.stdout.split()),
         )
         for session, _ in logs.values():

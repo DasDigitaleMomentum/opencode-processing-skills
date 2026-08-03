@@ -22,13 +22,35 @@ import { main as inspectCheckpoint } from "../../packages/checkpoint-core/bin/ch
 import * as checkpointCore from "../../packages/checkpoint-core/src/index.js";
 import {
   createOpenCodeCheckpointPlugin,
-  createOpenCodeContextTelemetry,
+  createOpenCodeInputTelemetry,
   createOpenCodeSessionTitle,
 } from "../checkpoint-runtime.mjs";
 
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, "../..");
 const INSTRUCTION_MARKER = "<!-- opencode-checkpoint-instruction -->";
 const INSTRUCTION_END_MARKER = "<!-- /opencode-checkpoint-instruction -->";
+const PREVIOUS_SOFT_CONTEXT_INSTRUCTION = `<!-- opencode-checkpoint-instruction -->
+
+## Checkpoint Heartbeat
+
+This instruction applies to parents and subagents. Segment work into meaningful, role-appropriate bounded units and call \`checkpoint\` after each completed or failed unit, not after every tiny action. Follow any more specific role cadence. Write \`done\` and \`next\` as exactly three words, and reuse the previous \`next\` text verbatim as the following \`done\`.
+
+Where possible, include \`checkpoint\` in the same parallel tool-call block as the next independent tool calls. Do not create an additional model round trip solely for checkpointing.
+
+When an attempted subtask fails, still checkpoint with that announced subtask as \`done\`, set \`step_failed=true\`, and make \`next\` the corrective step. This records work progress and is not itself a Canary failure.
+
+Checkpoint feedback may describe the previous completed step or latest harness snapshot and therefore lag the active turn. Treat unknown telemetry as unknown. Before deliberately starting another context-heavy unit, consider the latest feedback, remaining work, and available headroom.
+
+Approximately 75% context use and approximately 220k used tokens are soft planning signals only, never stop conditions. Continuing toward approximately 300k used tokens is acceptable when the remaining work is bounded. Do not deliberately open another context-heavy branch without first assessing the remaining work and headroom. If continued work is no longer controlled, complete the current bounded unit, write a final checkpoint, and return a compact handoff stating progress and the next announced step.
+
+Checkpointing records progress but does not prove work quality.
+
+Every successful checkpoint lazily confirms the persisted session as open. \`close_session\` defaults to \`false\`. A subagent sets \`close_session=true\` only on its final checkpoint immediately before returning a digest, summary, or handoff. A Maintainer or parent leaves it false unless intentionally ending the whole persisted session.
+
+Closure is independent of \`step_failed\` and does not prove work succeeded. An interrupted session or missing final call remains open; any later checkpoint confirms it open again.
+
+<!-- /opencode-checkpoint-instruction -->
+`;
 const PREVIOUS_CURRENT_INSTRUCTION = `<!-- opencode-checkpoint-instruction -->
 
 ## Checkpoint Heartbeat
@@ -328,7 +350,7 @@ async function assertInstalledOpenCodePilot(home) {
   assert.doesNotMatch(plugin, /^import .*@opencode-ai\/plugin/m);
   assert.match(plugin, /fallbackTool/);
   assert.match(plugin, /await import\("@opencode-ai\/plugin"\)/);
-  assert.match(plugin, /createOpenCodeContextTelemetry\(pluginContext\?\.client\)/);
+  assert.match(plugin, /createOpenCodeInputTelemetry\(pluginContext\?\.client\)/);
   assert.match(plugin, /createOpenCodeSessionTitle\(pluginContext\?\.client\)/);
   assert.match(runtime, /createOpenCodeCheckpointPlugin/);
   assert.match(core, /export async function checkpoint/);
@@ -351,9 +373,11 @@ async function assertInstalledOpenCodePilot(home) {
     assert.equal(persona.split(INSTRUCTION_END_MARKER).length - 1, 1, name);
     assert.match(persona, /subagent sets `close_session=true` only on its final checkpoint/);
     assert.match(persona, /Maintainer or parent leaves it false/);
-    assert.match(persona, /Approximately 75% context use/);
-    assert.match(persona, /approximately 220k used tokens are soft planning signals only/);
-    assert.match(persona, /Continuing toward approximately 300k used tokens is acceptable/);
+    assert.match(persona, /reported \*\*input usage\*\*/);
+    assert.match(persona, /Across providers/);
+    assert.match(persona, /approximately 220k input tokens are a soft planning signal/);
+    assert.match(persona, /At or above approximately 272k input tokens/);
+    assert.match(persona, /372k input rejection boundary is emergency headroom/);
     assert.match(persona, /previous completed step or latest harness snapshot/);
   }
 
@@ -391,7 +415,7 @@ test("native tools isolate parent and subagent logs with honest unknown telemetr
 
   assert.equal(
     parentResult,
-    "Checkpoint saved.\nContext (previous completed step, TUI-equivalent): unknown\nUsed K-tokens (previous completed step, TUI-equivalent): unknown\nRemaining K-tokens (context-window headroom after previous completed step): unknown",
+    "Checkpoint saved.\nInput usage (previous completed step, 372k limit): unknown\nInput K-tokens (previous completed step): unknown\nRemaining input K-tokens (to 372k limit): unknown",
   );
   assert.equal(subagentResult, parentResult);
   for (const sessionId of ["parent/session", "subagent-session"]) {
@@ -434,7 +458,7 @@ test("native tools isolate parent and subagent logs with honest unknown telemetr
   const failedSummary = await inspect(subagentPath, worktree);
   assert.match(parentSummary, /Session: parent\/session/);
   assert.match(parentSummary, /Work status: COMPLETED/);
-  assert.match(parentSummary, /Context used: unknown/);
+  assert.match(parentSummary, /Input used: unknown/);
   assert.match(parentSummary, /Chain: 0\/0 \(n\/a\)/);
   assert.match(parentSummary, /Work: 1\/1 \(100%\)/);
   assert.match(parentSummary, /Three-word compliance: 2\/2 \(100%\)/);
@@ -597,14 +621,14 @@ test("OpenCode directory wins when newer hosts expose root as worktree", async (
   }
 });
 
-test("telemetry uses the latest completed assistant step and sums all token categories", async () => {
-  const telemetry = createOpenCodeContextTelemetry(
+test("telemetry reports latest completed input against the 372k limit", async () => {
+  const telemetry = createOpenCodeInputTelemetry(
     fakeClient({
       messages: [
         assistant({ id: "older", input: 50, output: 10 }),
         assistant({
           id: "completed",
-          input: 400,
+          input: 223200,
           output: 100,
           reasoning: 50,
           cacheRead: 200,
@@ -616,9 +640,9 @@ test("telemetry uses the latest completed assistant step and sums all token cate
   );
 
   assert.deepEqual(await telemetry({ sessionID: "session-a", directory: "/workspace" }), {
-    contextUsed: 0.8,
-    usedKTokens: 0.8,
-    remainingKTokens: 0.2,
+    contextUsed: 0.6,
+    usedKTokens: 223.2,
+    remainingKTokens: 148.8,
   });
 });
 
@@ -730,38 +754,42 @@ test("session title failures and empty host metadata persist null without blocki
   }
 });
 
-test("telemetry clamps exhausted context and rejects malformed host data", async () => {
-  const exhausted = createOpenCodeContextTelemetry(
-    fakeClient({ messages: [assistant({ id: "large", input: 1000, output: 500 })] }),
+test("telemetry clamps exhausted input and rejects malformed host data", async () => {
+  const exhausted = createOpenCodeInputTelemetry(
+    fakeClient({ messages: [assistant({ id: "large", input: 400000, output: 500 })] }),
   );
   assert.deepEqual(await exhausted({ sessionID: "session-a", directory: "/workspace" }), {
     contextUsed: 1,
-    usedKTokens: 1.5,
+    usedKTokens: 400,
     remainingKTokens: 0,
   });
 
-  for (const client of [
-    fakeClient({ messages: [assistant({ id: "invalid", reasoning: Number.NaN })] }),
-    fakeClient({ messages: undefined }),
-  ]) {
-    const telemetry = createOpenCodeContextTelemetry(client);
-    assert.deepEqual(await telemetry({ sessionID: "session-a", directory: "/workspace" }), {
-      contextUsed: null,
-      usedKTokens: null,
-      remainingKTokens: null,
-    });
-  }
+  const partial = createOpenCodeInputTelemetry(
+    fakeClient({ messages: [assistant({ id: "invalid", input: 186000, reasoning: Number.NaN })] }),
+  );
+  assert.deepEqual(await partial({ sessionID: "session-a", directory: "/workspace" }), {
+    contextUsed: 0.5,
+    usedKTokens: 186,
+    remainingKTokens: 186,
+  });
+
+  const absent = createOpenCodeInputTelemetry(fakeClient({ messages: undefined }));
+  assert.deepEqual(await absent({ sessionID: "session-a", directory: "/workspace" }), {
+    contextUsed: null,
+    usedKTokens: null,
+    remainingKTokens: null,
+  });
 
   for (const client of [
     fakeClient({ messages: [assistant({ id: "unmatched", providerID: "missing" })] }),
     fakeClient({ messages: [assistant({ id: "invalid-limit" })], contextLimit: 0 }),
     fakeClient({ messages: [assistant({ id: "provider-error" })], providerError: new Error("unavailable") }),
   ]) {
-    const telemetry = createOpenCodeContextTelemetry(client);
+    const telemetry = createOpenCodeInputTelemetry(client);
     assert.deepEqual(await telemetry({ sessionID: "session-a", directory: "/workspace" }), {
-      contextUsed: null,
-      usedKTokens: 0.12,
-      remainingKTokens: null,
+      contextUsed: 100 / 372000,
+      usedKTokens: 0.1,
+      remainingKTokens: 371.9,
     });
   }
 });
@@ -769,18 +797,18 @@ test("telemetry clamps exhausted context and rejects malformed host data", async
 test("SDK telemetry failures fall back to null without blocking persistence", async (t) => {
   const worktree = await mkdtemp(path.join(os.tmpdir(), "checkpoint-opencode-telemetry-error-"));
   t.after(() => rm(worktree, { recursive: true, force: true }));
-  const getContextTelemetry = createOpenCodeContextTelemetry(
+  const getInputTelemetry = createOpenCodeInputTelemetry(
     fakeClient({ messages: [], messageError: new Error("SDK unavailable") }),
   );
-  const plugin = createOpenCodeCheckpointPlugin({ tool: fakeTool, checkpointCore, getContextTelemetry });
+  const plugin = createOpenCodeCheckpointPlugin({ tool: fakeTool, checkpointCore, getInputTelemetry });
   const hooks = await plugin({ worktree });
 
   const result = await hooks.tool.checkpoint.execute(
     { done: "Host query attempted", next: "Checkpoint write verified" },
     { sessionID: "session-a", directory: "/workspace", worktree },
   );
-  assert.match(result, /TUI-equivalent\): unknown/);
-  assert.match(result, /Used K-tokens .*: unknown/);
+  assert.match(result, /Input usage .*: unknown/);
+  assert.match(result, /Input K-tokens .*: unknown/);
   const raw = await readFile(
     path.join(worktree, ...checkpointCore.checkpointPath("session-a").split("/")),
     "utf8",
@@ -962,6 +990,7 @@ test("installer migrates only the exact legacy managed fragment and preserves su
   const current = await readFile(path.join(REPOSITORY_ROOT, "opencode/checkpoint-instruction.md"), "utf8");
   const legacyPath = path.join(home, "agents/ordinary-legacy.md");
   const initialLegacyPath = path.join(home, "agents/delegate-codex.md");
+  const previousSoftContextPath = path.join(home, "agents/previous-soft-context.md");
   const previousCurrentPath = path.join(home, "agents/previous-current.md");
   const retainedVariantPath = path.join(home, "agents/delegate-retained.md");
   const currentPath = path.join(home, "agents/ordinary-current.md");
@@ -969,6 +998,7 @@ test("installer migrates only the exact legacy managed fragment and preserves su
   const suffix = "user suffix without terminal newline";
   await writeFile(legacyPath, `${prefix}${LEGACY_INSTRUCTION}${suffix}`);
   await writeFile(initialLegacyPath, `${prefix}${INITIAL_LEGACY_INSTRUCTION}${suffix}`);
+  await writeFile(previousSoftContextPath, `${prefix}${PREVIOUS_SOFT_CONTEXT_INSTRUCTION}${suffix}`);
   await writeFile(previousCurrentPath, `${prefix}${PREVIOUS_CURRENT_INSTRUCTION}${suffix}`);
   await writeFile(retainedVariantPath, `variant prefix\n${LEGACY_INSTRUCTION}variant suffix\n`);
   const exactCurrent = `${prefix}${current}${suffix}`;
@@ -977,11 +1007,13 @@ test("installer migrates only the exact legacy managed fragment and preserves su
   const output = runInstaller([], { cwd: root, configFile, opencodeHome: home });
   assert.match(output, /Updated: ordinary-legacy\.md/);
   assert.match(output, /Updated: delegate-codex\.md/);
+  assert.match(output, /Updated: previous-soft-context\.md/);
   assert.match(output, /Updated: previous-current\.md/);
   assert.match(output, /Updated: delegate-retained\.md/);
   assert.match(output, /Present: ordinary-current\.md/);
   assert.equal(await readFile(legacyPath, "utf8"), `${prefix}${current}${suffix}`);
   assert.equal(await readFile(initialLegacyPath, "utf8"), `${prefix}${current}${suffix}`);
+  assert.equal(await readFile(previousSoftContextPath, "utf8"), `${prefix}${current}${suffix}`);
   assert.equal(await readFile(previousCurrentPath, "utf8"), `${prefix}${current}${suffix}`);
   assert.equal(
     await readFile(retainedVariantPath, "utf8"),
@@ -1166,7 +1198,7 @@ test("lifecycle documentation preserves honest events and ordered upgrade steps"
   assert.match(installation, /No child-end hook, host-idle heuristic, or parent-child field is added/);
   assert.match(installation, /unknown\/customized marked content stops loudly unchanged/);
   assert.match(installation, /`--stale-ms` and `CHECKPOINT_WATCH_STALE_MS` remain accepted.*no-ops/);
-  assert.match(installation, /`AGENT`, `NAME`, `AGE`, `STATE`, `CP`, `C\/W\/3 %`, `CONTEXT`, `DONE`, and `CURRENT`/);
+  assert.match(installation, /`AGENT`, `NAME`, `AGE`, `STATE`, `CP`, `C\/W\/3 %`, `INPUT`, `DONE`, and `CURRENT`/);
   assert.match(installation, /fixed presentation cutoff is exactly 10,800,000 ms/);
   assert.match(installation, /Lowercase `v` alone toggles all old rows/);
   assert.match(installation, /atomically renamed to `\$HOME\/\.local\/bin\/checkpoint-watch`/);

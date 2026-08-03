@@ -290,9 +290,9 @@ test("claude MCP runtime handles the protocol and appends telemetry-fed contract
   });
   assert.equal(parentCall.result.isError, undefined);
   assert.match(parentCall.result.content[0].text, /Checkpoint saved\./);
-  assert.match(parentCall.result.content[0].text, /latest-response harness telemetry\): ~42%/);
-  assert.match(parentCall.result.content[0].text, /Used K-tokens .*: ~84k/);
-  assert.match(parentCall.result.content[0].text, /headroom from latest-response input-only telemetry\): ~116k/);
+  assert.match(parentCall.result.content[0].text, /Input usage .*: ~23%/);
+  assert.match(parentCall.result.content[0].text, /Input K-tokens .*: ~84k/);
+  assert.match(parentCall.result.content[0].text, /Remaining input K-tokens .*: ~288k/);
 
   const subagentCall = await runtime.handleMessage({
     jsonrpc: "2.0",
@@ -322,14 +322,14 @@ test("claude MCP runtime handles the protocol and appends telemetry-fed contract
 
   assert.deepEqual(Object.keys(parentRecord), RECORD_KEYS);
   assert.equal(parentRecord.session_id, "sess-parent");
-  assert.equal(parentRecord.context_used, 0.42);
+  assert.equal(parentRecord.context_used, 84_000 / 372_000);
   assert.equal(parentRecord.agent, null);
   assert.equal(parentRecord.session_title, "Demo Session");
   assert.equal(parentRecord.step_failed, false);
 
   assert.deepEqual(Object.keys(subagentRecord), RECORD_KEYS);
   assert.equal(subagentRecord.session_id, "sess-parent--agent-1");
-  assert.equal(subagentRecord.context_used, 0.42);
+  assert.equal(subagentRecord.context_used, 84_000 / 372_000);
   assert.equal(subagentRecord.agent, "implementer");
   assert.equal(subagentRecord.session_title, "Demo Session");
   assert.equal(subagentRecord.step_failed, true);
@@ -468,9 +468,9 @@ test("claude readTelemetry degrades to explicit unknowns on mismatch and invalid
     session_name: null,
   });
   const nullPercentage = await readTelemetry(worktree, "sess-a");
-  assert.equal(nullPercentage.contextUsed, null);
+  assert.equal(nullPercentage.contextUsed, 50_000 / 372_000);
   assert.equal(nullPercentage.usedKTokens, 50);
-  assert.equal(nullPercentage.remainingKTokens, 150);
+  assert.equal(nullPercentage.remainingKTokens, 322);
   assert.equal(nullPercentage.sessionTitle, null);
 
   const absent = await readTelemetry(worktree, "sess-absent");
@@ -532,9 +532,9 @@ test("claude readTelemetry degrades to explicit unknowns on mismatch and invalid
     })}\n`,
   );
   const outOfRange = await readTelemetry(worktree, "sess-range");
-  assert.equal(outOfRange.contextUsed, null);
+  assert.equal(outOfRange.contextUsed, 250_000 / 372_000);
   assert.equal(outOfRange.usedKTokens, 250);
-  assert.equal(outOfRange.remainingKTokens, 0);
+  assert.equal(outOfRange.remainingKTokens, 122);
 });
 
 test("claude MCP writes stay eight-field while legacy six-field logs remain readable", async (t) => {
@@ -635,8 +635,8 @@ test("claude MCP stdio server flushes tool-call responses before exiting", async
   assert.equal(responses.length, 3);
   assert.equal(responses[0].result.protocolVersion, "2025-03-26");
   assert.match(responses[1].result.content[0].text, /Checkpoint saved\./);
-  assert.match(responses[1].result.content[0].text, /latest-response harness telemetry\): unknown/);
-  assert.match(responses[1].result.content[0].text, /Used K-tokens .*: unknown/);
+  assert.match(responses[1].result.content[0].text, /Input usage .*: unknown/);
+  assert.match(responses[1].result.content[0].text, /Input K-tokens .*: unknown/);
   assert.equal(responses[2].result.content[0].text, ".agent-checkpoints/stdio-session.jsonl");
   const raw = await readFile(
     path.join(worktree, ...checkpointCore.checkpointPath("stdio-session").split("/")),
@@ -676,7 +676,7 @@ test("claude-produced logs pass the shared selected-path inspection", async (t) 
   assert.equal(inspection.status, 0, inspection.stderr);
   assert.match(inspection.stdout, /Session: inspect-me/);
   assert.match(inspection.stdout, /Chain: 1\/1 \(100%\)/);
-  assert.match(inspection.stdout, /Context used: unknown/);
+  assert.match(inspection.stdout, /Input used: unknown/);
 });
 
 test("claude hook injects the checkpoint instruction on SessionStart and SubagentStart", () => {
@@ -704,13 +704,17 @@ test("claude hook injects the checkpoint instruction on SessionStart and Subagen
     "Maintainer or parent leaves it false",
   ));
   assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
-    "Approximately 75% context use",
+    "reported **input usage**",
+  ));
+  assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes("Across providers"));
+  assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
+    "approximately 220k input tokens are a soft planning signal",
   ));
   assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
-    "approximately 220k used tokens are soft planning signals only",
+    "At or above approximately 272k input tokens",
   ));
   assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
-    "Continuing toward approximately 300k used tokens is acceptable",
+    "372k input rejection boundary is emergency headroom",
   ));
   assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
     "previous completed step or latest harness snapshot",
@@ -1050,13 +1054,11 @@ test("claude statusline normalizes, formats, and atomically replaces the latest 
   assert.deepEqual(normalized, {
     session_id: "sess-1",
     project_dir: worktree,
-    used_percentage: 42,
-    context_window_size: 200000,
     total_input_tokens: 84000,
     session_name: "Demo Session",
   });
-  assert.equal(formatStatusline(normalized), "Checkpoint context: 42%");
-  assert.equal(formatStatusline(null), "Checkpoint context: unknown");
+  assert.equal(formatStatusline(normalized), "Checkpoint input: 23%");
+  assert.equal(formatStatusline(null), "Checkpoint input: unknown");
   assert.equal(normalizeStatuslineTelemetry(null), null);
   assert.equal(normalizeStatuslineTelemetry({ session_id: "s" }), null);
   assert.equal(
@@ -1067,32 +1069,28 @@ test("claude statusline normalizes, formats, and atomically replaces the latest 
   const payload = statuslinePayload({ workspace: { project_dir: worktree } });
   const first = runStatusline(payload);
   assert.equal(first.status, 0, first.stderr);
-  assert.equal(first.stdout, "Checkpoint context: 42%\n");
+  assert.equal(first.stdout, "Checkpoint input: 23%\n");
   const sidecar = sidecarPathFor(worktree, "sess-1");
   const snapshot = JSON.parse(await readFile(sidecar, "utf8"));
   assert.deepEqual(Object.keys(snapshot).sort(), [
-    "context_window_size",
     "project_dir",
     "session_id",
     "session_name",
     "total_input_tokens",
     "updated_at",
-    "used_percentage",
   ]);
-  assert.equal(snapshot.used_percentage, 42);
   assert.equal(snapshot.session_name, "Demo Session");
 
-  // Null percentage (pre-first-response / post-compaction) replaces the
-  // previous value atomically instead of fabricating one.
+  // Input tokens replace the previous value atomically regardless of the
+  // host's unrelated percentage field.
   const compacted = runStatusline(statuslinePayload({
     workspace: { project_dir: worktree },
     used_percentage: null,
     total_input_tokens: 90000,
   }));
   assert.equal(compacted.status, 0, compacted.stderr);
-  assert.equal(compacted.stdout, "Checkpoint context: unknown\n");
+  assert.equal(compacted.stdout, "Checkpoint input: 24%\n");
   const replaced = JSON.parse(await readFile(sidecar, "utf8"));
-  assert.equal(replaced.used_percentage, null);
   assert.equal(replaced.total_input_tokens, 90000);
 
   const runtimeEntries = await readdir(path.dirname(sidecar));
@@ -1100,12 +1098,12 @@ test("claude statusline normalizes, formats, and atomically replaces the latest 
 
   const malformed = runStatusline("not json");
   assert.equal(malformed.status, 0);
-  assert.equal(malformed.stdout, "Checkpoint context: unknown\n");
+  assert.equal(malformed.stdout, "Checkpoint input: unknown\n");
   assert.match(malformed.stderr, /agent-checkpoint statusline/);
 
   const noIdentity = runStatusline({ model: { id: "m" } });
   assert.equal(noIdentity.status, 0);
-  assert.equal(noIdentity.stdout, "Checkpoint context: unknown\n");
+  assert.equal(noIdentity.stdout, "Checkpoint input: unknown\n");
   assert.deepEqual(
     (await readdir(path.dirname(sidecar))).filter((entry) => entry !== "sess-1.json"),
     [],
