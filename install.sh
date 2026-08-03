@@ -23,6 +23,8 @@
 #                                                   via anthropic.claude-code ext;
 #                                                   plus agent-checkpoint plugin
 #                                                   + opt-in settings file)
+#   - Claude Desktop -> CLAUDE_DESKTOP_HOME/agent-checkpoint
+#                       (global-only MCP adapter + additive Desktop config entry)
 #   - Cursor     -> CURSOR_HOME/skills              (workflow skills, same as OpenCode)
 #                   + subagents/, ops/, orchestrator skills from cursor/
 #   - Hermes     -> HERMES_HOME/skills/processing   (skills in a namespaced
@@ -33,10 +35,12 @@
 #   OPS_OPENCODE_HOME       override OpenCode home
 #   OPS_CODEX_HOME          override Codex home
 #   OPS_CLAUDE_HOME         override Claude Code home
+#   OPS_CLAUDE_DESKTOP_HOME override Claude Desktop application-support home
 #   OPS_CURSOR_HOME         override Cursor home
 #   OPS_HERMES_HOME         override Hermes home
 #   OPS_SYNC_CODEX          true|false|auto — override targets.codex.enabled
 #   OPS_SYNC_CLAUDE         true|false|auto — override targets.claude.enabled
+#   OPS_SYNC_CLAUDE_DESKTOP true|false|auto — override targets.claude_desktop.enabled
 #   OPS_SYNC_CURSOR         true|false|auto — override targets.cursor.enabled
 #   OPS_SYNC_HERMES         true|false|auto — override targets.hermes.enabled
 #   OPS_ANTIGRAVITY_PATH    override Antigravity detection path (test-only)
@@ -246,6 +250,15 @@ CLAUDE_STATE_RAW=$(yaml_get_target "claude" "enabled")
 CLAUDE_STATE_RAW="${CLAUDE_STATE_RAW:-auto}"
 CLAUDE_STATE="${OPS_SYNC_CLAUDE:-$CLAUDE_STATE_RAW}"
 
+# Claude Desktop (independent from Claude Code)
+CLAUDE_DESKTOP_HOME_RAW=$(yaml_get_target "claude_desktop" "home")
+CLAUDE_DESKTOP_HOME_RAW="${CLAUDE_DESKTOP_HOME_RAW:-$HOME/Library/Application Support/Claude}"
+CLAUDE_DESKTOP_HOME="${OPS_CLAUDE_DESKTOP_HOME:-$CLAUDE_DESKTOP_HOME_RAW}"
+CLAUDE_DESKTOP_HOME=$(expand_home "$CLAUDE_DESKTOP_HOME")
+CLAUDE_DESKTOP_STATE_RAW=$(yaml_get_target "claude_desktop" "enabled")
+CLAUDE_DESKTOP_STATE_RAW="${CLAUDE_DESKTOP_STATE_RAW:-auto}"
+CLAUDE_DESKTOP_STATE="${OPS_SYNC_CLAUDE_DESKTOP:-$CLAUDE_DESKTOP_STATE_RAW}"
+
 # Cursor
 CURSOR_HOME_RAW=$(yaml_get_target "cursor" "home")
 CURSOR_HOME_RAW="${CURSOR_HOME_RAW:-$HOME/.cursor}"
@@ -290,6 +303,14 @@ if is_enabled "$CLAUDE_STATE" "$CLAUDE_HOME"; then
     echo "Claude Code integration: enabled (skills -> $CLAUDE_HOME/skills, agents -> $CLAUDE_HOME/agents)"
 else
     echo "Claude Code integration: disabled"
+fi
+
+claude_desktop_enabled=0
+if is_enabled "$CLAUDE_DESKTOP_STATE" "$CLAUDE_DESKTOP_HOME"; then
+    claude_desktop_enabled=1
+    echo "Claude Desktop integration: enabled (MCP adapter -> $CLAUDE_DESKTOP_HOME/agent-checkpoint)"
+else
+    echo "Claude Desktop integration: disabled"
 fi
 
 if is_enabled "$CURSOR_STATE" "$CURSOR_HOME"; then
@@ -927,6 +948,7 @@ install_opencode_checkpoint_file() {
 }
 
 CHECKPOINT_WATCH_NATIVE_PATH=""
+CLAUDE_DESKTOP_NODE_BIN=""
 
 install_optional_native_checkpoint_watch() (
     local native_dir="$HOME/.local/bin"
@@ -1164,6 +1186,47 @@ preflight_checkpoint_reader_dependencies() {
             "$CLAUDE_HOME" \
             "skills/agent-checkpoint/server/checkpoint-core.mjs" \
             "Claude bundled checkpoint core"
+    fi
+
+    if [ "$PROJECT_MODE" = false ] && [ "$claude_desktop_enabled" = "1" ]; then
+        local desktop_relative_path
+        preflight_required_checkpoint_reader \
+            "$CLAUDE_DESKTOP_HOME" \
+            "Claude Desktop application-support home"
+        for desktop_relative_path in \
+            "agent-checkpoint" \
+            "agent-checkpoint/checkpoint-core.mjs" \
+            "agent-checkpoint/checkpoint-mcp-runtime.mjs" \
+            "agent-checkpoint/checkpoint-mcp-server.mjs" \
+            "agent-checkpoint/configure-desktop.mjs" \
+            "agent-checkpoint/README.md" \
+            "claude_desktop_config.json"; do
+            preflight_required_checkpoint_reader_components \
+                "$CLAUDE_DESKTOP_HOME" \
+                "$desktop_relative_path" \
+                "Claude Desktop adapter/config destination"
+        done
+        if ! CLAUDE_DESKTOP_NODE_BIN="$(command -v node)"; then
+            echo "ERROR: node not found on PATH; cannot configure the Claude Desktop checkpoint MCP server." >&2
+            return 1
+        fi
+        case "$CLAUDE_DESKTOP_NODE_BIN" in
+            /*) ;;
+            *)
+                echo "ERROR: resolved Claude Desktop node executable is not absolute: $CLAUDE_DESKTOP_NODE_BIN" >&2
+                return 1
+                ;;
+        esac
+        if ! "$CLAUDE_DESKTOP_NODE_BIN" \
+            "$SCRIPT_DIR/claude-desktop/agent-checkpoint/configure-desktop.mjs" \
+            --check \
+            "$CLAUDE_DESKTOP_HOME/claude_desktop_config.json" \
+            "$CLAUDE_DESKTOP_NODE_BIN" \
+            "$CLAUDE_DESKTOP_HOME/agent-checkpoint/checkpoint-mcp-server.mjs" \
+            >/dev/null; then
+            echo "ERROR: Claude Desktop checkpoint configuration preflight failed; no installation targets were changed." >&2
+            return 1
+        fi
     fi
 }
 
@@ -1542,6 +1605,62 @@ JSON
     echo ""
 }
 
+# Claude Desktop checkpoint adapter: dependency-free stdio MCP server with an
+# explicit workspace/session boundary and one additive, atomic Desktop config
+# registration. This target is independent from the Claude Code plugin.
+install_claude_desktop_checkpoint() {
+    local desktop_home="$1"
+    local adapter_src="$SCRIPT_DIR/claude-desktop/agent-checkpoint"
+    local adapter_dest="$desktop_home/agent-checkpoint"
+    local config_file="$desktop_home/claude_desktop_config.json"
+    local server_path="$adapter_dest/checkpoint-mcp-server.mjs"
+
+    echo "Step 8.1: Installing Claude Desktop checkpoint adapter to $adapter_dest"
+    if [ -z "$CLAUDE_DESKTOP_NODE_BIN" ]; then
+        echo "  ERROR: Claude Desktop node executable was not resolved during preflight." >&2
+        return 1
+    fi
+
+    mkdir -p "$adapter_dest"
+    install_opencode_checkpoint_file \
+        "$SCRIPT_DIR/packages/checkpoint-core/src/index.js" \
+        "$adapter_dest/checkpoint-core.mjs" \
+        "agent-checkpoint/checkpoint-core.mjs"
+    install_opencode_checkpoint_file \
+        "$adapter_src/checkpoint-mcp-runtime.mjs" \
+        "$adapter_dest/checkpoint-mcp-runtime.mjs" \
+        "agent-checkpoint/checkpoint-mcp-runtime.mjs"
+    install_opencode_checkpoint_file \
+        "$adapter_src/checkpoint-mcp-server.mjs" \
+        "$server_path" \
+        "agent-checkpoint/checkpoint-mcp-server.mjs"
+    install_opencode_checkpoint_file \
+        "$adapter_src/configure-desktop.mjs" \
+        "$adapter_dest/configure-desktop.mjs" \
+        "agent-checkpoint/configure-desktop.mjs"
+    install_opencode_checkpoint_file \
+        "$adapter_src/README.md" \
+        "$adapter_dest/README.md" \
+        "agent-checkpoint/README.md"
+
+    if [ ! -L "$server_path" ]; then
+        chmod +x "$server_path"
+    fi
+    if [ ! -L "$adapter_dest/configure-desktop.mjs" ]; then
+        chmod +x "$adapter_dest/configure-desktop.mjs"
+    fi
+
+    "$CLAUDE_DESKTOP_NODE_BIN" \
+        "$adapter_dest/configure-desktop.mjs" \
+        --write \
+        "$config_file" \
+        "$CLAUDE_DESKTOP_NODE_BIN" \
+        "$server_path" \
+        >/dev/null
+    echo "  Registered: claude_desktop_config.json mcpServers.agent-checkpoint"
+    echo ""
+}
+
 # Add a plugin name to the plugins.enabled list of a Hermes config.yaml using
 # only additive text edits. Rationale: the documented enablement flow
 # (`hermes plugins enable`) rewrites the whole file via save_config ->
@@ -1866,6 +1985,11 @@ if [ "$PROJECT_MODE" = false ] && [ "$claude_enabled" = "1" ]; then
     install_claude_checkpoint "$CLAUDE_HOME"
 fi
 
+# --- Step 8.1: Claude Desktop checkpoint adapter (global installations only) ---
+if [ "$PROJECT_MODE" = false ] && [ "$claude_desktop_enabled" = "1" ]; then
+    install_claude_desktop_checkpoint "$CLAUDE_DESKTOP_HOME"
+fi
+
 # --- Step 9: Hermes checkpoint plugin (global installations only) ---
 if [ "$PROJECT_MODE" = false ] && [ "$hermes_enabled" = "1" ]; then
     install_hermes_checkpoint "$HERMES_HOME"
@@ -1926,6 +2050,15 @@ if [ "$PROJECT_MODE" = false ] && [ "$claude_enabled" = "1" ]; then
     echo "  Activate with:     CLAUDE_CONFIG_DIR=\"$CLAUDE_HOME\" claude --settings \"$CLAUDE_HOME/agent-checkpoint.settings.json\""
     echo "  Base settings.json and ~/.claude.json left untouched; approve the new hooks on first run."
     echo "  Restart Claude Code (or run /reload-plugins) to load the plugin."
+fi
+if [ "$PROJECT_MODE" = false ] && [ "$claude_desktop_enabled" = "1" ]; then
+    echo ""
+    echo "Claude Desktop:"
+    echo "  Checkpoint adapter: $CLAUDE_DESKTOP_HOME/agent-checkpoint/"
+    echo "  Configuration:      $CLAUDE_DESKTOP_HOME/claude_desktop_config.json"
+    echo "  MCP log:            $HOME/Library/Logs/Claude/mcp-server-agent-checkpoint.log"
+    echo "  A full quit and restart of Claude Desktop is required to load the MCP server."
+    echo "  Claude Code configuration and files were left untouched."
 fi
 if [ "$PROJECT_MODE" = false ] && [ "$hermes_enabled" = "1" ]; then
     echo ""

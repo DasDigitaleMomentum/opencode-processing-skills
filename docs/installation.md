@@ -14,6 +14,7 @@ The installer auto-detects which harnesses to sync into. Out of the box:
 - **OpenCode** (always): skills + agents + checkpoint plugin/support files to `~/.config/opencode/`
 - **Codex** (if `~/.codex/` exists): skills to `~/.codex/skills/` + the agent-checkpoint adapter to `~/.codex/agent-checkpoint/` with an additive `agent-checkpoint.config.toml` profile (global installs only; the base `config.toml` is never modified)
 - **Claude Code** (if `~/.claude/` exists): skills + agents to `~/.claude/` + the agent-checkpoint plugin to `~/.claude/skills/agent-checkpoint/` with an opt-in `agent-checkpoint.settings.json` statusline file (global installs only; the base `settings.json` and `~/.claude.json` are never modified)
+- **Claude Desktop** (if `~/Library/Application Support/Claude/` exists): an independent, global-only MCP adapter under `~/Library/Application Support/Claude/agent-checkpoint/` plus one additive `mcpServers.agent-checkpoint` registration in `claude_desktop_config.json`
 - **Cursor** (if `~/.cursor/` exists): adapted skills + orchestrator to `~/.cursor/skills/`
 - **Hermes** (if `~/.hermes/` exists): skills to `~/.hermes/skills/processing/` (a namespaced category dir — Hermes discovers `SKILL.md` files recursively and shows top-level dirs as categories) + the agent-checkpoint user plugin to `~/.hermes/plugins/agent-checkpoint/` with the documented opt-in enablement as a single additive `plugins.enabled` entry in `~/.hermes/config.yaml` (global installs only; all other config content is preserved byte-for-byte)
 - **Antigravity**: served transitively by the Claude Code target (it loads skills through the bundled `anthropic.claude-code` extension, which reads from the same path)
@@ -61,6 +62,20 @@ CLAUDE_CONFIG_DIR=<claude-home> claude --settings <claude-home>/agent-checkpoint
 ```
 
 The generated file contains only the `statusLine` command; the base `~/.claude/settings.json` and `~/.claude.json` are left byte-for-byte unchanged, and symlinked destinations are preserved. Telemetry is honest: the statusline wrapper atomically caches the latest-response `context_window.total_input_tokens` snapshot under `.agent-checkpoints/.runtime/claude/`. Claude Code documents that value as fresh input plus cache-creation and cache-read input. Input usage is `min(total_input_tokens / 372000, 1)`, input K-tokens are `total_input_tokens / 1000`, and remaining input K-tokens use the same 372k limit. Missing input makes all three values `unknown`, and feedback does not claim to include the active turn. `agent` records the subagent `agent_type` (else `null`), `session_title` the statusline `session_name` (else `null`). See [claude/agent-checkpoint/README.md](../claude/agent-checkpoint/README.md) for prerequisites, semantics, and uninstall.
+
+### Claude Desktop checkpoint adapter
+
+Claude Desktop is detected, configured, and installed independently from Claude Code, and only during a global installation:
+
+| Artifact | Location |
+|---|---|
+| MCP server, runtime, shared core, config helper, README | `~/Library/Application Support/Claude/agent-checkpoint/` |
+| Additive Desktop configuration | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| MCP diagnostic log | `~/Library/Logs/Claude/mcp-server-agent-checkpoint.log` |
+
+The installer registers exactly `mcpServers.agent-checkpoint` with the absolute resolved Node executable and one absolute server-path argument. It preserves unrelated top-level values and other MCP servers semantically; an identical registration is an idempotent no-op. Malformed or non-object JSON, a conflicting registration, or a symlinked adapter/config destination stops fail-closed without replacing the conflicting or symlinked target. The installer does not terminate the app: fully quit and restart Claude Desktop after installation, then use the MCP log above if the connector or its `checkpoint` and `checkpoint_path` tools do not load. Claude Code configuration remains unchanged by this target.
+
+Desktop has no Claude Code hook identity or project-directory injection. Every tool call therefore requires an existing absolute `workspace_root` and a non-empty, conversation-stable `session_id`; create the ID once per Desktop conversation, reuse it, and ask for the absolute workspace when it is unknown. Successful final calls persist `open` → checkpoint → declared `closed` with `close_session=true`; `context_used`, `agent`, and `session_title` remain honest `null` values. A real Claude Desktop 1.24012.9 model run with embedded commit `03c61d06f8e01a4db2273b9514e225f21d2ba62e` verified this full restart, connected-tool, model-issued checkpoint, JSONL, inspector, and unchanged-watcher boundary. Direct MCP calls or synthetic JSONL do not establish that model E2E. See [claude-desktop/agent-checkpoint/README.md](../claude-desktop/agent-checkpoint/README.md) for the focused tool contract, troubleshooting, and removal procedure.
 
 ### Hermes checkpoint plugin
 
@@ -129,7 +144,7 @@ The shim prefers OpenCode's published `@opencode-ai/plugin` helper when it is re
 
 The plugin writes current eight-field records. In addition to the original six fields, each write snapshots nullable `agent` from `ToolContext.agent` and nullable `session_title` from SDK `session.get`; a title can change between checkpoints, so `session_id` remains the definitive identity. A missing/empty title or failed `session.get` becomes `null` and does not block persistence. Readers accept exact legacy six-field checkpoints, current eight-field checkpoints, and four-field `{timestamp, session_id, event: "session_status", status: "open" | "closed"}` records in one physical-order stream. The checkpoint-only compatibility API filters status events, so lifecycle lines never affect chain, work, or three-word metrics.
 
-Reader-first rollout is active across all four adapters: compatible shared readers and bundled cores are installed before status-capable plugin/hook assets. Existing host-observed events remain additive, and every adapter now performs lazy open plus optional declared close at checkpoint time. Required reader/core symlinks and their symlinked path components still stop installation. `OPEN` and `CLOSED` are physical-order lifecycle reductions, not liveness or success claims.
+Reader-first rollout is active across all five adapters: compatible shared readers and bundled cores are installed before status-capable plugin/hook/MCP assets. Existing host-observed events remain additive, and every adapter now performs lazy open plus optional declared close at checkpoint time. Required reader/core symlinks and their symlinked path components still stop installation. `OPEN` and `CLOSED` are physical-order lifecycle reductions, not liveness or success claims.
 
 The plugin uses OpenCode's `PluginInput.client` to query session messages and selects the latest previous assistant step with positive output tokens. Complete request input is `tokens.input + tokens.cache.read + tokens.cache.write`; this prevents cached prompt content from disappearing from occupancy. Persisted `context_used` is `min(input / 372000, 1)`, runtime input K-tokens are `input / 1000`, and runtime remaining input K-tokens are `max(372000 - input, 0) / 1000`. Provider/model context metadata, output, and reasoning are ignored. The assistant step currently calling the tool is not finalized, so all values may lag the active turn. Missing or invalid input components produce honest unknowns and never block the checkpoint; K-token values do not enter the exact JSONL schema. See [Agent Checkpoint / Heartbeat](agent-checkpoint-heartbeat.md) for the record contract and selected-log inspection command.
 
@@ -160,6 +175,9 @@ targets:
   claude:
     enabled: auto
     home: ~/.claude          # also serves Antigravity via claude-code ext
+  claude_desktop:
+    enabled: auto
+    home: "~/Library/Application Support/Claude"
 ```
 
 ### `OPS_*` environment overrides
@@ -170,11 +188,13 @@ Use these when you need to override `config.yaml` for one run — typically in t
 |---|---|
 | `OPS_SYNC_CODEX` | `targets.codex.enabled` |
 | `OPS_SYNC_CLAUDE` | `targets.claude.enabled` |
+| `OPS_SYNC_CLAUDE_DESKTOP` | `targets.claude_desktop.enabled` |
 | `OPS_SYNC_CURSOR` | `targets.cursor.enabled` |
 | `OPS_SYNC_HERMES` | `targets.hermes.enabled` |
 | `OPS_OPENCODE_HOME` | `targets.opencode.home` |
 | `OPS_CODEX_HOME` | `targets.codex.home` |
 | `OPS_CLAUDE_HOME` | `targets.claude.home` |
+| `OPS_CLAUDE_DESKTOP_HOME` | `targets.claude_desktop.home` |
 | `OPS_CURSOR_HOME` | `targets.cursor.home` |
 | `OPS_HERMES_HOME` | `targets.hermes.home` |
 | `OPS_CONFIG_FILE` | path to an alternate `config.yaml` |
