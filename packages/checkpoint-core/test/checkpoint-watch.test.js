@@ -41,7 +41,7 @@ async function writeLog(root, name, records) {
   await writeFile(path.join(root, ".agent-checkpoints", name), `${records.map(JSON.stringify).join("\n")}\n`);
 }
 
-test("rows sort by latest event and separate explicit state, age, metrics, status, and context", async (t) => {
+test("rows sort by latest event and separate explicit state, age, metrics, status, and input", async (t) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "checkpoint-watch-rows-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, ".agent-checkpoints"));
@@ -62,8 +62,8 @@ test("rows sort by latest event and separate explicit state, age, metrics, statu
   assert.deepEqual(rows.map((row) => row.session), ["newer", "older"]);
   assert.deepEqual(rows.map((row) => row.state), ["OPEN", "CLOSED"]);
   assert.deepEqual(rows.map((row) => row.ageMs), [500, 19000]);
-  assert.equal(rows[0].context, "unknown");
-  assert.equal(rows[1].context, "50%");
+  assert.equal(rows[0].input, "unknown");
+  assert.equal(rows[1].input, "50%");
   assert.equal(rows[1].checkpointCount, 2);
   assert.equal(rows[1].metrics, "0/50/100%");
   assert.equal(rows[0].checkpointCount, 1);
@@ -181,7 +181,7 @@ test("status-only, duplicate, and reopened rows use neutral checkpoint details",
   for (const row of rows) {
     assert.equal(row.checkpointCount, 0);
     assert.equal(row.metrics, "n/a/n/a/n/a");
-    assert.equal(row.context, "unknown");
+    assert.equal(row.input, "unknown");
     assert.equal(row.agent, "-");
     assert.equal(row.title, "-");
     assert.equal(row.done, "-");
@@ -231,7 +231,7 @@ test("unreadable files become ERROR rows without hiding valid sessions", async (
 test("dashboard truncates deterministically within terminal width", () => {
   const row = {
     session: "session-name-that-is-much-too-long", ageMs: 2000, state: "UNKNOWN",
-    checkpointCount: 1, metrics: "n/a/100/100%", context: "unknown",
+    checkpointCount: 1, metrics: "n/a/100/100%", input: "unknown",
     agent: "implementer", title: "A human-readable session title",
     done: "A deliberately oversized completed work description",
     next: "A deliberately oversized next work description",
@@ -241,7 +241,7 @@ test("dashboard truncates deterministically within terminal width", () => {
   assert.equal(first, second);
   assert.ok(first.split("\n").every((line) => line.length <= 140));
   assert.match(first, /…/);
-  assert.match(first, /AGENT.*NAME.*AGE.*STATE.*CP.*C\/W\/3 %.*CONTEXT.*DONE.*CURRENT/);
+  assert.match(first, /AGENT.*NAME.*AGE.*STATE.*CP.*C\/W\/3 %.*INPUT.*DONE.*CURRENT/);
   assert.match(first, /n\/a\/100\/100%/);
   assert.doesNotMatch(first, /session-name-that-is-much-too-long|SESSION|NAME\/TITLE|CHAIN|3-WORD|NEXT/);
 });
@@ -251,7 +251,7 @@ test("dashboard preserves complete agent identity at 120 columns and truncates n
     session: "session-with-long-id", agent: "maintainer-direct",
     title: "A descriptive human readable checkpoint session title",
     ageMs: 2000, state: "UNKNOWN", checkpointCount: 2, metrics: "100/100/100%",
-    context: "50%",
+    input: "50%",
     done: "A deliberately oversized completed work description",
     next: "A deliberately oversized next work description",
   };

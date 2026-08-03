@@ -85,21 +85,18 @@ Inspect logs with the shared tooling from this repository:
   declares closure after its checkpoint. Because children append to the root
   parent log, a child declaration closes that shared row until the next parent
   or child checkpoint reopens it; no child/parent relationship is persisted.
-- **Telemetry is an estimate or `null`.** `pre_api_request` records the
-  latest `approx_input_tokens` and model in the addressed native session's
-  process-local slot. A valid input estimate reports used K-tokens even if the
-  model limit is unknown. `context_used` is the approximate share only when a defensible model
-  context limit is known (small built-in table, overridable via
-  `AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS`); otherwise the record honestly
-  carries `null` while only the limit-dependent feedback fields report
-  `unknown`. Reported remaining headroom
-  floors at `~0k` when the estimate reaches or exceeds the known limit.
+- **Telemetry is an estimate or `null`.** `pre_api_request` records the latest
+  `approx_input_tokens` in the addressed native session's process-local slot.
+  A valid estimate supplies input usage against 372k, input K-tokens, and
+  remaining input K-tokens. `context_used` retains its historical JSON key but
+  stores `min(approx_input_tokens / 372000, 1)`. Remaining input floors at
+  `~0k` when the estimate reaches or exceeds 372k.
 - **`agent`/`session_title` are always `null`.** No documented surface
   exposes persona identity or the current session title at checkpoint time
   (titles live in the SQLite store via `hermes sessions rename`;
   `--pass-session-id` exposes only the ID).
 - **Hook/telemetry state is process-local** and never persisted into JSONL;
-  no filenames, used/remaining tokens, or derived percentages are stored.
+  no filenames, input/remaining tokens, or derived percentages are stored.
 - **Name collision:** `hermes checkpoints` is Hermes' shadow-git
   working-directory rollback store — unrelated to this contract and never a
   substitute for it.

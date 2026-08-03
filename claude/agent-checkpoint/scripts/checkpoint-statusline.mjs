@@ -9,12 +9,13 @@
 // latest-value cache: it is never JSONL, recovery data, or a second log, and
 // never stores chain/word percentages, checkpoint file names, remaining
 // K-tokens, or display output. Pinned to the claude 2.1.170 statusline
-// surface (latest-response, input-only used_percentage; null before the
-// first response and after compaction).
+// surface (`total_input_tokens`; null before the first response).
 
 import { mkdirSync, realpathSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+const INPUT_LIMIT_TOKENS = 372_000;
 
 function nonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
@@ -30,9 +31,7 @@ function encodeSessionId(sessionId) {
   return encodeURIComponent(sessionId);
 }
 
-// Keep only the documented, defensible fields. used_percentage is
-// latest-response and input-only: null before the first response and after
-// compaction, and preserved as null here rather than fabricated.
+// Keep only the documented fields needed for input telemetry.
 export function normalizeStatuslineTelemetry(input) {
   if (input === null || typeof input !== "object" || Array.isArray(input)) {
     return null;
@@ -46,12 +45,9 @@ export function normalizeStatuslineTelemetry(input) {
   if (sessionId === null || projectDir === null) {
     return null;
   }
-  const usedPercentage = finiteNumberAtLeast(input.used_percentage, 0);
   return {
     session_id: sessionId,
     project_dir: projectDir,
-    used_percentage: usedPercentage !== null && usedPercentage <= 100 ? usedPercentage : null,
-    context_window_size: finiteNumberAtLeast(input.context_window_size, 1),
     total_input_tokens: finiteNumberAtLeast(input.total_input_tokens, 0),
     session_name: nonEmptyString(input.session_name),
   };
@@ -76,8 +72,6 @@ export function writeAtomicSnapshot(snapshot, clock = () => new Date()) {
     session_id: snapshot.session_id,
     project_dir: snapshot.project_dir,
     updated_at: clock().toISOString(),
-    used_percentage: snapshot.used_percentage,
-    context_window_size: snapshot.context_window_size,
     total_input_tokens: snapshot.total_input_tokens,
     session_name: snapshot.session_name,
   };
@@ -88,8 +82,9 @@ export function writeAtomicSnapshot(snapshot, clock = () => new Date()) {
 }
 
 export function formatStatusline(snapshot) {
-  const used = snapshot === null ? null : snapshot.used_percentage;
-  return `Checkpoint context: ${used === null ? "unknown" : `${Math.round(used)}%`}`;
+  const used = snapshot === null ? null : finiteNumberAtLeast(snapshot.total_input_tokens, 0);
+  const percentage = used === null ? null : Math.min(used / INPUT_LIMIT_TOKENS, 1) * 100;
+  return `Checkpoint input: ${percentage === null ? "unknown" : `${Math.round(percentage)}%`}`;
 }
 
 export function handleStatuslineInput(input, clock) {

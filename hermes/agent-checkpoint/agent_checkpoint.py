@@ -56,31 +56,7 @@ _UTC_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$
 _CHECKPOINT_DIR = ".agent-checkpoints"
 _PLUGIN_TOOLS = frozenset({"checkpoint", "checkpoint_path"})
 
-# Small, deliberate table of defensible model context limits (tokens). A miss
-# degrades telemetry to an honest ``null`` instead of a fabricated estimate;
-# AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS overrides/extends for other models.
-_MODEL_CONTEXT_LIMITS = {
-    "claude-sonnet-4-6": 200000,
-    "claude-opus-4-5": 200000,
-    "claude-haiku-4-5": 200000,
-    "gpt-4": 8192,
-    "gpt-4-32k": 32768,
-    "gpt-4-turbo": 128000,
-    "gpt-4-turbo-preview": 128000,
-    "gpt-4-1106-preview": 128000,
-    "gpt-4-0125-preview": 128000,
-    "gpt-4o": 128000,
-    "gpt-4o-mini": 128000,
-}
-# Prefixes only where every variant sharing the prefix shares the limit;
-# unlisted variants degrade to an honest null instead of a wrong estimate.
-_MODEL_PREFIX_LIMITS = (
-    ("claude-", 200000),
-    ("gpt-4o", 128000),
-    ("gpt-4-turbo", 128000),
-    ("gpt-4-32k", 32768),
-)
-_CONTEXT_LIMIT_ENV = "AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS"
+_INPUT_LIMIT_TOKENS = 372000
 _INSTRUCTION_PATH = Path(__file__).with_name("checkpoint-instruction.md")
 _CHECKPOINT_INSTRUCTION = _INSTRUCTION_PATH.read_text(encoding="utf-8")
 
@@ -298,36 +274,12 @@ def _append_record(workspace_root, session_id, record) -> str:
 # Telemetry (estimate with honest null fallback)
 # ---------------------------------------------------------------------------
 
-def _context_limit_for_model(model):
-    if not isinstance(model, str) or not model.strip():
-        return None
-    leaf = model.strip().lower().rsplit("/", 1)[-1]
-    if leaf in _MODEL_CONTEXT_LIMITS:
-        return _MODEL_CONTEXT_LIMITS[leaf]
-    for prefix, limit in _MODEL_PREFIX_LIMITS:
-        if leaf.startswith(prefix):
-            return limit
-    return None
-
-
-def _env_context_limit():
-    raw = os.environ.get(_CONTEXT_LIMIT_ENV, "").strip()
-    if not raw:
-        return None
-    try:
-        value = int(raw)
-    except ValueError:
-        return None
-    return value if value > 0 else None
-
-
 def _telemetry(native_session_id=None):
-    """Return context fraction, used K-tokens, and remaining K-tokens.
+    """Return input fraction, input K-tokens, and remaining input K-tokens.
 
     Estimate only: the latest valid ``pre_api_request`` token count supplies
-    used K-tokens. A known model context limit (table or
-    AGENT_CHECKPOINT_CONTEXT_LIMIT_TOKENS) additionally supplies the fraction
-    and remaining K-tokens. Absent/invalid data degrades to honest unknowns.
+    all three values against the common 372k operational input limit.
+    Absent or invalid data degrades to honest unknowns.
     """
     with _LOCK:
         if native_session_id is None:
@@ -339,11 +291,8 @@ def _telemetry(native_session_id=None):
         return None, None, None
     approx = slot["approx_input_tokens"]
     used_k = round(approx / 1000)
-    limit = _env_context_limit() or _context_limit_for_model(slot.get("model"))
-    if limit is None:
-        return None, used_k, None
-    context_used = min(max(approx / limit, 0.0), 1.0)
-    remaining_k = max(0, round((limit - approx) / 1000))
+    context_used = min(max(approx / _INPUT_LIMIT_TOKENS, 0.0), 1.0)
+    remaining_k = max(0, round((_INPUT_LIMIT_TOKENS - approx) / 1000))
     return context_used, used_k, remaining_k
 
 
@@ -388,7 +337,7 @@ def _on_pre_tool_call(tool_name: str = "", session_id: str = "", **_) -> None:
 
 
 def _on_pre_api_request(session_id: str = "", approx_input_tokens=None, model=None, **_) -> None:
-    """Record one native session's latest valid token estimate and model."""
+    """Record one native session's latest valid input-token estimate."""
     _require_session_id(session_id)
     valid = (
         isinstance(approx_input_tokens, (int, float))
@@ -402,7 +351,6 @@ def _on_pre_api_request(session_id: str = "", approx_input_tokens=None, model=No
         else:
             _TELEMETRY[session_id] = {
                 "approx_input_tokens": approx_input_tokens,
-                "model": model if isinstance(model, str) and model else None,
             }
 
 
@@ -478,14 +426,14 @@ def checkpoint(
     _append_record(workspace_root, session_id, record)
     if closed_record is not None:
         _append_record(workspace_root, session_id, closed_record)
-    context = "unknown" if context_used is None else f"~{round(context_used * 100)}%"
+    input_used = "unknown" if context_used is None else f"~{round(context_used * 100)}%"
     used = "unknown" if used_k is None else f"~{used_k}k"
     remaining = "unknown" if remaining_k is None else f"~{remaining_k}k"
     return (
         "Checkpoint saved.\n"
-        f"Context (latest harness telemetry): {context}\n"
-        f"Used K-tokens (latest input-estimate harness telemetry): {used}\n"
-        f"Remaining K-tokens (context-window headroom from latest harness telemetry): {remaining}"
+        f"Input usage (latest harness telemetry, 372k limit): {input_used}\n"
+        f"Input K-tokens (latest harness telemetry): {used}\n"
+        f"Remaining input K-tokens (to 372k limit): {remaining}"
     )
 
 

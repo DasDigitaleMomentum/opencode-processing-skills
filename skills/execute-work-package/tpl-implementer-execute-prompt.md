@@ -22,7 +22,7 @@ Constraints:
 - Return an **Execution Digest** (no raw diffs/logs).
 - Keep uncurated bulk evidence out of your context while directly reading scoped source and compact targeted evidence.
 - Spool potentially verbose command and verification output to a predictable path under `/tmp/opencode/`. Retain only path, command, exit status, and compact metadata/evidence; use a reliable focused filter or ask `retriever` to analyze the complete raw artifact.
-- Checkpoint after each approved Blueprint step, or after bounded parts of a large step. Before deliberately starting another context-heavy unit, consider the latest feedback, remaining work, and headroom. Feedback may lag the active turn; unknown remains unknown. Approximately 75% context use and 220k used tokens are soft planning signals, not stop conditions; continuing toward approximately 300k is acceptable when remaining work is bounded.
+- Checkpoint after each approved Blueprint step, or after bounded parts of a large step. Feedback may lag the active turn; unknown remains unknown. Base capacity and cost decisions only on reported input usage and input K-tokens. Across providers, approximately 220k input tokens are a soft planning signal; at or above approximately 272k, stop expanding the task and use the remaining budget for a coherent checkpointed digest or handoff. The 372k rejection boundary is emergency headroom, not a working target.
 
 Execution invariants (must):
 - You MUST perform at least one concrete action: apply a patch and/or run a command.

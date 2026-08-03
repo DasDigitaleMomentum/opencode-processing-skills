@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 
 import { analyzeCheckpointLog } from "../src/index.js";
 
-export function formatContext(contextUsed) {
-  return contextUsed === null ? "unknown" : `${Number((contextUsed * 100).toFixed(2))}%`;
+export function formatInput(inputUsed) {
+  return inputUsed === null ? "unknown" : `${Number((inputUsed * 100).toFixed(2))}%`;
 }
 
 export function formatPercent(percent) {
@@ -45,7 +45,7 @@ export function formatCheckpointSummary(selectedPath, input, legacyAnalysis) {
     `Last attempted: ${latestCheckpoint?.done ?? "-"}`,
     `Next announced: ${latestCheckpoint?.next ?? "-"}`,
     `Work status: ${latestCheckpoint ? (latestCheckpoint.step_failed ? "FAILED" : "COMPLETED") : "-"}`,
-    `Context used: ${formatContext(latestCheckpoint?.context_used ?? null)}`,
+    `Input used: ${formatInput(latestCheckpoint?.context_used ?? null)}`,
     `Chain: ${formatMetric(log.analysis.chain)}`,
     `Work: ${formatMetric(log.analysis.work)}`,
     `Three-word compliance: ${formatMetric(log.analysis.threeWord)}`,

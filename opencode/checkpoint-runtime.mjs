@@ -1,3 +1,5 @@
+const INPUT_LIMIT_TOKENS = 372_000;
+
 function unknownTelemetry() {
   return {
     contextUsed: null,
@@ -57,14 +59,13 @@ export function createOpenCodeSessionTitle(client) {
   };
 }
 
-export function createOpenCodeContextTelemetry(client) {
-  return async function getOpenCodeContextTelemetry(context) {
+export function createOpenCodeInputTelemetry(client) {
+  return async function getOpenCodeInputTelemetry(context) {
     try {
       if (
         client === null ||
         typeof client !== "object" ||
         typeof client.session?.messages !== "function" ||
-        typeof client.provider?.list !== "function" ||
         typeof context?.sessionID !== "string" ||
         context.sessionID.length === 0
       ) {
@@ -75,15 +76,13 @@ export function createOpenCodeContextTelemetry(client) {
         typeof context.directory === "string" && context.directory.length > 0
           ? { directory: context.directory }
           : undefined;
-      const [messageResult, providerResult] = await Promise.allSettled([
-        client.session.messages({ path: { id: context.sessionID }, ...(query ? { query } : {}) }),
-        client.provider.list(query ? { query } : undefined),
-      ]);
-      if (messageResult.status !== "fulfilled" || messageResult.value?.error) {
-        return unknownTelemetry();
-      }
+      const messageResult = await client.session.messages({
+        path: { id: context.sessionID },
+        ...(query ? { query } : {}),
+      });
+      if (messageResult?.error) return unknownTelemetry();
 
-      const messages = messageResult.value?.data;
+      const messages = messageResult?.data;
       if (!Array.isArray(messages)) return unknownTelemetry();
 
       let message;
@@ -100,39 +99,13 @@ export function createOpenCodeContextTelemetry(client) {
       }
       if (!message) return unknownTelemetry();
 
-      const tokenCounts = [
-        message.tokens?.input,
-        message.tokens?.output,
-        message.tokens?.reasoning,
-        message.tokens?.cache?.read,
-        message.tokens?.cache?.write,
-      ];
-      if (!tokenCounts.every(validTokenCount)) return unknownTelemetry();
-
-      const total = tokenCounts.reduce((sum, value) => sum + value, 0);
-      const usedKTokens = total / 1000;
-      const providers =
-        providerResult.status === "fulfilled" && !providerResult.value?.error
-          ? providerResult.value?.data?.all
-          : null;
-      if (!Array.isArray(providers)) {
-        return { contextUsed: null, usedKTokens, remainingKTokens: null };
-      }
-      const provider = providers.find((item) => item?.id === message.providerID);
-      const limit = provider?.models?.[message.modelID]?.limit?.context;
-      if (
-        typeof limit !== "number" ||
-        !Number.isFinite(limit) ||
-        limit <= 0 ||
-        !Number.isFinite(total)
-      ) {
-        return { contextUsed: null, usedKTokens, remainingKTokens: null };
-      }
+      const inputTokens = message.tokens?.input;
+      if (!validTokenCount(inputTokens)) return unknownTelemetry();
 
       return {
-        contextUsed: Math.min(Math.max(total / limit, 0), 1),
-        usedKTokens,
-        remainingKTokens: Math.max(limit - total, 0) / 1000,
+        contextUsed: Math.min(inputTokens / INPUT_LIMIT_TOKENS, 1),
+        usedKTokens: inputTokens / 1000,
+        remainingKTokens: Math.max(INPUT_LIMIT_TOKENS - inputTokens, 0) / 1000,
       };
     } catch {
       return unknownTelemetry();
@@ -141,16 +114,16 @@ export function createOpenCodeContextTelemetry(client) {
 }
 
 function formatCheckpointResult({ contextUsed, usedKTokens, remainingKTokens }) {
-  const context = contextUsed === null ? "unknown" : `~${Math.round(contextUsed * 100)}%`;
+  const input = contextUsed === null ? "unknown" : `~${Math.round(contextUsed * 100)}%`;
   const used = usedKTokens === null ? "unknown" : `~${usedKTokens}k`;
   const remaining = remainingKTokens === null ? "unknown" : `~${remainingKTokens}k`;
-  return `Checkpoint saved.\nContext (previous completed step, TUI-equivalent): ${context}\nUsed K-tokens (previous completed step, TUI-equivalent): ${used}\nRemaining K-tokens (context-window headroom after previous completed step): ${remaining}`;
+  return `Checkpoint saved.\nInput usage (previous completed step, 372k limit): ${input}\nInput K-tokens (previous completed step): ${used}\nRemaining input K-tokens (to 372k limit): ${remaining}`;
 }
 
 export function createOpenCodeCheckpointPlugin({
   tool,
   checkpointCore,
-  getContextTelemetry = unknownTelemetry,
+  getInputTelemetry = unknownTelemetry,
   getSessionTitle = async () => null,
 }) {
   if (typeof tool !== "function" || tool.schema === undefined) {
@@ -167,8 +140,8 @@ export function createOpenCodeCheckpointPlugin({
       "checkpointCore must provide checkpoint, checkpointPath, and appendSessionStatus",
     );
   }
-  if (typeof getContextTelemetry !== "function") {
-    throw new TypeError("getContextTelemetry must be a function");
+  if (typeof getInputTelemetry !== "function") {
+    throw new TypeError("getInputTelemetry must be a function");
   }
   if (typeof getSessionTitle !== "function") {
     throw new TypeError("getSessionTitle must be a function");
@@ -201,7 +174,7 @@ export function createOpenCodeCheckpointPlugin({
               throw new TypeError("close_session must be a boolean");
             }
             const [telemetryResult, titleResult] = await Promise.allSettled([
-              getContextTelemetry(context),
+              getInputTelemetry(context),
               getSessionTitle(context),
             ]);
             let telemetry =

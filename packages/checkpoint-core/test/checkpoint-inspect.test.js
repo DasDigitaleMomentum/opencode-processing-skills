@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   formatCheckpointSummary,
-  formatContext,
+  formatInput,
   formatMetric,
   formatPercent,
   main,
@@ -83,11 +83,11 @@ test("inspection prints deterministic selected-session summaries without changin
   }
 
   const handoff = await inspect("fixtures/pilot/controlled-handoff.jsonl", root);
-  assert.match(handoff.stdout, /Context used: 92%/);
+  assert.match(handoff.stdout, /Input used: 92%/);
   assert.match(handoff.stdout, /Next announced: Prepare compact handoff/);
 });
 
-test("first record and null context use explicit n/a and unknown displays", async () => {
+test("first record and null input use explicit n/a and unknown displays", async () => {
   const { records, analysis } = await loadFixture("successful.jsonl");
   const firstAnalysis = analyzeCheckpoints([records[0]]);
   const summary = formatCheckpointSummary("selected.jsonl", [records[0]], firstAnalysis);
@@ -96,9 +96,9 @@ test("first record and null context use explicit n/a and unknown displays", asyn
   assert.match(summary, /Three-word compliance: 2\/2 \(100%\)/);
   assert.match(summary, /Agent: -/);
   assert.match(summary, /Name\/title: -/);
-  assert.match(summary, /Context used: unknown/);
-  assert.equal(formatContext(0), "0%");
-  assert.equal(formatContext(1), "100%");
+  assert.match(summary, /Input used: unknown/);
+  assert.equal(formatInput(0), "0%");
+  assert.equal(formatInput(1), "100%");
   assert.equal(formatPercent(null), "n/a");
   assert.equal(formatMetric({ success: 0, count: 0, percent: null }), "0/0 (n/a)");
 });
@@ -147,7 +147,7 @@ test("inspection renders status-only, duplicate, and reopened logs deterministic
   assert.match(statusOnly.stdout, /Last attempted: -/);
   assert.match(statusOnly.stdout, /Next announced: -/);
   assert.match(statusOnly.stdout, /Work status: -/);
-  assert.match(statusOnly.stdout, /Context used: unknown/);
+  assert.match(statusOnly.stdout, /Input used: unknown/);
   assert.match(statusOnly.stdout, /Chain: 0\/0 \(n\/a\)/);
   assert.match(statusOnly.stdout, /Work: 0\/0 \(n\/a\)/);
   assert.match(statusOnly.stdout, /Three-word compliance: 0\/0 \(n\/a\)/);

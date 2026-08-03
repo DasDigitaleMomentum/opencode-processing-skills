@@ -55,10 +55,10 @@ function checkpointPathToolSchema() {
 }
 
 function formatCheckpointResult({ contextUsed, usedKTokens, remainingKTokens }) {
-  const context = contextUsed === null ? "unknown" : `~${Math.round(contextUsed * 100)}%`;
+  const input = contextUsed === null ? "unknown" : `~${Math.round(contextUsed * 100)}%`;
   const used = usedKTokens === null ? "unknown" : `~${usedKTokens}k`;
   const remaining = remainingKTokens === null ? "unknown" : `~${remainingKTokens}k`;
-  return `Checkpoint saved.\nContext (latest harness telemetry): ${context}\nUsed K-tokens (latest harness telemetry): ${used}\nRemaining K-tokens (context-window headroom from latest harness telemetry): ${remaining}`;
+  return `Checkpoint saved.\nInput usage (latest harness telemetry, 372k limit): ${input}\nInput K-tokens (latest harness telemetry): ${used}\nRemaining input K-tokens (to 372k limit): ${remaining}`;
 }
 
 function toolTextResult(text, { isError = false } = {}) {

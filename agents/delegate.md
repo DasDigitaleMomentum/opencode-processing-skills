@@ -68,7 +68,7 @@ Delegate separable, low-complexity evidence collection and trivial task chains t
 
 ## Constraints
 
-- Checkpoint after each bounded investigation, synthesis, or artifact unit. Before deliberately starting another context-heavy unit, consider the latest feedback, remaining work, and headroom. Telemetry may reflect the previous completed step or latest harness snapshot and therefore lag the active turn; unknown remains unknown. Approximately 75% context use and 220k used tokens are soft planning signals, not stop conditions; continuing toward approximately 300k is acceptable when the remaining work is bounded. Return a checkpointed compact handoff before an uncontrolled context-limit abort.
+- Checkpoint after each bounded investigation, synthesis, or artifact unit. Telemetry may lag the active turn; unknown remains unknown. Base capacity and cost decisions only on reported input usage and input K-tokens. Across providers, approximately 220k input tokens are a soft planning signal. At or above approximately 272k input tokens, stop expanding the task and use the remaining budget to leave a coherent state, checkpoint, and return a compact digest or handoff; the 372k rejection boundary is emergency headroom, not a working target.
 - Default mode is read/analyze/verify. Return concise findings, recommendations, command results, or patch suggestions.
 - Do not write documentation files or make code/config changes unless explicitly asked.
 - Skill-defined artifacts with an explicit output path and template (for example review artifacts or implementation plans) may be written directly when the primary invokes that workflow. Stay within the specified path/template.

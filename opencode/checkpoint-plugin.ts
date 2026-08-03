@@ -1,7 +1,7 @@
 import * as checkpointCore from "../lib/opencode-processing-skills/checkpoint-core.mjs"
 import {
   createOpenCodeCheckpointPlugin,
-  createOpenCodeContextTelemetry,
+  createOpenCodeInputTelemetry,
   createOpenCodeSessionTitle,
 } from "../lib/opencode-processing-skills/checkpoint-runtime.mjs"
 
@@ -55,7 +55,7 @@ export const CheckpointPlugin = async (pluginContext) => {
   const plugin = createOpenCodeCheckpointPlugin({
     tool,
     checkpointCore,
-    getContextTelemetry: createOpenCodeContextTelemetry(pluginContext?.client),
+    getInputTelemetry: createOpenCodeInputTelemetry(pluginContext?.client),
     getSessionTitle: createOpenCodeSessionTitle(pluginContext?.client),
   })
   return plugin(pluginContext)

@@ -101,7 +101,7 @@ current eight-field checkpoints plus four-field `session_status` events:
 .agent-checkpoints/<session-id>.jsonl
 ```
 
-`checkpoint` returns a TUI-equivalent estimate of the previous completed model step's context use and remaining context-window K-tokens. It falls back to `unknown` when OpenCode cannot provide defensible data. Failed work is recorded separately from Canary/instruction compliance.
+`checkpoint` returns input usage against the common 372k operational limit, input K-tokens, and remaining input K-tokens. OpenCode reports the previous completed model step; other adapters retain their documented snapshot lag. Unavailable input telemetry falls back to `unknown`. Failed work is recorded separately from Canary/instruction compliance.
 
 Watch all direct session logs in a second terminal:
 
