@@ -4,6 +4,7 @@ const CODEX_TELEMETRY = Object.freeze({
   remainingKTokens: null,
   source: "unavailable",
 });
+const INPUT_LIMIT_TOKENS = 372_000;
 
 const CHECKPOINT_TOOL_NAME = "checkpoint";
 const CHECKPOINT_PATH_TOOL_NAME = "checkpoint_path";
@@ -33,6 +34,11 @@ function checkpointToolSchema() {
           type: "string",
           description: "hook injected; callers omit",
         },
+        _checkpoint_input_tokens: {
+          type: ["integer", "null"],
+          description:
+            "hook injected from the latest prior Codex token-count event; callers omit",
+        },
       },
       required: ["done", "next"],
     },
@@ -58,7 +64,19 @@ function formatCheckpointResult({ contextUsed, usedKTokens, remainingKTokens }) 
   const input = contextUsed === null ? "unknown" : `~${Math.round(contextUsed * 100)}%`;
   const used = usedKTokens === null ? "unknown" : `~${usedKTokens}k`;
   const remaining = remainingKTokens === null ? "unknown" : `~${remainingKTokens}k`;
-  return `Checkpoint saved.\nInput usage (latest harness telemetry, 372k limit): ${input}\nInput K-tokens (latest harness telemetry): ${used}\nRemaining input K-tokens (to 372k limit): ${remaining}`;
+  return `Checkpoint saved.\nInput usage (previous completed model call, 372k limit): ${input}\nInput K-tokens (previous completed model call): ${used}\nRemaining input K-tokens (to 372k limit): ${remaining}`;
+}
+
+function telemetryFromInputTokens(inputTokens) {
+  if (!Number.isSafeInteger(inputTokens) || inputTokens < 0) {
+    return CODEX_TELEMETRY;
+  }
+  return {
+    contextUsed: Math.min(inputTokens / INPUT_LIMIT_TOKENS, 1),
+    usedKTokens: inputTokens / 1000,
+    remainingKTokens: Math.max(INPUT_LIMIT_TOKENS - inputTokens, 0) / 1000,
+    source: "codex-transcript-last-token-count",
+  };
 }
 
 function toolTextResult(text, { isError = false } = {}) {
@@ -80,7 +98,6 @@ export function createMcpRuntime({
   checkpointCore,
   serverName = "agent-checkpoint",
   serverVersion = "1.0.0",
-  telemetry = CODEX_TELEMETRY,
 } = {}) {
   if (
     checkpointCore === null ||
@@ -116,6 +133,7 @@ export function createMcpRuntime({
         isError: true,
       });
     }
+    const telemetry = telemetryFromInputTokens(args._checkpoint_input_tokens);
     const feedback = await checkpointCore.checkpoint({
       workspaceRoot,
       sessionId,
@@ -202,8 +220,7 @@ export function createMcpRuntime({
     callTool,
     handleMessage,
     serverInfo: { name: serverName, version: serverVersion },
-    telemetry,
   };
 }
 
-export { CODEX_TELEMETRY, formatCheckpointResult };
+export { CODEX_TELEMETRY, formatCheckpointResult, telemetryFromInputTokens };
