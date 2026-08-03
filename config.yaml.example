@@ -46,6 +46,12 @@
 # `claude --settings <home>/agent-checkpoint.settings.json`). The base settings.json
 # and ~/.claude.json are never modified. Antigravity is served transitively
 # via the bundled `anthropic.claude-code` extension, which reads from CLAUDE_HOME.
+# Claude Desktop is a separate global-only MCP target. It installs under
+# CLAUDE_DESKTOP_HOME/agent-checkpoint/ and additively registers exactly
+# mcpServers.agent-checkpoint in claude_desktop_config.json. Override its home
+# with OPS_CLAUDE_DESKTOP_HOME and enabled state with OPS_SYNC_CLAUDE_DESKTOP.
+# The default home is ~/Library/Application Support/Claude; project mode never
+# installs or registers this target.
 # Cursor installs workflow skills + orchestration layer (subagents, ops-orchestrator
 # skills). See docs/installation.md and cursor/README.md. Use ./install.sh --project
 # to install into ./.cursor/ per repo.
@@ -74,6 +80,10 @@ targets:
   claude:
     enabled: auto
     home: ~/.claude
+
+  claude_desktop:
+    enabled: auto
+    home: "~/Library/Application Support/Claude"
 
   cursor:
     enabled: auto
