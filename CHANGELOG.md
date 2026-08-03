@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **Interrupted digest recovery**: Maintainers now resolve `checkpoint_path(task_id)`, inspect the selected log and current tree, map progress to the approved Blueprint or original delegated objective, and issue a smaller fresh task instead of resuming a bloated session.
+- **Native watcher verification**: Global installation now rejects a scriptc-built watcher unless real 80- and 120-column PTY smokes prove raw-key handling, Ctrl-C cleanup, cursor restoration, and exact terminal-flag restoration; the installed Node watcher remains the fail-closed fallback.
 
 ## 0.5.5 — 2026-08-02
 

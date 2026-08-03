@@ -49,7 +49,7 @@ installer, then restart the enabled harnesses and select `@maintainer` in
 OpenCode.
 Global installation opportunistically compiles a native
 `$HOME/.local/bin/checkpoint-watch` when an already-installed `scriptc` passes
-coverage, build, snapshot, and live smokes. This is optional: the installed
+coverage, build, snapshot, non-TTY live, and Python PTY smokes. This is optional: the installed
 Node watcher and its printed fallback command remain available, and project
 installation never touches the global binary.
 On OpenCode v1.18.2+, set `"subagent_depth": 2` for worker-to-retriever handoffs. Older versions do not support this setting and generally allow nested tasks through permissions alone.

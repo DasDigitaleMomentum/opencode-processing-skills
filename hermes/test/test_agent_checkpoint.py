@@ -436,8 +436,8 @@ class CheckpointWriteTests(PluginTestCase):
         )
         _, records_a = self.read_records(".agent-checkpoints/parent-a.jsonl")
         _, records_b = self.read_records(".agent-checkpoints/parent-b.jsonl")
-        self.assertAlmostEqual(records_a[0]["context_used"], 0.1)
-        self.assertAlmostEqual(records_b[0]["context_used"], 0.5)
+        self.assertAlmostEqual(records_a[0]["context_used"], 20000 / 372000)
+        self.assertAlmostEqual(records_b[0]["context_used"], 100000 / 372000)
         self.assertFalse((self.workspace / ".agent-checkpoints/child-a.jsonl").exists())
         self.assertFalse((self.workspace / ".agent-checkpoints/child-b.jsonl").exists())
 
@@ -683,7 +683,7 @@ class FixtureParityTests(PluginTestCase):
             "if (records.length !== 2) throw new Error('expected 2 records');"
             "if (analysis.chainPercent !== 100) throw new Error('chain must match');"
             "if (records[1].step_failed !== true) throw new Error('step_failed lost');"
-            "if (Math.abs(records[1].context_used - 0.42) > 1e-9) throw new Error('telemetry lost');"
+            "if (Math.abs(records[1].context_used - (84000 / 372000)) > 1e-9) throw new Error('telemetry lost');"
         )
         result = subprocess.run(
             [NODE, "--input-type=module", "-e", script],
@@ -715,12 +715,18 @@ class InstallerTestCase(unittest.TestCase):
         self.home.mkdir()
         self.hermes_home = self.root / "hermes"
         self.hermes_home.mkdir()
+        self.test_bin = self.root / "bin"
+        self.test_bin.mkdir()
+        fake_scriptc = self.test_bin / "scriptc"
+        fake_scriptc.write_text("#!/bin/sh\nexit 127\n", encoding="utf-8")
+        fake_scriptc.chmod(0o755)
 
     def run_installer_result(self, args=(), cwd=None, sync_hermes="true"):
         config_file = self.root / "installer.yaml"
         config_file.write_text("", encoding="utf-8")
         env = dict(os.environ)
         env.update({
+            "PATH": f"{self.test_bin}{os.pathsep}{env.get('PATH', '')}",
             "HOME": str(self.home),
             "OPS_CONFIG_FILE": str(config_file),
             "OPS_OPENCODE_HOME": str(self.root / "opencode"),

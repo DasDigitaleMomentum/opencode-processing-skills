@@ -1061,6 +1061,18 @@ install_optional_native_checkpoint_watch() (
         native_fallback "native live cursor restoration failed"
         return 1
     fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        native_fallback "python3 was not found for native PTY verification"
+        return 1
+    fi
+    if ! python3 "$SCRIPT_DIR/packages/checkpoint-core/test/native-checkpoint-watch-smoke.py" \
+        "$stage/checkpoint-watch" "$stage/native-smoke" \
+        >"$stage/native-smoke.txt" 2>"$stage/native-smoke.err"; then
+        local native_smoke_error=""
+        IFS= read -r native_smoke_error < "$stage/native-smoke.err" || true
+        native_fallback "native PTY smoke failed${native_smoke_error:+: $native_smoke_error}"
+        return 1
+    fi
 
     if ! mkdir -p "$native_dir"; then
         native_fallback "could not create $native_dir"
