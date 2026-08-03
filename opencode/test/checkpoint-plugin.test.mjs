@@ -630,18 +630,18 @@ test("OpenCode directory wins when newer hosts expose root as worktree", async (
   }
 });
 
-test("telemetry reports latest completed input against the 372k limit", async () => {
+test("telemetry combines uncached and cached input against the 372k limit", async () => {
   const telemetry = createOpenCodeInputTelemetry(
     fakeClient({
       messages: [
-        assistant({ id: "older", input: 50, output: 10 }),
+        assistant({ id: "older", input: 100000, output: 10, cacheRead: 100000 }),
         assistant({
           id: "completed",
-          input: 223200,
+          input: 2300,
           output: 100,
           reasoning: 50,
-          cacheRead: 200,
-          cacheWrite: 50,
+          cacheRead: 220000,
+          cacheWrite: 900,
         }),
         assistant({ id: "active", input: 900, output: 0 }),
       ],
@@ -765,7 +765,7 @@ test("session title failures and empty host metadata persist null without blocki
 
 test("telemetry clamps exhausted input and rejects malformed host data", async () => {
   const exhausted = createOpenCodeInputTelemetry(
-    fakeClient({ messages: [assistant({ id: "large", input: 400000, output: 500 })] }),
+    fakeClient({ messages: [assistant({ id: "large", input: 1000, output: 500, cacheRead: 399000 })] }),
   );
   assert.deepEqual(await exhausted({ sessionID: "session-a", directory: "/workspace" }), {
     contextUsed: 1,
@@ -784,6 +784,15 @@ test("telemetry clamps exhausted input and rejects malformed host data", async (
 
   const absent = createOpenCodeInputTelemetry(fakeClient({ messages: undefined }));
   assert.deepEqual(await absent({ sessionID: "session-a", directory: "/workspace" }), {
+    contextUsed: null,
+    usedKTokens: null,
+    remainingKTokens: null,
+  });
+
+  const invalidCache = createOpenCodeInputTelemetry(
+    fakeClient({ messages: [assistant({ id: "invalid-cache", cacheRead: Number.NaN })] }),
+  );
+  assert.deepEqual(await invalidCache({ sessionID: "session-a", directory: "/workspace" }), {
     contextUsed: null,
     usedKTokens: null,
     remainingKTokens: null,

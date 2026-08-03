@@ -19,7 +19,7 @@ The adapter owns OpenCode tool schemas, metadata/telemetry derivation, and feedb
 
 The generic event callback still accepts only verified `session.created`; plugin load, activity, update/status/idle, deletion, disposal, and malformed events remain write-free. Every successful checkpoint independently appends `open` first, so a resumed checkpoint-only log becomes `OPEN`; `close_session=true` appends `closed` only after that checkpoint. This is agent-declared closure, not a host-idle or graceful-end inference.
 
-`createOpenCodeInputTelemetry` queries session messages through `PluginInput.client` and selects the latest previous assistant step with positive output tokens. That step's `tokens.input` supplies input usage against 372k, input K-tokens, and remaining input K-tokens. Provider/model metadata and output/reasoning/cache counts are ignored. The active assistant step invoking the tool is not finalized, so all known values describe the previous completed step. Missing or invalid input makes all three values unknown.
+`createOpenCodeInputTelemetry` queries session messages through `PluginInput.client` and selects the latest previous assistant step with positive output tokens. Complete request input is `tokens.input + tokens.cache.read + tokens.cache.write`; that sum supplies input usage against 372k, input K-tokens, and remaining input K-tokens. Provider/model metadata, output, and reasoning are ignored. The active assistant step invoking the tool is not finalized, so all known values describe the previous completed step. Missing or invalid input components make all three values unknown.
 
 ### Dependencies
 
@@ -57,9 +57,9 @@ The generic event callback still accepts only verified `session.created`; plugin
 2. On verified `session.created`, the event callback uses the event's native ID and the plugin worktree to append `open`. Unsupported activity/resume/close candidates are ignored.
 3. The shim exposes `checkpoint(done, next, step_failed=false, close_session=false)`; the native schema or fallback executor rejects a supplied non-boolean before persistence, then starts title/telemetry lookups.
 4. `session.get` supplies the point-in-time title while `context.agent` supplies the current persona. Either normalizes to `null` when absent/empty; title lookup failure is isolated and cannot prevent persistence.
-5. The runtime scans backward to the latest assistant message with positive output and maps its input count to `min(input / 372000, 1)`, `input / 1000`, and `max(372000 - input, 0) / 1000`. The output-zero active tool-calling step is not selected.
+5. The runtime scans backward to the latest assistant message with positive output, sums uncached/cache-read/cache-write input, and maps it to `min(input / 372000, 1)`, `input / 1000`, and `max(372000 - input, 0) / 1000`. The output-zero active tool-calling step is not selected.
 6. The core persists exact `open` → eight-field checkpoint → optional exact `closed`; input and remaining K-token feedback stays runtime-only.
-7. Missing or malformed input telemetry persists `context_used: null` and reports all fields unknown. Non-input categories and provider/model limits do not affect telemetry; metadata failures likewise persist `null` without blocking the record.
+7. Missing or malformed input/cache telemetry persists `context_used: null` and reports all fields unknown. Output, reasoning, and provider/model limits do not affect telemetry; metadata failures likewise persist `null` without blocking the record.
 8. Global installation always refreshes the portable Node reader before writer assets and may select a separately staged, smoke-tested scriptc executable as the preferred watcher command. Optional build failure leaves writer installation and the Node reader available; project mode remains Node-only and global-bin isolated.
 9. `checkpoint_path(session_id)` returns the selected relative path for direct reading or core inspection. The stable ID, not mutable title text, selects the log.
 

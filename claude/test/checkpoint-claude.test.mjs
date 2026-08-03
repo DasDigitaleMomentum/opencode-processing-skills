@@ -95,17 +95,21 @@ function runStatusline(input) {
 }
 
 function statuslinePayload(overrides = {}) {
+  const { context_window: contextWindowOverrides = {}, ...rootOverrides } = overrides;
   return {
     session_id: "sess-1",
     session_name: "Demo Session",
     model: { id: "claude-opus", display_name: "Opus" },
     workspace: { project_dir: "/project", current_dir: "/project" },
-    context_window_size: 200000,
-    used_percentage: 42,
-    remaining_percentage: 58,
-    total_input_tokens: 84000,
+    context_window: {
+      context_window_size: 200000,
+      used_percentage: 42,
+      remaining_percentage: 58,
+      total_input_tokens: 84000,
+      ...contextWindowOverrides,
+    },
     exceeds_200k_tokens: false,
-    ...overrides,
+    ...rootOverrides,
   };
 }
 
@@ -1050,7 +1054,10 @@ test("claude statusline normalizes, formats, and atomically replaces the latest 
   const worktree = await mkdtemp(path.join(os.tmpdir(), "checkpoint-claude-statusline-"));
   t.after(() => rm(worktree, { recursive: true, force: true }));
 
-  const normalized = normalizeStatuslineTelemetry(statuslinePayload({ workspace: { project_dir: worktree } }));
+  const normalized = normalizeStatuslineTelemetry(statuslinePayload({
+    workspace: { project_dir: worktree },
+    total_input_tokens: 1,
+  }));
   assert.deepEqual(normalized, {
     session_id: "sess-1",
     project_dir: worktree,
@@ -1085,8 +1092,10 @@ test("claude statusline normalizes, formats, and atomically replaces the latest 
   // host's unrelated percentage field.
   const compacted = runStatusline(statuslinePayload({
     workspace: { project_dir: worktree },
-    used_percentage: null,
-    total_input_tokens: 90000,
+    context_window: {
+      used_percentage: null,
+      total_input_tokens: 90000,
+    },
   }));
   assert.equal(compacted.status, 0, compacted.stderr);
   assert.equal(compacted.stdout, "Checkpoint input: 24%\n");

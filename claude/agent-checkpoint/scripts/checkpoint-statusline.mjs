@@ -9,7 +9,7 @@
 // latest-value cache: it is never JSONL, recovery data, or a second log, and
 // never stores chain/word percentages, checkpoint file names, remaining
 // K-tokens, or display output. Pinned to the claude 2.1.170 statusline
-// surface (`total_input_tokens`; null before the first response).
+// surface (`context_window.total_input_tokens`; null before the first response).
 
 import { mkdirSync, realpathSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -45,10 +45,16 @@ export function normalizeStatuslineTelemetry(input) {
   if (sessionId === null || projectDir === null) {
     return null;
   }
+  const contextWindow =
+    input.context_window !== null &&
+    typeof input.context_window === "object" &&
+    !Array.isArray(input.context_window)
+      ? input.context_window
+      : null;
   return {
     session_id: sessionId,
     project_dir: projectDir,
-    total_input_tokens: finiteNumberAtLeast(input.total_input_tokens, 0),
+    total_input_tokens: finiteNumberAtLeast(contextWindow?.total_input_tokens, 0),
     session_name: nonEmptyString(input.session_name),
   };
 }
