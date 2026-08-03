@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **Interrupted digest recovery**: Maintainers now resolve `checkpoint_path(task_id)`, inspect the selected log and current tree, map progress to the approved Blueprint or original delegated objective, and issue a smaller fresh task instead of resuming a bloated session.
+- **OpenCode cached-input accounting**: Input usage now sums uncached input, cache-read input, and cache-write input before applying the 372k operational limit; output and reasoning remain excluded.
+- **Claude statusline input path**: The wrapper now reads the documented `context_window.total_input_tokens` value, which already includes cache reads and writes, instead of an absent top-level field.
 - **Native watcher verification**: Global installation now rejects a scriptc-built watcher unless real 80- and 120-column PTY smokes prove raw-key handling, Ctrl-C cleanup, cursor restoration, and exact terminal-flag restoration; the installed Node watcher remains the fail-closed fallback.
 - **Codex Desktop checkpoints**: The generated layered profile explicitly approves only `checkpoint` and `checkpoint_path`, preventing Codex Desktop 26.727.51351 from cancelling unattended heartbeat calls, and prints the Desktop/current-runtime `-p` activation alongside the pinned CLI `--profile-v2` form.
 - **Hermes 0.19.1 verification**: The pinned Hermes gate and documentation now match the locally installed v0.19.1 runtime proven by the real plugin/tool/lifecycle E2E.

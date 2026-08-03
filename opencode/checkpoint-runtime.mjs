@@ -99,8 +99,13 @@ export function createOpenCodeInputTelemetry(client) {
       }
       if (!message) return unknownTelemetry();
 
-      const inputTokens = message.tokens?.input;
-      if (!validTokenCount(inputTokens)) return unknownTelemetry();
+      const inputComponents = [
+        message.tokens?.input,
+        message.tokens?.cache?.read,
+        message.tokens?.cache?.write,
+      ];
+      if (!inputComponents.every(validTokenCount)) return unknownTelemetry();
+      const inputTokens = inputComponents.reduce((sum, value) => sum + value, 0);
 
       return {
         contextUsed: Math.min(inputTokens / INPUT_LIMIT_TOKENS, 1),

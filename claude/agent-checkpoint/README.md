@@ -104,15 +104,17 @@ final calls cannot synthesize `closed`.
 
 - The configured statusline wrapper atomically replaces the **latest**
   snapshot at `.agent-checkpoints/.runtime/claude/<native-session-id>.json`
-  (session/project identity, update timestamp, `total_input_tokens`, and
-  `session_name` when present).
+  (session/project identity, update timestamp,
+  `context_window.total_input_tokens`, and `session_name` when present).
 - `context_used` retains its historical JSON key but now equals
   `min(total_input_tokens / 372000, 1)`. Input K-tokens are
   `total_input_tokens / 1000`; remaining input K-tokens are
   `max(0, 372000 - total_input_tokens) / 1000`.
 - Values are **latest-response** and input-only. The sidecar may be absent or
   lack a valid input count; in that case all three feedback values are
-  `unknown`. The snapshot may lag the active turn.
+  `unknown`. Claude Code defines `context_window.total_input_tokens` as the sum
+  of fresh input, cache-creation input, and cache-read input. The snapshot may
+  lag the active turn.
 - `agent` = subagent `agent_type` from the hook when present, else `null`;
   `session_title` = statusline `session_name` when present, else `null`.
 - The sidecar is ignored local runtime state — never JSONL, recovery data, or

@@ -118,7 +118,7 @@ Input K-tokens (previous completed step): ~223.2k
 Remaining input K-tokens (to 372k limit): ~148.8k
 ```
 
-OpenCode wählt rückwärts den neuesten Assistant-Schritt mit positiven Output-Tokens aus. Aus `tokens.input` berechnet der Adapter `context_used = min(input / 372000, 1)`, Input-K-Tokens als `input / 1000` und verbleibende Input-K-Tokens als `max(372000 - input, 0) / 1000`. Output, Reasoning, Cache-Werte und beworbene Modellgrenzen werden nicht verwendet.
+OpenCode wählt rückwärts den neuesten Assistant-Schritt mit positiven Output-Tokens aus. Vollständiger Request-Input ist `tokens.input + tokens.cache.read + tokens.cache.write`; gecachter Prompt-Input bleibt damit Teil der Belegung. Daraus berechnet der Adapter `context_used = min(input / 372000, 1)`, Input-K-Tokens als `input / 1000` und verbleibende Input-K-Tokens als `max(372000 - input, 0) / 1000`. Output, Reasoning und beworbene Modellgrenzen werden nicht verwendet.
 
 Der gerade `checkpoint` aufrufende Assistant-Schritt ist noch nicht finalisiert und wird daher nicht ausgewählt. Die Angaben sind folglich Schätzwerte für den vorherigen abgeschlossenen Schritt, keine Live-Werte des aktiven Schritts. „Context-window headroom“ bezeichnet außerdem **nicht** den Abstand zu OpenCodes Compaction-Schwelle oder reservierten Compaction-Tokens.
 
@@ -131,7 +131,7 @@ Input K-tokens (previous completed step): unknown
 Remaining input K-tokens (to 372k limit): unknown
 ```
 
-Fehlende andere Tokenkategorien, Provider-Antworten oder Modellgrenzen beeinflussen die Input-Telemetrie nicht.
+Fehlende oder ungültige Input-/Cache-Komponenten machen alle drei Werte unbekannt. Provider-Antworten, Modellgrenzen, Output und Reasoning beeinflussen die Input-Telemetrie nicht.
 
 ## Pfad- und Lesezugriff
 
@@ -262,7 +262,7 @@ Der aufrufbare Tool-Vertrag bleibt harnessübergreifend gleich. Adapter untersch
 | OpenCode | Native Custom Tools `checkpoint` und `checkpoint_path`; `session.created` sowie jeder Checkpoint bestätigen `open`, deklarierter finaler Close ist möglich, ohne Idle-/Host-Close-Heuristik; `agent` aus `ToolContext.agent`, Titel und Telemetrie über `PluginInput.client` | `ToolContext.sessionID` für Checkpoints, native `event.properties.info.id` für Creation-Status | Input-Anteil/K-Tokens/Headroom des vorherigen abgeschlossenen Assistant-Schritts gegen 372k; ohne gültigen Input alles `unknown` |
 | Codex | Stdio-MCP plus `SessionStart`-/`PreToolUse`-Bridge; Starts und Checkpoints bestätigen `open`, final deklarierter Close ist möglich, `Stop` bleibt write-free; `agent`/`session_title` immer `null` | Native Hook-`session_id` auf Session-Ebene; Children teilen diese Zeile | Context, verwendet und verbleibend immer `null`/`unknown` |
 | PydanticAI | Native Python Function Tool | `run_id` beziehungsweise `conversation_id` | Aus verfügbarer Input-Usage gegen 372k ableitbar, sonst `null` |
-| Claude Code | Skills-Verzeichnis-Plugin mit Stdio-MCP; Host-Starts/Parent-End bleiben additiv, Checkpoints bestätigen `open` und können final `closed` deklarieren; kein Host-Child-End | Parent: native Hook-`session_id`; Subagent: komposit `<session_id>--<agent_id>` | Letzte Statusline-Antwort: Input-Anteil/K-Tokens/Headroom aus `total_input_tokens` gegen 372k; ohne gültigen Input alles `unknown` |
+| Claude Code | Skills-Verzeichnis-Plugin mit Stdio-MCP; Host-Starts/Parent-End bleiben additiv, Checkpoints bestätigen `open` und können final `closed` deklarieren; kein Host-Child-End | Parent: native Hook-`session_id`; Subagent: komposit `<session_id>--<agent_id>` | Letzte Statusline-Antwort: Input-Anteil/K-Tokens/Headroom aus dem cache-inkludierenden `context_window.total_input_tokens` gegen 372k; ohne gültigen Input alles `unknown` |
 | Hermes | Natives User-Plugin mit vollständiger `pre_llm_call`-Instruktion; Parent-Start und jeder Checkpoint bestätigen `open`, final deklarierter Close möglich, kein Host-End-Hook | Native Hook-`session_id`; Child-IDs werden intern zum Root-Parent-Log aufgelöst, ohne Beziehungspersistenz | Letzter `pre_api_request`-Input-Schätzwert liefert Anteil/K-Tokens/Headroom gegen 372k; ohne gültigen Input alles `unknown`; Headroom mindestens `0k` |
 
 MCP kann den gemeinsamen Aufruf `checkpoint(done, next, step_failed, close_session)` transportieren. `close_session` ist optional, standardmäßig `false` und bei Angabe strikt Boolean. Harness-spezifische Adapter ergänzen Session-ID und Input-Werte, weil diese Informationen nicht Teil des allgemeinen MCP-Vertrags sind.
@@ -310,6 +310,6 @@ Die gemeinsame Checkpoint-Instruktion wird in installierte OpenCode-Personas ein
 | Wortzahl-Drift | Chain 100 %, Drei-Worte-Regel 83,33 % |
 | Kontrollierter Handoff-Fixture | 92 % Context und `Prepare compact handoff` werden korrekt angezeigt |
 
-Der Handoff-Wert von 92 % ist ein **synthetischer Contract-Fixture**; unter aktueller Semantik bedeutet er 92 % des 372k-Input-Limits. Automatisierte Adaptertests bestätigen getrennte Parent-/Subagent-Dateien, den kodierten Rückgabepfad, append-only Korrekturketten und read-only Inspection. Sie prüfen außerdem die Auswahl des letzten positiven-Output-Assistant-Schritts vor einem aktiven Output-null-Schritt, die ausschließliche Input-Berechnung, Clamping und Null-Fallback bei ungültigen Daten und SDK-Fehlern. Agent-/Titel-Momentaufnahmen, umbenannte Sessions, Installer-Szenarien und Symlink-Schutz sind separat abgedeckt. Der frühere Lauf mit einem isolierten lokalen OpenCode-Build schrieb einen heute als Legacy-Schema lesbaren sechs-feldrigen Datensatz mit `context_used: null`; diese Beobachtung belegt den Fallback, nicht eine allgemeine Always-null-Eigenschaft.
+Der Handoff-Wert von 92 % ist ein **synthetischer Contract-Fixture**; unter aktueller Semantik bedeutet er 92 % des 372k-Input-Limits. Automatisierte Adaptertests bestätigen getrennte Parent-/Subagent-Dateien, den kodierten Rückgabepfad, append-only Korrekturketten und read-only Inspection. Sie prüfen außerdem die Auswahl des letzten positiven-Output-Assistant-Schritts vor einem aktiven Output-null-Schritt, die Summe aus nicht gecachtem, Cache-Read- und Cache-Write-Input, Clamping und Null-Fallback bei ungültigen Daten und SDK-Fehlern. Agent-/Titel-Momentaufnahmen, umbenannte Sessions, Installer-Szenarien und Symlink-Schutz sind separat abgedeckt. Der frühere Lauf mit einem isolierten lokalen OpenCode-Build schrieb einen heute als Legacy-Schema lesbaren sechs-feldrigen Datensatz mit `context_used: null`; diese Beobachtung belegt den Fallback, nicht eine allgemeine Always-null-Eigenschaft.
 
 **Pilot-Gate: GO für spätere Adapter.** Tool-Verfügbarkeit, ausgewählte Pfad-Inspection, Append-Integrität, Signaltrennung, deterministische Schätzwerte und der ehrliche Null-Fallback entsprechen dem gemeinsamen Vertrag. Nicht belegt sind Live-Belegung des aktiven Tool-Schritts, aktive oder Compaction-Headroom und ein real beobachteter telemetriebasierter Handoff.
