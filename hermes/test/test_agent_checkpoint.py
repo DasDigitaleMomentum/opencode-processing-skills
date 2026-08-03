@@ -54,7 +54,7 @@ def require_node():
 def require_hermes():
     if HERMES is None:
         raise unittest.TestCase.failureException(
-            "hermes binary not found on PATH; pinned Hermes v0.19.0 is required for this suite"
+            "hermes binary not found on PATH; pinned Hermes v0.19.1 is required for this suite"
         )
     result = subprocess.run(
         [HERMES, "--version"], capture_output=True, text=True
@@ -70,9 +70,9 @@ def require_hermes():
             f"could not parse Hermes version from: {output.strip()}"
         )
     version = tuple(int(part) for part in match.groups())
-    if version != (0, 19, 0):
+    if version != (0, 19, 1):
         raise unittest.TestCase.failureException(
-            f"Hermes v{'.'.join(map(str, version))} does not match the required pinned version v0.19.0"
+            f"Hermes v{'.'.join(map(str, version))} does not match the required pinned version v0.19.1"
         )
 
 

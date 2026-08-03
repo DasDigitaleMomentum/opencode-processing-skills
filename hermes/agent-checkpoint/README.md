@@ -8,9 +8,10 @@ no model-carried identity, no configuration beyond opt-in enablement.
 
 ## Prerequisites
 
-- Pinned **Hermes Agent v0.19.0** (upstream `e0b9ab5a`; the plugin tool/hook
-  surface — `PluginContext.register_tool()`, plugin hook callbacks, and the
-  `plugins.enabled` opt-in flow — is verified against this build).
+- Pinned **Hermes Agent v0.19.1** (the plugin tool/hook surface —
+  `PluginContext.register_tool()`, plugin hook callbacks, and the
+  `plugins.enabled` opt-in flow — is unit- and live-E2E-verified against this
+  build).
 - The plugin directory installed at `~/.hermes/plugins/agent-checkpoint/`
   (the `install.sh` Hermes target of opencode-processing-skills does this).
 
@@ -79,7 +80,7 @@ Inspect logs with the shared tooling from this repository:
   parent-owned log. Parent and child invocation/telemetry slots remain isolated,
   but child identity or attribution is never persisted; every child checkpoint
   still carries the parent session ID and appends to the parent log.
-- **No fabricated host close.** The pinned v0.19.0 surface has no adopted trustworthy
+- **No fabricated host close.** The pinned v0.19.1 surface has no adopted trustworthy
   graceful main-session end hook. `subagent_start`, child stop information,
   tool completion, process exit, and age emit no event. `close_session=true`
   declares closure after its checkpoint. Because children append to the root

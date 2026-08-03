@@ -638,6 +638,7 @@ test("codex installer deploys adapter/profile and preserves the base config", as
   const output = runCodexInstaller([], { cwd: root, configFile, opencodeHome, codexHome });
   assert.match(output, /Codex checkpoint adapter/);
   assert.match(output, /agent-checkpoint\.config\.toml/);
+  assert.match(output, /Codex Desktop runtime:\s+codex -p agent-checkpoint/);
   assert.match(output, /codex --profile-v2 agent-checkpoint/);
   assertOutputOrder(output, [
     "Checkpoint adapter upgrade prerequisite:",
@@ -694,6 +695,15 @@ test("codex installer deploys adapter/profile and preserves the base config", as
   assert.match(profile, /\[mcp_servers\.agent_checkpoint\]/);
   assert.match(profile, /enabled_tools = \["checkpoint", "checkpoint_path"\]/);
   assert.match(profile, /default_tools_approval_mode = "auto"/);
+  assert.match(
+    profile,
+    /\[mcp_servers\.agent_checkpoint\.tools\.checkpoint\]\napproval_mode = "approve"/,
+  );
+  assert.match(
+    profile,
+    /\[mcp_servers\.agent_checkpoint\.tools\.checkpoint_path\]\napproval_mode = "approve"/,
+  );
+  assert.match(profile, /Codex Desktop runtime: codex -p agent-checkpoint/);
   assert.match(profile, /\[\[hooks\.SessionStart\]\]/);
   assert.match(profile, /\[\[hooks\.PreToolUse\]\]/);
   assert.doesNotMatch(profile, /hooks\.(?:Stop|SessionEnd)/);
