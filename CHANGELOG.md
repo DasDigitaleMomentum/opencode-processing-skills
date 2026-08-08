@@ -2,30 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.5.6 — 2026-08-03
+## 0.8.0 — 2026-08-08
+
+### Added
+- **Cross-harness checkpoint heartbeat**: A shared JSONL checkpoint core now supports OpenCode, Codex, Claude Code, Hermes, and a standalone Claude Desktop MCP adapter while preserving host-specific identity and lifecycle boundaries.
+- **Checkpoint Canary**: Three-word `next` to `done` chaining exposes instruction-following health separately from work success, with chain, work-status, and label-compliance signals.
+- **Live session visibility**: The watcher and inspector display parent/subagent identity, session titles, lifecycle state, current work, input usage, and explicit session completion across mixed legacy and current logs.
 
 ### Changed
-- **Input-only capacity feedback**: Supported adapters now report input usage against a common 372k operational limit, input K-tokens, and remaining input K-tokens with explicit previous-step/latest-snapshot lag semantics. The existing `context_used` JSON key now carries this input fraction; older logs may retain its previous context-fraction meaning.
-- **Input-budget guidance**: Across providers, approximately 220k input tokens are a soft planning signal; at or above approximately 272k, agents stop expanding work and use the remaining budget for a coherent checkpointed digest or handoff. The 372k rejection boundary is emergency headroom rather than a working target.
-- **Proportional cadence**: Implementers checkpoint after approved Blueprint steps or bounded parts of large steps, while Delegates checkpoint after bounded investigation, synthesis, or artifact units.
-- **Advisory package sizing**: Blueprints may include a concise optional Package Sizing Note, but only the Maintainer may approve the full package or issue a smaller fresh package.
+- **Input-only capacity feedback**: Supported adapters report input usage against a common 372k operational limit, input K-tokens, and remaining input K-tokens with explicit telemetry-lag semantics. The existing `context_used` JSON key now carries this input fraction; older logs may retain its previous context-fraction meaning.
+- **Input-budget guidance**: Approximately 220k input tokens are a soft planning signal across providers; at or above approximately 272k, agents stop expanding work and use the remaining budget for a coherent checkpointed digest or handoff. The 372k rejection boundary is emergency headroom rather than a working target.
+- **Proportional execution**: Implementers and Delegates checkpoint after bounded units. Blueprints may include a non-binding Package Sizing Note, while only the Maintainer decides whether to approve the full package or issue a smaller one.
+- **Smallest-sufficient planning**: Plans confirm the minimum necessary phase set before artifact creation. Reviews persist only evidence-backed scope exceptions, use compact reduction digests, and apply accepted reductions without automatic review loops.
+- **On-demand artifacts**: Planning workflows no longer scaffold empty implementation or handover directories or unresolved todo links.
+- **Multi-harness onboarding**: Installation and top-level documentation now make OpenCode, Codex, Claude Code, Claude Desktop, Cursor, and Hermes capabilities and boundaries explicit.
 
 ### Fixed
-- **Interrupted digest recovery**: Maintainers now resolve `checkpoint_path(task_id)`, inspect the selected log and current tree, map progress to the approved Blueprint or original delegated objective, and issue a smaller fresh task instead of resuming a bloated session.
-- **OpenCode cached-input accounting**: Input usage now sums uncached input, cache-read input, and cache-write input before applying the 372k operational limit; output and reasoning remain excluded.
-- **Claude statusline input path**: The wrapper now reads the documented `context_window.total_input_tokens` value, which already includes cache reads and writes, instead of an absent top-level field.
-- **Native watcher verification**: Global installation now rejects a scriptc-built watcher unless real 80- and 120-column PTY smokes prove raw-key handling, Ctrl-C cleanup, cursor restoration, and exact terminal-flag restoration; the installed Node watcher remains the fail-closed fallback.
-- **Codex Desktop checkpoints**: The generated layered profile explicitly approves only `checkpoint` and `checkpoint_path`, preventing Codex Desktop 26.727.51351 from cancelling unattended heartbeat calls. The hook now derives previous-call input telemetry from the last prior transcript `token_count` without double-counting cached input. A real two-turn model E2E covers model call, hook injection, MCP persistence, and inspection. Standalone CLI 0.131.0 is no longer claimed as supported after its live model path failed to deliver the configured hooks.
-- **Hermes 0.19.1 verification**: The pinned Hermes gate and documentation now match the locally installed v0.19.1 runtime proven by the real plugin/tool/lifecycle E2E.
-
-## 0.5.5 — 2026-08-02
-
-### Changed
-- **Smallest-sufficient planning**: Plan scope and the minimum necessary phase set are confirmed before artifact creation; authors prefer direct reuse, justify present need for new foundations/abstractions, and perform one bounded deletion pass.
-- **Exception-based scope reviews**: Plan and implementation-plan reviews check for both gaps and unnecessary work but persist only evidence-backed exceptions, without clean-item matrices or formal completeness certification.
-- **Compact reduction digests**: Reviews report verdict, reduction-required status, severity counts, actionable findings, and the next decision without mandatory before/after bookkeeping.
-- **Bounded remediation gate**: Once an optional review is invoked, blocking scope findings must be applied or explicitly rejected before progression. Plan reductions use one `update-plan` pass; implementation-plan reductions use one `review-fix` pass; automatic re-review loops remain prohibited.
-- **On-demand planning artifacts**: Empty implementation and handover directories and unresolved todo links are no longer scaffolded during plan creation.
+- **Interrupted digest recovery**: Maintainers resolve `checkpoint_path(task_id)`, inspect the selected log and current tree, map progress to the approved Blueprint or original delegated objective, and issue a smaller fresh task instead of resuming a bloated session.
+- **Complete input accounting**: OpenCode includes uncached, cache-read, and cache-write input; Claude Code reads the documented nested total; Codex derives prior-call input without double-counting cached tokens; output and reasoning remain excluded.
+- **Desktop checkpoint reliability**: Codex Desktop receives narrowly approved checkpoint tools and transcript-backed telemetry, while Claude Desktop receives isolated configuration planning, lifecycle tools, and shared-core persistence.
+- **Watcher safety**: Symlinked entry points work correctly, and native watcher installation is accepted only after bounded PTY smokes prove key handling, cleanup, cursor restoration, and terminal-flag restoration; the Node watcher remains the fail-closed fallback.
+- **Pinned host verification**: Adapter behavior and documentation match the verified Codex Desktop, Claude Code, Claude Desktop, and Hermes host surfaces; unsupported standalone Codex CLI behavior is no longer claimed.
 
 ## 0.5.4 — 2026-07-26
 

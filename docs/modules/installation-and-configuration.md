@@ -59,9 +59,10 @@ This module owns the public repository entry points and the mechanics that turn 
 | `Target Project File Convention` | section | public | `AGENTS.md:101` | Specifies the canonical target-project `docs/` and `plans/` artifact layout. |
 | `Development Guidelines` | section | public | `AGENTS.md:126` | Sets repository expectations for entity alignment, modular templates, updateability, phasing, and context limits. |
 | `File Conventions` | section | public | `AGENTS.md:135` | Requires Markdown/YAML metadata, plan changelogs, and structured checkbox todos. |
-| `0.5.0` | release | public | `CHANGELOG.md:5` | Records the unified delegate, review-fix, Cursor, GPT-5.6, scope-discipline, and macOS installer release. |
-| `0.2.0` | release | public | `CHANGELOG.md:26` | Records review workflows, configurable variants, project installs, model injection, and execution-policy changes. |
-| `0.1.0` | release | public | `CHANGELOG.md:61` | Records the initial skills, agents, installer, README, and license. |
+| `0.8.0` | release | public | `CHANGELOG.md:5` | Records cross-harness checkpoints, the Canary, input-budget telemetry, recovery, proportional planning, and multi-harness onboarding. |
+| `0.5.0` | release | public | `CHANGELOG.md:51` | Records the unified delegate, review-fix, Cursor, GPT-5.6, scope-discipline, and macOS installer release. |
+| `0.2.0` | release | public | `CHANGELOG.md:72` | Records review workflows, configurable variants, project installs, model injection, and execution-policy changes. |
+| `0.1.0` | release | public | `CHANGELOG.md:107` | Records the initial skills, agents, installer, README, and license. |
 | `MIT License grant` | license | public | `LICENSE:5` | Grants use, modification, distribution, sublicensing, and sale subject to notice retention. |
 | `MIT warranty disclaimer` | license | public | `LICENSE:15` | Disclaims warranties and author/copyright-holder liability. |
 | `OpenCode Processing Skills` | section | public | `README.md:1` | Names and summarizes the public project. |
