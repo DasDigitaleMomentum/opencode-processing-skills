@@ -39,7 +39,7 @@ This separates workflow health from implementation success. A failed work unit c
 
 I started working with subagents and context management through [DCP](https://github.com/Opencode-DCP/opencode-dynamic-context-pruning) to make Opus and other frontier models useful within GitHub Copilot's restrictions. The next step was orchestration: capable Chinese models such as DeepSeek V4 Pro, Qwen 3.7 Max, and GLM 5.2 formed the bracket around a task, while expensive models such as GPT-5.5 could start each focused piece of work with a fresh context.
 
-Now OpenAI has released the GPT-5.6 family. The same idea works within one model family: smaller models can steer the larger Sol model, while GPT-5.6 Sol at low or medium reasoning effort has proven itself as a very capable maintainer. Luna at high reasoning effort is also a cost-efficient option. Context discipline still matters, but DCP has moved from a requirement to an optional companion.
+Now OpenAI has released the GPT-5.6 family. GPT-5.6 Sol at medium or high reasoning effort has proven itself as a strong maintainer: it can hold the overall direction, make the important decisions, and distribute focused tasks cost-efficiently across models with different strengths and quality levels. Orchestration is no longer about putting one model above another, but about using each model where it fits best. Context discipline still matters, but DCP has moved from a requirement to an optional companion.
 
 That evolution is what this repo captures: not just a collection of prompts, but a practical way to keep strong models focused, give expensive work a clean context, and preserve everything important outside the chat.
 
