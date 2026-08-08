@@ -1,8 +1,37 @@
 # OpenCode Processing Skills
 
-Agents, skills, and templates for **structured AI-assisted development** with [OpenCode](https://github.com/anomalyco/opencode). Workflows for documenting codebases, persisting plans across sessions, and delegating work to specialized subagents.
+Agents, skills, and templates for **structured AI-assisted development** across [OpenCode](https://github.com/anomalyco/opencode), Codex, Claude Code, and other supported agent harnesses. Workflows cover codebase documentation, persistent multi-session planning, independent review, and gated implementation.
 
 > **Note:** This project is not built by or affiliated with the OpenCode team ("anomalyco").
+
+---
+
+## Work with OpenCode, Codex, or Claude
+
+One installer synchronizes the compatible workflow and checkpoint assets for each detected harness:
+
+| Harness | What you get |
+|---------|--------------|
+| **OpenCode** | The full maintainer/subagent system, workflow skills, model aliases, and native checkpoint plugin. |
+| **Codex** | The shared workflow skills plus a verified checkpoint profile with hook-owned session identity and input telemetry. |
+| **Claude Code** | Workflow skills, agent definitions, and a native checkpoint plugin with parent/subagent lifecycle tracking and input telemetry. |
+| **Claude Desktop** | A standalone checkpoint MCP adapter for workspace/conversation progress tracking; it is independent from the Claude Code workflow integration. |
+
+Cursor and Hermes are supported as additional installation targets with host-specific boundaries. The installer auto-detects existing homes, and `config.yaml` can explicitly enable, disable, or redirect each target.
+
+→ [Harness setup and activation](docs/installation.md)
+
+## Checkpoint Canary
+
+The checkpoint heartbeat is also a lightweight **instruction-following Canary**. Parents and subagents announce a three-word `next` step, then reuse it verbatim as the next checkpoint's three-word `done` value. The dashboard reports:
+
+- **Chain compliance**: did the next `done` match the previously announced `next`?
+- **Work status**: did the attempted unit complete or fail and enter correction?
+- **Three-word compliance**: did both checkpoint labels follow the compact contract?
+
+This separates workflow health from implementation success. A failed work unit can still have a healthy Canary when the agent records the failure correctly and announces the corrective step. The Canary does not prove code quality; it makes stalled, drifting, or interrupted agent work visible early and leaves a recovery trail for the parent.
+
+→ [Canary behavior, telemetry, and JSONL contract](docs/agent-checkpoint-heartbeat.md)
 
 ---
 
@@ -20,13 +49,13 @@ That evolution is what this repo captures: not just a collection of prompts, but
 
 AI-assisted development has a context problem. Every file you read, every search result you inspect — it all counts against a finite context window. When that window fills up, quality degrades. The most expensive thing you can do is rediscover what you already figured out yesterday.
 
-This repo solves that. It gives OpenCode:
+This repo solves that. Across the supported harnesses, it provides:
 
 - **Structured documentation** — generated from code, with symbol inventories that both humans and AI can navigate. Stop re-reading files you've already explored.
 - **Multi-session planning** — plans with phases, persistent todos, and handover docs. Close your laptop, open it tomorrow, pick up exactly where you left off.
 - **Gated implementation** — subagents propose a blueprint before writing code. The primary reviews and approves. Catches misunderstandings before they become bugs.
 - **File-based persistence** — `docs/` and `plans/` are the interface, not chat history. Knowledge survives session boundaries.
-- **Agent checkpoints** — parents and subagents log short done/next steps, failed attempts, and approximate context pressure to per-session JSONL files. A live terminal dashboard shows current workspace activity.
+- **Agent checkpoints** — parents and subagents log short done/next steps, failed attempts, and approximate input pressure to per-session JSONL files. A live terminal dashboard shows current workspace activity.
 - **Consistent templates** — every artifact uses the same structure. Information is always where you expect it.
 - **Provider-agnostic** — works with any model you configure: OpenAI, Anthropic, DeepSeek, Alibaba, and more. The architecture doesn't depend on any single provider's pricing or behavior.
 
@@ -53,7 +82,7 @@ coverage, build, snapshot, non-TTY live, and Python PTY smokes. This is optional
 Node watcher and its printed fallback command remain available, and project
 installation never touches the global binary.
 On OpenCode v1.18.2+, set `"subagent_depth": 2` for worker-to-retriever handoffs. Older versions do not support this setting and generally allow nested tasks through permissions alone.
-If Codex, Claude Code, Cursor, or Hermes are installed locally, skills are synced to their config directories during install.
+If Codex, Claude Code, Cursor, or Hermes are installed locally, compatible skills and adapters are synced to their config directories during install. Start Codex with the generated `agent-checkpoint` profile; restart Claude Code with the generated opt-in statusline settings to enable checkpoint telemetry.
 Hermes support includes the native checkpoint plugin and conservative
 parent-session `open` events; it does not port OpenCode-specific delegate
 personas, `Task` calls, or `task_id` continuation contracts.
@@ -118,7 +147,7 @@ printed by `./install.sh` or `./install.sh --project`; a successful optional
 global native build also prints the exact `Node fallback:`. The dashboard
 refreshes live and shows informational age, explicit
 `OPEN`/`CLOSED`/`UNKNOWN` state, chain and three-word compliance, work status,
-context, done, and current work. Agent identity has priority over the mutable
+input usage, done, and current work. Agent identity has priority over the mutable
 session name at the normal 120-column width. Rows whose latest physical event
 is at least three hours old are hidden initially in both live and `--once`
 output; lowercase `v` toggles all old rows in live mode and places old
