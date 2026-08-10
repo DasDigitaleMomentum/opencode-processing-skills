@@ -67,7 +67,7 @@ updated: "{{date}}"
 
 ## Phases
 
-<!-- Use the smallest sufficient phase set. For multi-phase plans, state briefly why each phase needs a separate execution boundary. -->
+<!-- Use the smallest complete phase set: cover necessary real paths and existing invariants without speculative work. For multi-phase plans, state briefly why each phase needs a separate execution boundary. -->
 
 | Phase | Title | Contribution | Why Separate | Detail | Status |
 |-------|-------|--------------|--------------|--------|--------|

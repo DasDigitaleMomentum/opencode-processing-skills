@@ -15,7 +15,8 @@ The main-loop orchestrator. Handles user interaction, planning decisions, scope,
 - Delegates expensive exploration to subagents
 - Keeps context lean by receiving digests instead of full outputs
 - Persists curated documentation to `docs/` and uses `plans/` proportionally for multi-phase, multi-session, explicitly requested, or durably coordinated/tracked work
-- Confirms the smallest sufficient plan before artifact writes, owns plan updates/reductions through `update-plan`, and enforces any optional review gate once invoked
+- Routes detailed planning and execution scope decisions through their owning skills, obtains material user-owned decisions before dependent work, owns plan updates/reductions through `update-plan`, and enforces any optional review gate once invoked
+- Coordinates user-attended `browser-walkthrough` journeys in the main loop while optionally retaining a Delegate for bounded browser segments; routes automated acceptance to Implementer and agent-observed walkthroughs to Delegate
 - Commits only when you ask
 
 **When it works itself vs. delegates:**
@@ -34,13 +35,14 @@ Non-interactive variant of `maintainer`. It uses the same routing, safety, testi
 
 ### `delegate`
 
-The one canonical, skill-driven persona and standard choice for normal delegation involving reasoning, synthesis, reviews, and skill-defined artifacts. Skills provide task expertise, workflow, write boundaries, and output contracts.
+The one canonical, skill-driven persona and standard choice for normal delegation involving reasoning, synthesis, reviews, and skill-defined artifacts. Skills provide task expertise, scope authority, workflow, write boundaries, and output contracts; the persona does not duplicate those operational rules.
 
 **Typical tasks:**
 - Codebase exploration
 - Running commands (tests, builds, verification)
 - Analyzing data or logs
 - Research and synthesis
+- Agent-observed browser journeys through `browser-walkthrough`
 
 **Write boundary:** `delegate` is read/analyze/verify by default. It may write skill-defined artifacts with explicit output paths/templates, such as reviews and implementation plans. Larger ad-hoc writes with undefined shape/targets should start with an informal Blueprint for primary approval. Code changes normally route to `implementer`; delegates do not perform Git operations.
 
@@ -87,6 +89,8 @@ Executes exactly one phase/work package following the gated two-call protocol. S
 The implementer directly reads scoped source, docs/plans, symbols, and compact targeted results, and uses `retriever` for separable bulk or coherent multi-file evidence while retaining ownership of its Blueprint, edits, and verification.
 In BLUEPRINT it uses native parallel reads for compact independent results and `retriever` for broad, large, or exploratory evidence. BLUEPRINT remains command-free and may include a concise non-binding Package Sizing Note; only the Maintainer may approve the full package or issue a smaller fresh one. In EXECUTE, potentially verbose output is spooled under `/tmp/opencode/`, and checkpoints follow approved Blueprint steps or bounded parts of a large step.
 
+`execute-work-package` owns the Implementer's detailed scope, completeness, underspecification, and configurable-value behavior. The persona only routes the role and protocol.
+
 **Protocol:** BLUEPRINT → GATE → EXECUTE → DIGEST
 
 BLUEPRINT and EXECUTE for that package always use the same compact `task_id`: the second turn depends on the inspection and approval context retained from the first. Only those two calls reuse the session; it retires after the digest and is never carried into another phase, work package, or post-digest continuation.
@@ -95,6 +99,7 @@ BLUEPRINT and EXECUTE for that package always use the same compact `task_id`: th
 - Proposes step lists (blueprint mode)
 - Proposes advisory natural sizing cuts when useful, without choosing or executing a split
 - Implements changes and stages verification: smallest targeted tests while changing/fixing, then the approved broad/full command as the final gate
+- Runs approved automated browser acceptance through `browser-walkthrough`
 - Returns compact digests
 
 **Does NOT:**
@@ -154,7 +159,7 @@ Batch implementation-plan review is another deliberate reuse case: the reviewer 
 
 Work likely to exhaust one session should be split before delegation by focused question, dependency group, or bounded work package. If a started subagent returns no usable digest, the maintainer neither resumes the bloated session nor absorbs the remainder. It resolves `checkpoint_path(task_id)`, inspects the selected log and current working tree, maps last attempted/next announced work to the approved Blueprint when present or the original delegated objective otherwise, and issues a smaller fresh task that begins from current state. This uses existing evidence rather than a new handoff, digest state, recovery schema, or automatic split.
 
-Checkpoint telemetry may lag the active turn. Capacity and cost decisions use only reported input usage and input K-tokens. Across providers, approximately 220k input tokens are a soft planning signal; at or above approximately 272k, agents stop expanding work and use the remaining budget for a coherent checkpointed digest or handoff. The 372k rejection boundary is emergency headroom, not a working target. Unknown telemetry stays unknown.
+Checkpoint telemetry may lag the active turn. Capacity and cost decisions use only reported input usage and input K-tokens. Across providers, approximately 205k input tokens are a soft planning signal; at or above approximately 272k, agents stop expanding work and use the remaining budget for a coherent checkpointed digest or handoff. The 372k rejection boundary is emergency headroom, not a working target. Unknown telemetry stays unknown.
 
 ### When to use delegate variants
 

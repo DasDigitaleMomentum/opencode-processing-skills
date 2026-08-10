@@ -33,11 +33,11 @@ Do **not** use this skill to:
 
 ## Review Focus
 
-The default priority is the smallest sufficient scope: confirm that requested outcomes are covered and that no phase or material deliverable is unauthorized, unnecessary, or needlessly separate. Inspect the relevant plan elements, but record only evidence-backed exceptions. The primary may add a focus via `{{focus}}`.
+The default priority is the smallest complete scope: confirm that requested outcomes are covered and that no phase or material deliverable is unauthorized, unnecessary, or needlessly separate. Inspect the relevant plan elements, but record only evidence-backed exceptions. The primary may add a focus via `{{focus}}`.
 
 ### Review posture
 
-**Detect existing gold-plating without becoming an adversarial reviewer.** A scope-reduction finding must identify a concrete planned item and show missing authorization, missing present necessity, or a smaller sufficient path. Do not invent requirements, ideal architectures, hardening, infrastructure, or findings. Zero findings remains valid.
+**Detect existing gold-plating without becoming an adversarial reviewer.** A scope-reduction finding must identify a concrete planned item and show missing authorization, missing present necessity, or a smaller path that remains complete: the requested behavior must still work, affected real paths must still integrate, and applicable existing invariants must be preserved. Scope discipline is not permission to omit necessary work. Do not invent requirements, ideal architectures, hardening, infrastructure, or findings. Zero findings remains valid.
 
 DoD wording, testing, references, documentation, and other formal criteria are not checklist obligations. Report them only when a concrete defect would block or misdirect execution.
 

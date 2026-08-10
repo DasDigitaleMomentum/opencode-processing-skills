@@ -12,7 +12,7 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 ├── README.md              # Project overview (English)
 ├── config.yaml.example    # Model configuration template
 ├── skills/                # Reusable skill definitions
-├── agents/                # Agent configurations  
+├── agents/                # Agent configurations
 └── docs/                  # Project documentation
 ```
 
@@ -51,7 +51,7 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 - **Session-resilient**: Everything persisted, handover on demand
 - **Context-aware**: Documents structured for partial loading (not everything into context at once)
 - **Policy-light**: Routing rules are defaults, not self-imposed blockers; preserve valid context and avoid automatic review/fix loops
-- **Scope-disciplined**: Authors produce the smallest sufficient plan and perform one deletion pass before handoff. Reviews check for gaps and unnecessary work but persist only evidence-backed exceptions, avoiding formal certification, replacement work, and automatic review loops.
+- **Skill-owned scope authority**: Detailed scope, completeness, underspecification, and configurable-value rules live in `create-plan`, `author-and-verify-implementation-plan`, and `execute-work-package` plus their bundled prompts/templates. Agent instructions route decisions and invoke the active skill rather than duplicating its rulebook; review skills retain their bounded review guidance.
 
 ## Design Decisions
 
@@ -63,7 +63,7 @@ Phases define scope and acceptance criteria independent of technical approach. T
 
 ### Why does the primary agent author plans, not doc-explorer?
 
-Scope plans are conversation-anchored: requirements emerge from user dialogue, trade-offs are negotiated, and DoD is agreed upon. This context lives in the primary agent's conversation. The primary proposes and confirms the smallest sufficient phase set before writing artifacts. Grounded per-phase implementation plans are different: one fresh Delegate per phase writes the smallest sufficient technical approach from gated scope and current code, then performs one author-owned deletion pass. Documentation, by contrast, is codebase-anchored and belongs to Doc Explorer.
+Scope plans are conversation-anchored: requirements emerge from user dialogue, trade-offs are negotiated, and DoD is agreed upon. This context lives in the primary agent's conversation, so the Primary obtains user-owned decisions before `create-plan` writes artifacts. Grounded per-phase implementation plans are different: one fresh Delegate per phase follows `author-and-verify-implementation-plan` against gated scope and current code. Execution follows the separately gated `execute-work-package` authority. Documentation, by contrast, is codebase-anchored and belongs to Doc Explorer.
 
 ### Why keep exploration and writing within workflow agents?
 

@@ -8,7 +8,7 @@ created: "{{date}}"
 # Execution Digest (Reference Format)
 
 ### Outcome
-- state: succeeded|failed
+- state: succeeded|failed|BLOCKED
 
 ### Edits
 - files_changed:
@@ -21,4 +21,4 @@ created: "{{date}}"
     <few relevant lines>
 
 ### Next
-- 1–3 bullets
+- 1–3 bullets; when BLOCKED, include the exact decision needed from the Primary and whether an updated/re-approved gate is required

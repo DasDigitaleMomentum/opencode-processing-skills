@@ -15,7 +15,7 @@ The `skills/` tree is the reusable workflow library. Each package combines a dis
 
 ### Responsibility
 
-This module owns workflow semantics and their canonical Markdown artifact shapes. It covers initial documentation, smallest-sufficient persistent planning, gated inline or plan-bound execution, two-way scope review, bounded reduction remediation, and legacy-document archiving. It does not define agent personas, select models, install files into a harness, or own a target project's generated `docs/` and `plans/`; those responsibilities belong to the agent definitions, installer/configuration surface, and the target repository respectively. Agent-role behavior and routing are described in the [Agents Reference](../agents.md).
+This module owns workflow semantics and their canonical Markdown artifact shapes. It covers initial documentation, smallest-complete persistent planning, gated inline or plan-bound execution, two-way scope review, bounded reduction remediation, and legacy-document archiving. It does not define agent personas, select models, install files into a harness, or own a target project's generated `docs/` and `plans/`; those responsibilities belong to the agent definitions, installer/configuration surface, and the target repository respectively. Agent-role behavior and routing are described in the [Agents Reference](../agents.md).
 
 ### Dependencies
 
@@ -38,11 +38,13 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `skills/archive-legacy-docs/tpl-archive-legacy-docs-prompt.md` | file | Delegation prompt that scopes a legacy-curator archive run. |
 | `skills/archive-legacy-docs/tpl-legacy-summary.md` | file | Canonical inventory format for `docs-legacy/summary.md`. |
 | `skills/author-and-verify-implementation-plan/` | dir | Grounded per-phase implementation-plan authoring package. |
-| `skills/author-and-verify-implementation-plan/SKILL.md` | file | Defines smallest-sufficient technical authoring, two-way step traceability, and one author-owned deletion pass against gated phase intent and current code. |
+| `skills/author-and-verify-implementation-plan/SKILL.md` | file | Defines smallest-complete technical authoring, two-way step traceability, and one author-owned deletion pass against gated phase intent and current code. |
 | `skills/author-and-verify-implementation-plan/tpl-author-and-verify-implementation-plan-prompt.md` | file | Delegation prompt with the exact implementation-plan write boundary and required references. |
 | `skills/author-and-verify-implementation-plan/tpl-implementation-plan.md` | file | Canonical implementation-plan artifact with What/Where/Authorized By/Why/Considerations steps, one primary verify command, optional checks, and exception-only Reality Check. |
+| `skills/browser-walkthrough/` | dir | Playwright-MCP browser walkthrough package routed through existing roles. |
+| `skills/browser-walkthrough/SKILL.md` | file | Defines automated Implementer acceptance, Delegate-observed walkthroughs, Maintainer-coordinated user-attended walkthroughs with optional retained-Delegate execution, bounded browser checkpoints, compact evidence routing, and the walkthrough digest. |
 | `skills/create-plan/` | dir | Conversation-anchored plan creation package. |
-| `skills/create-plan/SKILL.md` | file | Defines proportional selection, smallest-sufficient phase design, one deletion pass, confirmation before writes, and on-demand downstream directories. |
+| `skills/create-plan/SKILL.md` | file | Defines proportional selection, smallest-complete phase design, one deletion pass, confirmation before writes, and on-demand downstream directories. |
 | `skills/create-plan/tpl-phase.md` | file | Canonical what/why phase artifact with scope, deliverables, acceptance criteria, and no repeated authorization fields. |
 | `skills/create-plan/tpl-plan.md` | file | Canonical high-level plan artifact whose phase table adds only Contribution and Why Separate to its identity/link/status fields. |
 | `skills/create-plan/tpl-todo.md` | file | Canonical persistent todo artifact whose implementation-plan and handover links remain absent until those artifacts exist. |
@@ -76,7 +78,7 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `skills/review-implementation/tpl-impl-review.md` | file | Canonical severity-rated implementation review artifact with evidence and test-integrity sections. |
 | `skills/review-implementation/tpl-review-impl-prompt.md` | file | Delegation prompt for inspecting changes and optionally collecting bounded evidence while the reviewer owns findings and verdict. |
 | `skills/review-plan/` | dir | Independent high-level plan review package. |
-| `skills/review-plan/SKILL.md` | file | Defines fresh two-way review of requirement coverage, phase/deliverable authorization, smallest-sufficient scope, and binding reduction decisions. |
+| `skills/review-plan/SKILL.md` | file | Defines fresh two-way review of requirement coverage, phase/deliverable authorization, smallest-complete scope, and binding reduction decisions. |
 | `skills/review-plan/tpl-plan-review.md` | file | Canonical compact plan assessment with reduction flag and evidence-backed exception findings. |
 | `skills/review-plan/tpl-review-plan-prompt.md` | file | Delegation prompt for cold exception-only scope/minimality review. |
 | `skills/update-docs/` | dir | Incremental project-documentation maintenance package. |
@@ -98,15 +100,16 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `archive-legacy-docs` | workflow | public | `skills/archive-legacy-docs/SKILL.md:2` | Skill entry point for collecting scattered legacy docs into a git-aware flat archive. |
 | `delegation-prompt` (`archive-legacy-docs`) | template | public | `skills/archive-legacy-docs/tpl-archive-legacy-docs-prompt.md:3` | Contract for delegating archive policy and output to legacy-curator. |
 | `docs-archive-summary` | template | public | `skills/archive-legacy-docs/tpl-legacy-summary.md:3` | Contract for the forensic archive inventory and per-file summaries. |
-| `author-and-verify-implementation-plan` | workflow | public | `skills/author-and-verify-implementation-plan/SKILL.md:2` | Produces the smallest sufficient code-grounded implementation plan with two-way traceability and one deletion pass. |
+| `author-and-verify-implementation-plan` | workflow | public | `skills/author-and-verify-implementation-plan/SKILL.md:2` | Owns complete, code-grounded implementation planning, exact blocking decisions, two-way traceability, and one deletion pass. |
 | `delegation-prompt` (`author-and-verify-implementation-plan`) | template | public | `skills/author-and-verify-implementation-plan/tpl-author-and-verify-implementation-plan-prompt.md:3` | Contract for the delegate's references, exclusive write target, and compact return. |
 | `implementation-plan` (`author-and-verify`) | template | public | `skills/author-and-verify-implementation-plan/tpl-implementation-plan.md:3` | Canonical phase implementation-plan schema with five-field steps, one primary verify command, optional checks, and optional exception-only Reality Check. |
-| `create-plan` | workflow | public | `skills/create-plan/SKILL.md:2` | Confirms and writes the smallest sufficient durable plan, creating downstream directories only on demand. |
+| `browser-walkthrough` | workflow | public | `skills/browser-walkthrough/SKILL.md:2` | Uses available Playwright MCP/browser tools for three role-routed walkthrough modes with bounded checkpoints and a compact evidence-referenced digest. |
+| `create-plan` | workflow | public | `skills/create-plan/SKILL.md:2` | Owns complete durable scope confirmation and user-decision gating, creating downstream directories only on demand. |
 | `phase` (`create-plan`) | template | public | `skills/create-plan/tpl-phase.md:3` | Canonical what/why phase schema without repeated authorization metadata. |
 | `plan` (`create-plan`) | template | public | `skills/create-plan/tpl-plan.md:3` | Canonical project-change plan schema. |
 | `todo` (`create-plan`) | template | public | `skills/create-plan/tpl-todo.md:3` | Canonical persistent task-state and changelog schema. |
 | `delegate-analysis` | workflow | public | `skills/delegate-analysis/SKILL.md:2` | Skill entry point for scoped investigation in four explicit analysis modes. |
-| `execute-work-package` | workflow | public | `skills/execute-work-package/SKILL.md:2` | Skill entry point for plan-bound or inline gated implementation with mandatory gate-session reuse and staged verification. |
+| `execute-work-package` | workflow | public | `skills/execute-work-package/SKILL.md:2` | Owns scope-disciplined plan-bound or inline execution, blocker routing, gate-session reuse, and staged verification. |
 | `blueprint` | template | public | `skills/execute-work-package/tpl-execution-blueprint.md:3` | Canonical pre-execution step list plus optional advisory natural slices that do not split scope. |
 | `digest` | template | public | `skills/execute-work-package/tpl-execution-digest.md:3` | Canonical compact execution-result schema. |
 | `subagent-execute-prompt` | template | public | `skills/execute-work-package/tpl-implementer-execute-prompt.md:3` | Approved-step continuation contract that stages targeted tests before the broad/full final gate. |
@@ -120,13 +123,13 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `resume-plan` | workflow | public | `skills/resume-plan/SKILL.md:2` | Skill entry point for read-only, ordered session bootstrap from persisted plan artifacts. |
 | `review-fix` | workflow | public | `skills/review-fix/SKILL.md:2` | Applies one accepted implementation-plan/implementation remediation pass, emits reduction details where applicable, and stops. |
 | `continuation-prompt` | template | public | `skills/review-fix/tpl-review-fix-prompt.md:3` | Canonical remediation prompt with reduction instructions, context-value routing, and staged verification. |
-| `review-implementation-plan` | workflow | public | `skills/review-implementation-plan/SKILL.md:2` | Audits ordered implementation plans for forward coverage, reverse authorization/necessity, technical reality, and smallest sufficient scope. |
+| `review-implementation-plan` | workflow | public | `skills/review-implementation-plan/SKILL.md:2` | Audits ordered implementation plans for forward coverage, reverse authorization/necessity, technical reality, and smallest complete scope. |
 | `implementation-plan-review` | template | public | `skills/review-implementation-plan/tpl-impl-plan-review.md:3` | Canonical exception-only per-phase assessment and severity-rated findings schema. |
 | `delegation-prompt` (`review-implementation-plan`) | template | public | `skills/review-implementation-plan/tpl-review-impl-plan-prompt.md:3` | Contract for one fresh batch reviewer, consolidated evidence, per-phase artifacts, and compact aggregate digest. |
 | `review-implementation` | workflow | public | `skills/review-implementation/SKILL.md:2` | Skill entry point for independent completed-implementation review. |
 | `implementation-review` | template | public | `skills/review-implementation/tpl-impl-review.md:3` | Canonical implementation review schema with evidence, verification, and regression analysis. |
 | `delegation-prompt` (`review-implementation`) | template | public | `skills/review-implementation/tpl-review-impl-prompt.md:3` | Contract for reviewing actual changes and writing the implementation review artifact. |
-| `review-plan` | workflow | public | `skills/review-plan/SKILL.md:2` | Independently audits plan coverage, authorization, present necessity, and smallest sufficient scope. |
+| `review-plan` | workflow | public | `skills/review-plan/SKILL.md:2` | Independently audits plan coverage, authorization, present necessity, and smallest complete scope. |
 | `plan-review` | template | public | `skills/review-plan/tpl-plan-review.md:3` | Canonical exception-only plan assessment and severity-rated findings schema. |
 | `delegation-prompt` (`review-plan`) | template | public | `skills/review-plan/tpl-review-plan-prompt.md:3` | Contract for cold scope review and a compact verdict/reduction/findings return. |
 | `update-docs` | workflow | public | `skills/update-docs/SKILL.md:2` | Skill entry point for incremental documentation synchronization after code changes. |
@@ -143,7 +146,7 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 
 1. A user request matches a skill's `name` and `description` frontmatter, causing the harness or maintainer to load that package's `SKILL.md`.
 2. The skill identifies the owning role, required inputs, read/write boundary, ordered workflow, and output contract. Where a delegate is involved, the primary fills the package's prompt template with paths and decisions rather than copying source content into chat.
-3. Plan and implementation-plan authors derive the smallest sufficient scope and each perform one deletion pass. `create-plan` confirms scope before writes and creates only currently needed artifacts; implementation and handover directories appear on demand.
+3. `create-plan`, `author-and-verify-implementation-plan`, and `execute-work-package` own detailed scope, completeness, underspecification, and configurable-value behavior for their stages. Personas route user-owned decisions rather than duplicating those rules; planning authors retain one deletion pass and on-demand artifact creation.
 4. Review workflows inspect for gaps and unnecessary work but persist only evidence-backed exceptions. Their artifacts contain an assessment, reduction flag, stable severity-rated findings, and required action.
 5. The primary accepts or explicitly rejects blocking findings. Accepted plan findings run once through primary-owned `update-plan`; accepted implementation-plan findings run once through `review-fix`, reusing reviewer context only when materially helpful. Both preserve the immutable review, verify only changed/directly affected checks, and end without automatic re-review.
 6. Multiple implementation plans normally use one reviewer session fresh from authoring, sequential dependency-order review, material conflict notes only in affected artifacts, and one compact aggregate digest. Evidence retrieval is consolidated rather than recursively fanned out by phase.
@@ -158,4 +161,4 @@ The skill library has no module-local runtime configuration file or environment 
 ## Inventory Notes
 
 - **Coverage**: full
-- **Notes**: The Structure inventory contains the `skills/` root, all 14 tracked package directories, and all 43 paths returned by `git ls-files skills` on this branch. Key Symbols are best-effort exhaustive for a Markdown package: every tracked file contributes its public skill name or primary template `entity`, with exact 1-based source locations. Markdown subsections and variable fields subordinate to those top-level contracts are intentionally described through the owning file rather than treated as language-level exports.
+- **Notes**: The Structure inventory contains the `skills/` root, all 15 tracked package directories, and all 44 tracked paths under `skills/` on this branch. Key Symbols are best-effort exhaustive for a Markdown package: every tracked file contributes its public skill name or primary template `entity`, with exact 1-based source locations. Markdown subsections and variable fields subordinate to those top-level contracts are intentionally described through the owning file rather than treated as language-level exports.

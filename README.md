@@ -23,13 +23,15 @@ Cursor and Hermes are supported as additional installation targets with host-spe
 
 ## Checkpoint Canary
 
-The checkpoint heartbeat is also a lightweight **instruction-following Canary**. Parents and subagents announce a three-word `next` step, then reuse it verbatim as the next checkpoint's three-word `done` value. The dashboard reports:
+Most importantly, every checkpoint reports the latest available input usage, input K-tokens, and remaining input headroom back to the model. This lets the model stop expanding its work in time and produce an orderly digest or handoff. If the model still aborts, the persisted checkpoint log gives the parent a recovery trail for mapping completed work and continuing the remainder in a smaller fresh task.
+
+The heartbeat is also a lightweight **instruction-following Canary**. Parents and subagents announce a three-word `next` step, then reuse it verbatim as the next checkpoint's three-word `done` value. The dashboard reports:
 
 - **Chain compliance**: did the next `done` match the previously announced `next`?
 - **Work status**: did the attempted unit complete or fail and enter correction?
 - **Three-word compliance**: did both checkpoint labels follow the compact contract?
 
-This separates workflow health from implementation success. A failed work unit can still have a healthy Canary when the agent records the failure correctly and announces the corrective step. The Canary does not prove code quality; it makes stalled, drifting, or interrupted agent work visible early and leaves a recovery trail for the parent.
+This separates workflow health from implementation success. A failed work unit can still have a healthy Canary when the agent records the failure correctly and announces the corrective step. The Canary does not prove code quality; it makes stalled, drifting, or interrupted agent work visible early.
 
 → [Canary behavior, telemetry, and JSONL contract](docs/agent-checkpoint-heartbeat.md)
 
@@ -171,7 +173,7 @@ process liveness from age.
 
 **Reuse review context conditionally.** Accepted related findings may return to the same reviewer through `review-fix` when retained reasoning materially helps, including multi-file runtime fixes. This does not carry authoring or implementation sessions across phases/work packages; further reviews are optional and never loop automatically.
 
-**Generate the smallest sufficient plan.** Confirm scope and the minimum necessary phase set before writing artifacts. Plan and implementation-plan authors prefer direct changes and existing structures, justify new foundations or abstractions by present need, and perform one deletion pass before handoff.
+**Generate the smallest complete plan.** Confirm scope and the minimum necessary phase set before writing artifacts. Plan and implementation-plan authors prefer direct changes and existing structures, justify new foundations or abstractions by present need, and perform one deletion pass before handoff.
 
 **Keep reviews disciplined.** No Gold-Plating. No Adversarial Reviewing. No Scope Creep. Reviewers check for gaps and unnecessary work but write only evidence-backed exceptions, not coverage matrices or clean-item certifications. Reduction findings remove concrete work; they do not invent replacement architecture or requirements.
 

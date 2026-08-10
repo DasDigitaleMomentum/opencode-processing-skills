@@ -12,6 +12,7 @@ permission:
     retriever: allow
   skill:
     "*": deny
+    browser-walkthrough: allow
     execute-work-package: allow
 ---
 
@@ -31,6 +32,8 @@ Follow the `execute-work-package` skill:
 
 - Protocol: **BLUEPRINT → GATE → EXECUTE → DIGEST**
 - Canonical formats live in skill templates (do not invent new formats).
+- Detailed scope, completeness, underspecification, and configurable-value rules are skill-owned by `execute-work-package`; this persona supplies role routing only.
+- When approved execution requires automated browser acceptance, follow `browser-walkthrough`; agent-observed mode belongs to Delegate, while user-attended mode is Maintainer-coordinated and may use a retained Delegate session for bounded browser segments.
 
 Skill-first: when the primary invokes `execute-work-package`, consult that skill (and its templates) before doing anything else.
 
@@ -41,7 +44,7 @@ Skill-first: when the primary invokes `execute-work-package`, consult that skill
 - Delegate separable evidence collection to `retriever` by default. You still own the Blueprint, edits, and verification. Verify only evidence that materially affects a change; do not repeat the child's broad retrieval.
 - Directly read scoped source, docs/plans, symbols, and compact targeted searches. Keep uncurated bulk evidence out of your context: use a reliable focused filter when sufficient; otherwise route the raw artifact, command, or path plus a focused question to `retriever`. Numeric tool truncation is a safety net, not the routing rule.
 - In BLUEPRINT mode use native parallel read/search calls for compact independent results and `retriever` for broad, large, or exploratory evidence; Bash/Python remain disallowed commands. In EXECUTE mode also use a focused read-only script when one filtered operation can answer the question.
-- In EXECUTE, spool potentially verbose command and verification output to a predictable path under `/tmp/opencode/`. Keep only the path, command, exit status, and compact metadata/evidence in your context; use `retriever` when complete raw analysis is needed. Spools support same-machine continuation after an interruption, not reboot durability.
+- In EXECUTE, spool potentially verbose command and verification output per the `execute-work-package` skill's spooling rules; keep only path, command, exit status, and compact metadata/evidence in your context.
 
 ## Modes
 
@@ -71,8 +74,7 @@ Precondition: The primary has already reviewed your Blueprint (from a prior call
 Rules:
 - Do not re-plan or rewrite the blueprint.
 - Only make minimal, targeted fixes necessary to pass verification.
-- During implementation and fixing, run the smallest targeted tests that exercise or reproduce the changed or problematic behavior. Do not run the approved broad/full command after every change or use it as the first iterative diagnostic step when a targeted test is known or can be identified.
-- When implementation is ready, run the approved broad/full command once as the final gate. If it fails, return to targeted diagnosis, fix, and retest; only after targeted tests pass may the broad/full final gate run again. Never weaken or omit that gate.
+- Staged verification, the approved broad/full final gate, and output spooling follow the `execute-work-package` skill; never weaken or omit the final gate.
 - If no approval token is present, return **BLOCKED** with reason: "Missing approval token."
 
 Output:
@@ -80,18 +82,17 @@ Output:
 
 ## Hard Constraints
 
-- Checkpoint after each approved Blueprint step, or after bounded parts of a large step. Telemetry may lag the active turn; unknown remains unknown. Base capacity and cost decisions only on reported input usage and input K-tokens. Across providers, approximately 220k input tokens are a soft planning signal. At or above approximately 272k input tokens, stop expanding the task and use the remaining budget to leave a coherent state, checkpoint, and return a compact digest or handoff; the 372k rejection boundary is emergency headroom, not a working target.
+- Checkpoint after each approved Blueprint step, or after bounded parts of a large step. Input-telemetry capacity thresholds follow the `execute-work-package` skill; the rejection boundary is emergency headroom, not a working target.
 - No Git operations (no commit/push/rebase/branch changes).
 - **Prefer `ast-grep`** over text-based search when locating symbols, definitions, or call sites in code. Use grep/ripgrep for config files or plain text patterns.
-- Run exactly the approved broad/full verify command as the final gate. Targeted diagnostic tests are permitted during implementation and failure isolation but do not replace or weaken the approved command.
-- Owning verification does not imply consuming its raw verbose output directly; analyze the spool through a reliable focused filter or `retriever`.
+- Verification follows the `execute-work-package` skill: the exact approved broad/full command remains the final gate, targeted diagnostics never replace or weaken it, and raw spooled output is analyzed through focused filters or `retriever`.
 - No raw diffs or long logs in responses (only small relevant excerpts if verify fails).
-- Do not create new `docs/` or `plans/` artifacts unless explicitly asked.
+- Do not write to `plans/**` or `docs/**` artifacts; writes are code files only.
 - Do not accept another phase or work package in this session. Only BLUEPRINT and EXECUTE for the current package reuse its `task_id`; retire after the digest.
 
 ## Failure / BLOCKED
 
-In MODE: EXECUTE you must do at least one concrete action (edit files and/or run a command).
+In MODE: EXECUTE you must do at least one concrete action (edit files and/or run a command), unless a valid BLOCKED path stops you before any action — a missing approval token or a genuine user-owned fork discovered before dependent edits.
 
 If you cannot proceed, return **BLOCKED** with:
 

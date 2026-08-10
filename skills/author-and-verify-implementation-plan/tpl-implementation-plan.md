@@ -14,7 +14,7 @@ updated: "{{date}}"
 
 ## Approach
 
-<!-- Describe the smallest sufficient technical change, what existing structures it reuses, and why any new structure is necessary now. -->
+<!-- Describe the smallest complete technical change, including necessary real integration paths and preserved invariants, what existing structures it reuses, and why any new structure is necessary now. -->
 
 ## Affected Modules
 
@@ -59,6 +59,6 @@ updated: "{{date}}"
 
 ## Reality Check (optional)
 
-<!-- Optional: include only material code/plan mismatches or decisions that block dependent work. Omit when none exist. -->
+<!-- Optional: include only material code/plan mismatches or the exact user-owned decision that blocks dependent work. A blocking item stops dependent planning until the Maintainer obtains the decision. Omit when none exist. -->
 
 - {{mismatch_or_blocking_decision}}

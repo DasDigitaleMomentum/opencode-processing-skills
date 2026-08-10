@@ -64,6 +64,16 @@ Gather requirements from the user using the `question` tool:
 
 If the user provided a detailed brief, extract these from the brief and confirm with the `question` tool.
 
+### Scope and Specification Boundary
+
+Gold-plating is work not required by an explicit user requirement, gated scope/DoD, or a concrete existing invariant necessary for the requested behavior to function. It includes invented product rules or guardrails, speculative configurability, generalized abstractions or future-proofing, and exhaustive treatment of hypothetical edge cases. Do not invent product, policy, or operational rules or guardrails, and do not design every conceivable edge case.
+
+Minimal means the **smallest complete solution**, never an incomplete plan: the requested behavior must work, affected real paths must integrate, applicable existing invariants must be preserved, and the approved verification must pass. Functionality and correctness come first; scope discipline is not permission to omit necessary work or obstruct progress.
+
+Ask the user only when missing specification creates a genuine user-owned fork that changes observable behavior, scope/DoD, policy or rules, configuration behavior, or acceptance. Resolve codebase-answerable questions through documentation and targeted analysis, and choose local, reversible technical details that do not change observable behavior without asking. If a material user-owned choice is missing, ask through the Primary and obtain the answer before creating plan artifacts rather than filling the gap.
+
+Required values that users or operators may reasonably change across environments—including URLs, addresses, ports, timeouts, and similar runtime values—belong in the project's existing configuration location or pattern, not in hidden code defaults or fallbacks. Do not invent a new configuration system or extra options unless gated scope requires them. If a required configurable value has no established project configuration location, or its behavior is a user-owned choice, ask through the Primary before artifact creation. Fixed protocol or domain constants authorized by requirements do not become configurable merely to appear flexible.
+
 ### Step 2: Analyze the Codebase (if applicable)
 
 If the plan involves changes to existing code:
@@ -75,7 +85,7 @@ If the plan involves changes to existing code:
 
 ### Step 3: Design the Phase Structure
 
-Design the **smallest sufficient plan**: use the fewest phases needed for the confirmed outcome and stable execution boundaries. Omit phases that are useful only for hypothetical future requirements or can be merged without losing a required outcome.
+Design the **smallest complete plan**: use the fewest phases needed for the confirmed outcome and stable execution boundaries while covering all necessary real paths and existing invariants. Omit phases that are useful only for hypothetical future requirements or can be merged without losing a required outcome.
 
 **Single-phase plans** (work that otherwise warrants persistence):
 - One phase covering the entire scope
@@ -103,7 +113,7 @@ Before writing artifacts, present:
 - The proposed phase count and one-line necessity of each phase
 - Any unresolved decision that blocks a phase
 
-Use the `question` tool to confirm the smallest sufficient scope and phase structure or gather adjustments. Do not create plan artifacts before this gate.
+Use the `question` tool to confirm the smallest complete scope and phase structure or gather adjustments. Do not create plan artifacts before this gate.
 
 ### Step 5: Create the Plan Document
 
@@ -149,11 +159,11 @@ Create `implementation/` when the first implementation plan is authored and `han
 2. **Phase independence**: Each phase must end in a stable state. No phase should leave the codebase broken.
 3. **Phase describes scope**: Keep phase docs focused on what/why and acceptance criteria. The per-phase implementation approach (how) is authored later via `author-and-verify-implementation-plan`.
 4. **Reference, don't duplicate**: Implementation plans reference module docs and phase docs. Don't repeat requirements from the plan in each phase.
-5. **Smallest sufficient phase set**: Use the fewest phases that preserve a stable result and fit demonstrated execution boundaries. Uncertainty alone is not a reason to split.
+5. **Smallest complete phase set**: Use the fewest phases that preserve a stable result, cover necessary real paths and invariants, and fit demonstrated execution boundaries. Uncertainty alone is not a reason to split.
 6. **No built-in explore agent**: Do NOT use the built-in `explore` subagent type in this framework.
 7. **Use `doc-explorer` for codebase analysis**: Delegate deep symbol/dependency analysis via the Task tool. Results are written to `docs/`, not returned as text.
 8. **Two-pass default for implementation plans**: Implementation plans are authored/verified separately via `author-and-verify-implementation-plan` before executing a phase.
-9. **Always ask for confirmation before writing**: Validate requirements, the smallest sufficient phase structure, and scope with the user before creating artifacts.
+9. **Always ask for confirmation before writing**: Validate requirements, the smallest complete phase structure, and scope with the user before creating artifacts.
 10. **Initialize changelog**: The plan's changelog should document its creation with the current date.
 11. **Create artifacts on demand**: Create only directories and files needed by the current workflow. Do not scaffold empty implementation or handover directories.
 12. **Preserve framing without duplication**: Include the problem/current state, target outcome, and binding guiding decisions needed to interpret scope. Reference detailed architecture docs rather than turning the plan into an architecture inventory.

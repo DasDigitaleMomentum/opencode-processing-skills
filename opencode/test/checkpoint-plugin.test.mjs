@@ -384,7 +384,8 @@ async function assertInstalledOpenCodePilot(home) {
     assert.match(persona, /Maintainer or parent leaves it false/);
     assert.match(persona, /reported \*\*input usage\*\*/);
     assert.match(persona, /Across providers/);
-    assert.match(persona, /approximately 220k input tokens are a soft planning signal/);
+    assert.match(persona, /approximately 205k input tokens are a soft planning signal/);
+    assert.doesNotMatch(persona, /approximately 220k input tokens are a soft planning signal/);
     assert.match(persona, /At or above approximately 272k input tokens/);
     assert.match(persona, /372k input rejection boundary is emergency headroom/);
     assert.match(persona, /previous completed step or latest harness snapshot/);
@@ -397,6 +398,16 @@ async function assertInstalledOpenCodePilot(home) {
   assert.match(executionSkill, /Execute Work Package/);
   assert.match(executionSkill, /Package Sizing Note/);
   assert.match(executionSkill, /Call `checkpoint_path` with the failed Implementer `task_id`/);
+  const browserSkill = await readFile(
+    path.join(home, "skills/browser-walkthrough/SKILL.md"),
+    "utf8",
+  );
+  assert.match(browserSkill, /Automated browser acceptance — Implementer-owned/);
+  assert.match(browserSkill, /Agent-observed walkthrough — Delegate-owned/);
+  assert.match(browserSkill, /User-attended walkthrough — Maintainer-owned/);
+  assert.match(browserSkill, /Evidence paths/);
+  const implementer = await readFile(path.join(home, "agents/implementer.md"), "utf8");
+  assert.match(implementer, /browser-walkthrough: allow/);
 }
 
 test("native tools isolate parent and subagent logs with honest unknown telemetry", async (t) => {
@@ -1007,9 +1018,11 @@ test("installer migrates only the exact legacy managed fragment and preserves su
   runInstaller([], { cwd: root, configFile, opencodeHome: home });
 
   const current = await readFile(path.join(REPOSITORY_ROOT, "opencode/checkpoint-instruction.md"), "utf8");
+  const previousOperational = current.replace("approximately 205k input tokens", "approximately 220k input tokens");
   const legacyPath = path.join(home, "agents/ordinary-legacy.md");
   const initialLegacyPath = path.join(home, "agents/delegate-codex.md");
   const previousSoftContextPath = path.join(home, "agents/previous-soft-context.md");
+  const previousOperationalPath = path.join(home, "agents/previous-operational.md");
   const previousCurrentPath = path.join(home, "agents/previous-current.md");
   const retainedVariantPath = path.join(home, "agents/delegate-retained.md");
   const currentPath = path.join(home, "agents/ordinary-current.md");
@@ -1018,6 +1031,7 @@ test("installer migrates only the exact legacy managed fragment and preserves su
   await writeFile(legacyPath, `${prefix}${LEGACY_INSTRUCTION}${suffix}`);
   await writeFile(initialLegacyPath, `${prefix}${INITIAL_LEGACY_INSTRUCTION}${suffix}`);
   await writeFile(previousSoftContextPath, `${prefix}${PREVIOUS_SOFT_CONTEXT_INSTRUCTION}${suffix}`);
+  await writeFile(previousOperationalPath, `${prefix}${previousOperational}${suffix}`);
   await writeFile(previousCurrentPath, `${prefix}${PREVIOUS_CURRENT_INSTRUCTION}${suffix}`);
   await writeFile(retainedVariantPath, `variant prefix\n${LEGACY_INSTRUCTION}variant suffix\n`);
   const exactCurrent = `${prefix}${current}${suffix}`;
@@ -1027,12 +1041,14 @@ test("installer migrates only the exact legacy managed fragment and preserves su
   assert.match(output, /Updated: ordinary-legacy\.md/);
   assert.match(output, /Updated: delegate-codex\.md/);
   assert.match(output, /Updated: previous-soft-context\.md/);
+  assert.match(output, /Updated: previous-operational\.md/);
   assert.match(output, /Updated: previous-current\.md/);
   assert.match(output, /Updated: delegate-retained\.md/);
   assert.match(output, /Present: ordinary-current\.md/);
   assert.equal(await readFile(legacyPath, "utf8"), `${prefix}${current}${suffix}`);
   assert.equal(await readFile(initialLegacyPath, "utf8"), `${prefix}${current}${suffix}`);
   assert.equal(await readFile(previousSoftContextPath, "utf8"), `${prefix}${current}${suffix}`);
+  assert.equal(await readFile(previousOperationalPath, "utf8"), `${prefix}${current}${suffix}`);
   assert.equal(await readFile(previousCurrentPath, "utf8"), `${prefix}${current}${suffix}`);
   assert.equal(
     await readFile(retainedVariantPath, "utf8"),

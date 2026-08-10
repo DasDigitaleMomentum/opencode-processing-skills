@@ -1276,10 +1276,34 @@ install_opencode_checkpoint_instruction() {
     local agents_dir="$target_home/agents"
     local fragment="$SCRIPT_DIR/opencode/checkpoint-instruction.md"
     local marker="<!-- opencode-checkpoint-instruction -->"
-    local previous_input_fragment previous_current_fragment legacy_fragment initial_legacy_fragment current_length
+    local previous_operational_fragment previous_input_fragment previous_current_fragment legacy_fragment initial_legacy_fragment current_length
     local agent_file marker_matches marker_count marker_offset replacement
     local candidate candidate_length matched_legacy matched_length
 
+    previous_operational_fragment="$(mktemp "${TMPDIR:-/tmp}/opencode-checkpoint-previous-operational.XXXXXX")"
+    cat > "$previous_operational_fragment" <<'EOF'
+<!-- opencode-checkpoint-instruction -->
+
+## Checkpoint Heartbeat
+
+This instruction applies to parents and subagents. Segment work into meaningful, role-appropriate bounded units and call `checkpoint` after each completed or failed unit, not after every tiny action. Follow any more specific role cadence. Write `done` and `next` as exactly three words, and reuse the previous `next` text verbatim as the following `done`.
+
+Where possible, include `checkpoint` in the same parallel tool-call block as the next independent tool calls. Do not create an additional model round trip solely for checkpointing.
+
+When an attempted subtask fails, still checkpoint with that announced subtask as `done`, set `step_failed=true`, and make `next` the corrective step. This records work progress and is not itself a Canary failure.
+
+Checkpoint feedback may describe the previous completed step or latest harness snapshot and therefore lag the active turn. Treat unknown telemetry as unknown. Base capacity and cost decisions only on reported **input usage**, input K-tokens, and remaining input K-tokens.
+
+Across providers, approximately 220k input tokens are a soft planning signal: do not deliberately open another context-heavy branch without assessing the remaining work. At or above approximately 272k input tokens, use the remaining budget to leave a coherent state, checkpoint, and return a compact digest or handoff instead of starting more context-heavy work. The 372k input rejection boundary is emergency headroom, not a working target. These are behavioral guidelines, not tool-enforced stop conditions.
+
+Checkpointing records progress but does not prove work quality.
+
+Every successful checkpoint lazily confirms the persisted session as open. `close_session` defaults to `false`. A subagent sets `close_session=true` only on its final checkpoint immediately before returning a digest, summary, or handoff. A Maintainer or parent leaves it false unless intentionally ending the whole persisted session.
+
+Closure is independent of `step_failed` and does not prove work succeeded. An interrupted session or missing final call remains open; any later checkpoint confirms it open again.
+
+<!-- /opencode-checkpoint-instruction -->
+EOF
     previous_input_fragment="$(mktemp "${TMPDIR:-/tmp}/opencode-checkpoint-previous-input.XXXXXX")"
     cat > "$previous_input_fragment" <<'EOF'
 <!-- opencode-checkpoint-instruction -->
@@ -1378,7 +1402,7 @@ EOF
         matched_legacy=""
         matched_length=""
         if [ "$marker_count" -eq 1 ]; then
-            for candidate in "$previous_input_fragment" "$previous_current_fragment" "$legacy_fragment" "$initial_legacy_fragment"; do
+            for candidate in "$previous_operational_fragment" "$previous_input_fragment" "$previous_current_fragment" "$legacy_fragment" "$initial_legacy_fragment"; do
                 candidate_length="$(wc -c < "$candidate" | tr -d '[:space:]')"
                 if dd if="$agent_file" bs=1 skip="$marker_offset" count="$candidate_length" 2>/dev/null |
                     cmp -s - "$candidate"; then
@@ -1397,7 +1421,7 @@ EOF
                     dd if="$agent_file" bs=1 skip="$((marker_offset + matched_length))" 2>/dev/null
                 } > "$replacement" ||
                 ! mv -f "$replacement" "$agent_file"; then
-                rm -f "$replacement" "$previous_input_fragment" "$previous_current_fragment" "$legacy_fragment" "$initial_legacy_fragment"
+                rm -f "$replacement" "$previous_operational_fragment" "$previous_input_fragment" "$previous_current_fragment" "$legacy_fragment" "$initial_legacy_fragment"
                 echo "  ERROR: could not migrate checkpoint instruction in $agent_file" >&2
                 return 1
             fi
@@ -1405,12 +1429,12 @@ EOF
             continue
         fi
 
-        rm -f "$previous_input_fragment" "$previous_current_fragment" "$legacy_fragment" "$initial_legacy_fragment"
+        rm -f "$previous_operational_fragment" "$previous_input_fragment" "$previous_current_fragment" "$legacy_fragment" "$initial_legacy_fragment"
         echo "  ERROR: unknown or customized checkpoint instruction in $agent_file" >&2
         echo "  Restore the exact managed block or remove its marker, then rerun install.sh." >&2
         return 1
     done
-    rm -f "$previous_input_fragment" "$previous_current_fragment" "$legacy_fragment" "$initial_legacy_fragment"
+    rm -f "$previous_operational_fragment" "$previous_input_fragment" "$previous_current_fragment" "$legacy_fragment" "$initial_legacy_fragment"
     echo ""
 }
 

@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+- **Browser walkthrough workflow**: The new `browser-walkthrough` skill uses available Playwright MCP/browser tools for Implementer-owned automated acceptance, Delegate-observed journeys, and Maintainer-coordinated user-attended walkthroughs with optional retained-Delegate execution between interaction points, without adding a persona.
+
+### Changed
+- **Earlier input planning signal**: Current cross-harness guidance now uses approximately 205k input tokens as the soft planning signal while preserving the approximately 272k orderly-exit signal and 372k emergency boundary; installer migration recognizes the immediately previous 220k managed block.
+- **Skill-owned scope discipline**: Planning, implementation-plan authoring, and gated execution now own consistent minimal-completeness, underspecification, and configurable-value behavior in their skills and operational templates; agent personas retain only routing references to that authority.
+
 ## 0.8.0 — 2026-08-08
 
 ### Added

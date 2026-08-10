@@ -169,7 +169,7 @@ class RegistrationTests(unittest.TestCase):
             "previous completed step or latest harness snapshot",
             "reported **input usage**",
             "Across providers",
-            "approximately 220k input tokens are a soft planning signal",
+            "approximately 205k input tokens are a soft planning signal",
             "At or above approximately 272k input tokens",
             "372k input rejection boundary is emergency headroom",
             "final checkpoint",
@@ -185,6 +185,10 @@ class RegistrationTests(unittest.TestCase):
                 self.assertEqual(set(result), {"context"})
                 for clause in required:
                     self.assertIn(clause, result["context"])
+                self.assertNotIn(
+                    "approximately 220k input tokens are a soft planning signal",
+                    result["context"],
+                )
 
 
 class CheckpointWriteTests(PluginTestCase):
@@ -1024,6 +1028,10 @@ class InstallerIsolationTests(InstallerTestCase):
         self.assertEqual(installed, skill_names)
         for name in skill_names:
             self.assertTrue((skills / name / "SKILL.md").is_file())
+        browser_skill = (skills / "browser-walkthrough" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("User-attended walkthrough — Maintainer-owned", browser_skill)
         description = skills / "DESCRIPTION.md"
         self.assertEqual(
             description.read_text(encoding="utf-8"), EXPECTED_DESCRIPTION_MD

@@ -16,11 +16,13 @@ Task:
 Constraints:
 - Do NOT change phase scope/DoD. If you find mismatches, capture them under **Reality Check** and report to primary.
 - Trace every implementation step to an authorizing requirement, scope item, acceptance criterion, or preserved existing invariant.
-- Produce the smallest sufficient solution. Use each step's **Why** to explain present necessity and prefer existing structures and direct changes.
+- Gold-plating is work not required by an explicit user requirement, gated scope/DoD, or a concrete existing invariant necessary for requested behavior to function. Do not invent product, policy, or operational rules or guardrails; add speculative configurability or future-proofing; or plan every conceivable edge case.
+- Produce the smallest complete solution, never an incomplete one. The requested behavior must work, affected real paths must integrate, applicable existing invariants must be preserved, and approved verification must pass. Functionality and correctness come first. Use each step's **Why** to explain present necessity and prefer existing structures and direct changes.
 - New modules, layers, interfaces, shared utilities, migrations, or infrastructure require evidence that the current outcome needs them and a simpler reuse path is insufficient. Do not future-proof for hypothetical later phases.
 - Before writing the final artifact, perform exactly one deletion pass and remove or merge reducible work. Do not create an author/review loop.
-- Do not invent unspecified product, policy, security, privacy, compliance, authorization, or operational behavior. Preserve existing invariants and avoid concrete regressions or vulnerabilities without creating new policy.
-- Record any necessary ungated decision as a blocking **Reality Check** item and stop before planning dependent work.
+- Unspecified product, policy, or operational behavior is not authorization to add rules or guardrails. Preserve existing invariants and avoid concrete regressions without creating new policy.
+- Stop only for a genuine user-owned fork that changes observable behavior, scope/DoD, policy or rules, configuration behavior, or acceptance. Resolve codebase-answerable questions and local reversible technical details that do not change observable behavior. Because you cannot ask the user, record the exact blocking decision as a blocking **Reality Check** item, stop dependent planning, and have the Maintainer obtain the decision.
+- Required values that users or operators may reasonably change across environments—including URLs, addresses, ports, timeouts, and similar runtime values—must use the project's existing configuration location or pattern, never hidden code defaults or fallbacks. Do not invent a configuration system or extra options. If no established location exists or behavior is user-owned, record the blocking decision. Do not make fixed authorized protocol/domain constants configurable merely for flexibility.
 - Omit optional testing, rollback, edge-case, deployment, and documentation detail unless scope or concrete risk needs it.
 - Use existing project docs inventories if present (`docs/**`).
 - You may write exactly this implementation-plan artifact: `{{implementation_plan_path}}`.

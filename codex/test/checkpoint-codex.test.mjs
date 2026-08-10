@@ -419,7 +419,8 @@ test("codex SessionStart sources append open and preserve exact instruction outp
     assert.ok(context.includes("Maintainer or parent leaves it false"));
     assert.ok(context.includes("reported **input usage**"));
     assert.ok(context.includes("Across providers"));
-    assert.ok(context.includes("approximately 220k input tokens are a soft planning signal"));
+    assert.ok(context.includes("approximately 205k input tokens are a soft planning signal"));
+    assert.ok(!context.includes("approximately 220k input tokens are a soft planning signal"));
     assert.ok(context.includes("At or above approximately 272k input tokens"));
     assert.ok(context.includes("372k input rejection boundary is emergency headroom"));
     assert.ok(context.includes("previous completed step or latest harness snapshot"));
@@ -775,6 +776,11 @@ test("codex installer deploys adapter/profile and preserves the base config", as
   assert.match(executionSkill, /Execute Work Package/);
   assert.match(executionSkill, /Package Sizing Note/);
   assert.match(executionSkill, /Call `checkpoint_path` with the failed Implementer `task_id`/);
+  const browserSkill = await readFile(
+    path.join(codexHome, "skills/browser-walkthrough/SKILL.md"),
+    "utf8",
+  );
+  assert.match(browserSkill, /Automated browser acceptance — Implementer-owned/);
 
   const adapterDir = path.join(codexHome, "agent-checkpoint");
   for (const name of [

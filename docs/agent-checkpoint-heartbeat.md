@@ -233,7 +233,7 @@ Die Agentendefinition erhält eine kurze Meta-Instruktion:
 
 > Jeder Checkpoint bestätigt die persistierte Session als offen; `close_session` bleibt standardmäßig `false`. Ein Subagent setzt `close_session=true` ausschließlich auf seinem letzten Checkpoint unmittelbar vor Digest, Summary oder Handoff. Maintainer und Parents lassen den Wert `false`, außer sie beenden bewusst die gesamte persistierte Session. Closure ist unabhängig von `step_failed`, beweist keinen Arbeitserfolg, und ein späterer Checkpoint öffnet die Session wieder.
 
-Feedback kann vom vorherigen abgeschlossenen Schritt beziehungsweise der letzten Harness-Momentaufnahme stammen und den aktiven Turn nicht enthalten. Unbekannte Telemetrie bleibt unbekannt. Providerübergreifend sind ungefähr 220k Input-Tokens ein weiches Planungssignal. Ab ungefähr 272k wird die Arbeit nicht mehr erweitert; das verbleibende Budget dient einem kohärenten Checkpoint, Digest oder Handoff. Die 372k-Input-Ablehnungsgrenze ist Notfall-Headroom und kein Arbeitsziel.
+Feedback kann vom vorherigen abgeschlossenen Schritt beziehungsweise der letzten Harness-Momentaufnahme stammen und den aktiven Turn nicht enthalten. Unbekannte Telemetrie bleibt unbekannt. Providerübergreifend sind ungefähr 205k Input-Tokens ein weiches Planungssignal. Ab ungefähr 272k wird die Arbeit nicht mehr erweitert; das verbleibende Budget dient einem kohärenten Checkpoint, Digest oder Handoff. Die 372k-Input-Ablehnungsgrenze ist Notfall-Headroom und kein Arbeitsziel.
 
 Diese Anweisung gilt auch für den Parent. Er protokolliert damit seine eigenen Schritte, beispielsweise das Erstellen eines Subagent-Auftrags, die Prüfung eines zurückgegebenen Ergebnisses und die Entscheidung über die Fortsetzung.
 
@@ -278,7 +278,7 @@ Der implementierte Hermes-Adapter ist ein natives Python-User-Plugin (Hermes-Plu
 
 ## Erwartetes Verhalten bei Context-Druck
 
-Die Tool-Antwort ist ein potenziell verzögertes Planungssignal. Providerübergreifend sind ungefähr 220k Input ein weiches Planungssignal; ab ungefähr 272k wird keine weitere input-intensive Unit begonnen und das Budget bis zur 372k-Ablehnungsgrenze nur noch für den kontrollierten Ausstieg genutzt. Dann soll der Subagent:
+Die Tool-Antwort ist ein potenziell verzögertes Planungssignal. Providerübergreifend sind ungefähr 205k Input ein weiches Planungssignal; ab ungefähr 272k wird keine weitere input-intensive Unit begonnen und das Budget bis zur 372k-Ablehnungsgrenze nur noch für den kontrollierten Ausstieg genutzt. Dann soll der Subagent:
 
 1. den aktuellen Subtask sauber beenden,
 2. einen letzten Checkpoint mit dem nächsten konkreten Schritt schreiben,

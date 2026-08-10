@@ -15,13 +15,13 @@ A bounded implementation unit is executed through a visible blueprint, an explic
 
 ## How It Works
 
-`execute-work-package` binds a work package to one compact `implementer` session. Persistent plan references are authoritative for plan-bound work; otherwise an inline brief supplies task, DoD, constraints, and approved broad/full final verification. The implementer returns an auditable step list and may add a concise non-binding Package Sizing Note when natural execution cuts exist. Only the Maintainer decides between approving the full package and issuing a smaller fresh package; there is no automatic split or FIT/SPLIT state.
+`execute-work-package` binds a work package to one compact `implementer` session and owns its detailed scope, completeness, underspecification, and configurable-value rules. Persistent plan references are authoritative for plan-bound work; otherwise an inline brief supplies task, DoD, constraints, and approved broad/full final verification. The implementer returns an auditable step list and may add a concise non-binding Package Sizing Note when natural execution cuts exist. Only the Maintainer decides between approving the full package and issuing a smaller fresh package; there is no automatic split or FIT/SPLIT state.
 
 ### User Flow
 
 1. The user chooses an approved phase or a bounded self-contained work package.
 2. The maintainer sends either relevant plan references or an inline gated brief with task, DoD, constraints, and final verification, plus useful docs references.
-3. The implementer proposes a blueprint and, optionally, natural sizing cuts; the maintainer or user approves the complete package, requests a correction, or issues a smaller fresh package.
+3. The implementer proposes a blueprint and, optionally, natural sizing cuts; it returns any exact material user-owned blocker without dependent steps. The maintainer or user supplies decisions and approves the complete package, requests a correction, or issues a smaller fresh package.
 4. The same implementer session executes the accepted steps, iterates with the smallest targeted behavioral tests, and runs the approved broad/full command when ready as the final gate.
 5. If the broad gate fails, the implementer returns to targeted diagnosis/fix/retest before rerunning it; after the final result, the maintainer updates plan state only when a persistent plan exists. If a started execution returns no usable digest, the Maintainer selects its log with `checkpoint_path(task_id)`, inspects the log and working tree, maps progress to the approved Blueprint, and creates a smaller fresh recovery package.
 
@@ -56,6 +56,7 @@ The protocol itself has no feature flag. The chosen implementer model and option
 - Small, bounded, low-risk edits may remain with the primary; the gated protocol is intended for significant units where an explicit blueprint reduces risk.
 - Hosts without stateful subagent continuation need a documented fallback that persists and reloads the blueprint, with the resulting context loss acknowledged.
 - Package sizing is advisory. The Implementer never chooses a slice, and recovery introduces no handoff format, partial state, or automatic split.
+- A material user-owned blocker stops dependent work and requires the appropriate updated approval after the Maintainer obtains the decision; local codebase questions do not create user gates.
 
 ## Related Features
 
