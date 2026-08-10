@@ -62,6 +62,16 @@ Do **not** use this skill to:
 - `plans/` is the gated source of truth for intent/scope/DoD.
 - `docs/` (if present) provides curated inventories (modules/features/symbols) to navigate quickly.
 
+### Scope and Specification Boundary
+
+Gold-plating is work not required by an explicit user requirement, gated scope/DoD, or a concrete existing invariant necessary for the requested behavior to function. It includes invented product rules or guardrails, speculative configurability, generalized abstractions or future-proofing, and exhaustive treatment of hypothetical edge cases. Do not invent product, policy, or operational rules or guardrails, and do not plan every conceivable edge case.
+
+Minimal means the **smallest complete solution**, never an incomplete implementation plan: the requested behavior must work, affected real paths must integrate, applicable existing invariants must be preserved, and the approved verification must pass. Functionality and correctness come first; scope discipline is not permission to omit necessary work or obstruct progress.
+
+Stop only when missing specification creates a genuine user-owned fork that changes observable behavior, scope/DoD, policy or rules, configuration behavior, or acceptance. Resolve codebase-answerable questions and select local, reversible technical details that do not change observable behavior. A Delegate cannot ask the user: record the exact blocking decision as a blocking **Reality Check**, stop dependent planning, and have the Maintainer obtain the user decision.
+
+Required values that users or operators may reasonably change across environments—including URLs, addresses, ports, timeouts, and similar runtime values—belong in the project's existing configuration location or pattern, not in hidden code defaults or fallbacks. Do not invent a new configuration system or extra options unless gated scope requires them. If a required configurable value has no established project configuration location, or its behavior is a user-owned choice, record the blocking decision for the Maintainer. Fixed protocol or domain constants authorized by requirements do not become configurable merely to appear flexible.
+
 ---
 
 ## Workflow
@@ -86,7 +96,7 @@ The delegate:
 
 1. Reads the plan (for global context) and the phase intent/DoD.
 2. Locates the relevant code areas using docs inventories and targeted code search.
-3. Designs the **smallest sufficient technical change**, reusing current structures unless a new element is presently necessary.
+3. Designs the **smallest complete technical change**, reusing current structures unless a new element is presently necessary.
 4. Performs one deletion pass: removes or merges any step, new artifact, abstraction, or infrastructure that can be omitted without violating gated scope or a concrete existing invariant. This is author-owned QA, not a review loop.
 5. Writes/updates the implementation plan using the template and ensures it is **concrete**:
    - references real file paths/symbols
@@ -95,7 +105,7 @@ The delegate:
    - justifies new modules, layers, interfaces, shared utilities, migrations, or infrastructure with evidence that a direct change to existing structures is insufficient
    - includes a **single** proposed verify command (or preserves the given one)
    - captures only material mismatches as “Reality Check” notes
-   - marks any necessary but ungated decision as blocking and does not plan work that depends on it
+   - marks any necessary but ungated user-owned decision as blocking and does not plan work that depends on it
 
 If the phase depends on previous phases, its fresh delegate reads the necessary completed implementation plans to keep continuity. The Maintainer retains phase ordering and cross-phase decisions.
 
@@ -131,11 +141,11 @@ The implementation plan must follow the canonical frontmatter and required headi
 - **Artifact-based cross-phase continuity.** Each later phase delegate reads the completed prior implementation plans and checks shared interfaces, naming, data-flow assumptions, and dependency ordering while authoring its own target. It reports any inconsistency that requires changing a prior artifact or gated decision to the Maintainer rather than silently taking ownership of another phase.
 - **Independent review handoff.** After all phase plans are authored, hand the ordered set to one fresh reviewer session by default. Do not create a consolidated artifact.
 - Do not change phase scope/DoD; record mismatches under "Reality Check" and raise to the primary.
-- Produce the smallest sufficient solution, not the smallest edit at the expense of correctness. Preserve necessary error handling, tests, and existing invariants while rejecting speculative completeness.
+- Produce the smallest complete solution, not the smallest edit at the expense of correctness. Cover necessary real paths and preserve necessary error handling, tests, and existing invariants while rejecting speculative completeness.
 - Prefer direct changes and existing structures. Justify new modules, layers, interfaces, shared utilities, migrations, or infrastructure in the relevant step's **Why**.
 - Do not generalize current work for hypothetical later phases. Preserve an already-gated cross-phase interface, but do not pre-implement or future-proof behavior.
-- Unspecified product, policy, security, privacy, compliance, authorization, or operational behavior is not authorization to add it. Preserve applicable existing invariants and avoid concrete regressions or vulnerabilities, but do not invent new policy.
-- If a necessary decision is not gated, record it as a blocking Reality Check item and stop before planning dependent work. Purely local, reversible technical details may be selected when they do not change observable behavior or policy.
+- Unspecified product, policy, or operational behavior is not authorization to add rules or guardrails. Preserve applicable existing invariants and avoid concrete regressions, but do not invent policy or exhaustively plan hypothetical edge cases.
+- If a necessary user-owned decision is not gated, record the exact decision as a blocking **Reality Check** item for the Maintainer and stop before planning dependent work. Resolve codebase-answerable questions and select purely local, reversible technical details when they do not change observable behavior.
 - Omit testing detail beyond the primary verify command, rollback, edge-case, deployment, and documentation planning unless explicit scope or concrete risk needs it.
 - Perform exactly one author-owned minimality pass before returning. Do not start an author/review/rewrite loop.
 

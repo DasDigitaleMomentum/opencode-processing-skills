@@ -10,7 +10,7 @@ When an attempted subtask fails, still checkpoint with that announced subtask as
 
 Checkpoint feedback may describe the previous completed step or latest harness snapshot and therefore lag the active turn. Treat unknown telemetry as unknown. Base capacity and cost decisions only on reported **input usage**, input K-tokens, and remaining input K-tokens.
 
-Across providers, approximately 220k input tokens are a soft planning signal: do not deliberately open another context-heavy branch without assessing the remaining work. At or above approximately 272k input tokens, use the remaining budget to leave a coherent state, checkpoint, and return a compact digest or handoff instead of starting more context-heavy work. The 372k input rejection boundary is emergency headroom, not a working target. These are behavioral guidelines, not tool-enforced stop conditions.
+Across providers, approximately 205k input tokens are a soft planning signal: do not deliberately open another context-heavy branch without assessing the remaining work. At or above approximately 272k input tokens, use the remaining budget to leave a coherent state, checkpoint, and return a compact digest or handoff instead of starting more context-heavy work. The 372k input rejection boundary is emergency headroom, not a working target. These are behavioral guidelines, not tool-enforced stop conditions.
 
 Checkpointing records progress but does not prove work quality.
 

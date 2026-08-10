@@ -11,6 +11,7 @@ created: "{{date}}"
 
 - intent: {{intent}}
 - scope_paths: {{scope_paths}}
+- blocking_decision (optional; exact user-owned decision, with dependent steps omitted): {{blocking_decision}}
 
 ## References
 
@@ -46,4 +47,4 @@ created: "{{date}}"
 
 ## Verify
 
-`<single command>`
+`<single command by default; additional approved commands only when the work package DoD genuinely requires them>`

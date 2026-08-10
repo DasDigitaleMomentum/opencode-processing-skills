@@ -14,7 +14,7 @@ updated: "{{date}}"
 
 ## Approach
 
-<!-- Describe the smallest sufficient technical change, what existing structures it reuses, and why any new structure is necessary now. -->
+<!-- Describe the smallest complete technical change, including necessary real integration paths and preserved invariants, what existing structures it reuses, and why any new structure is necessary now. -->
 
 ## Affected Modules
 

@@ -65,6 +65,7 @@ Do **not** use this skill to:
   - Retires after the digest; another phase/work package starts with a fresh implementer.
   - Does not do Git operations.
   - Checkpoints after approved Blueprint steps or bounded parts of a large step, consulting the latest possibly lagged telemetry before deliberately starting another context-heavy unit.
+  - Uses `browser-walkthrough` for approved automated browser acceptance; agent-observed walkthroughs belong to a Delegate, while user-attended walkthroughs remain Primary-coordinated and may use a retained Delegate session for bounded browser segments.
 
 ## Routing Matrix (Who does what)
 
@@ -74,6 +75,7 @@ Do **not** use this skill to:
 - **implementer**: execution only (blueprint → execute → digest), no Git.
 - **Session boundary**: one fresh implementer per phase/work package; only that package's BLUEPRINT and EXECUTE calls share a session.
 - **retriever**: default leaf for separable evidence collection by the implementer; no edits, decisions, or artifact ownership.
+- **browser walkthroughs**: automated acceptance is Implementer-owned during EXECUTE, agent-observed walkthroughs route to a Delegate, and user-attended walkthroughs are Primary-coordinated with optional retained-Delegate execution; no browser-specific persona is created.
 - **doc-explorer**: not used for this skill (unless you explicitly want docs/plan artifacts, in which case use the appropriate planning/doc skills).
 
 ### Authority and navigation
@@ -81,6 +83,16 @@ Do **not** use this skill to:
 - `plans/` provides gated intent/DoD and references when the package belongs to a persistent plan lifecycle.
 - Otherwise, the inline gated work-package brief is authoritative and supplies the task, DoD, constraints, and final verification.
 - `docs/` (if present) provides curated inventories (modules/features/symbols) so the subagent does not rediscover everything.
+
+### Scope and Specification Boundary
+
+Gold-plating is work not required by an explicit user requirement, gated scope/DoD, or a concrete existing invariant necessary for the requested behavior to function. It includes invented product rules or guardrails, speculative configurability, generalized abstractions or future-proofing, and exhaustive treatment of hypothetical edge cases. Do not invent product, policy, or operational rules or guardrails, and do not implement every conceivable edge case.
+
+Minimal means the **smallest complete solution**, never an incomplete implementation: the requested behavior must work, affected real paths must integrate, applicable existing invariants must be preserved, and the approved verification must pass. Functionality and correctness come first; scope discipline is not permission to omit necessary work or obstruct progress.
+
+Stop only when missing specification creates a genuine user-owned fork that changes observable behavior, scope/DoD, policy or rules, configuration behavior, or acceptance. Resolve codebase-answerable questions and choose local, reversible technical details that do not change observable behavior. An Implementer cannot ask the user: in BLUEPRINT or EXECUTE, return the exact blocking decision to the Primary and stop before dependent work rather than fabricating a product decision. After user input changes or completes the authority, require an updated/re-approved gate as appropriate before dependent execution.
+
+Required values that users or operators may reasonably change across environments—including URLs, addresses, ports, timeouts, and similar runtime values—belong in the project's existing configuration location or pattern, not in hidden code defaults or fallbacks. Do not invent a new configuration system or extra options unless gated scope requires them. If a required configurable value has no established project configuration location, or its behavior is a user-owned choice, return the exact decision to the Primary and stop dependent work. Fixed protocol or domain constants authorized by requirements do not become configurable merely to appear flexible.
 
 ### Statefulness
 
@@ -138,7 +150,7 @@ Before delegating:
   - `docs/modules/*.md` (optional)
   - `docs/features/*.md` (optional)
 - Provide the approved broad/full **Verify Command** if one is already decided.
-  If not, the subagent proposes exactly **one** verify command in the BLUEPRINT (to be gated by the primary).
+  If not, the subagent proposes exactly **one** verify command in the BLUEPRINT (more only when the work package DoD genuinely requires them), to be gated by the primary.
 
 ### 1) MODE: BLUEPRINT (Execution Blueprint)
 
@@ -176,7 +188,7 @@ and MUST include the approval token.
 
 Subagent responds with a compact digest:
 
-- Outcome (succeeded/failed)
+- Outcome (succeeded/failed/BLOCKED)
 - Files changed (paths)
 - Verification result (command + exit)
 - If failure: only a small, relevant excerpt (no full logs)
@@ -208,10 +220,11 @@ Then:
 - If a persistent plan exists, updates `plans/<plan>/todo.md` and phase status via `update-plan`.
 - Commits / creates PR **only** when explicitly requested by the user
 
-Optional but recommended (Primary):
+Optional (Primary):
 
 - Before execute: capture baseline via `git status` / `git diff --name-only`
-- After execute: confirm changes exist via `git diff --stat`
+
+The after-execute confirmation is not optional: it is the `git diff --stat` spot-check required in the **Verification passed** branch above.
 
 ---
 
@@ -233,14 +246,18 @@ In BLUEPRINT mode, the subagent must NOT:
 - run commands
 - claim that code was changed
 
+If a genuine user-owned fork blocks dependent steps, return the Blueprint with the exact blocking decision and no dependent steps. The Primary obtains user input and supplies an updated/re-approved gate before execution.
+
 ### Digest Contract (Subagent -> Primary)
 
 Subagent MUST return only:
 
-- **Outcome**: succeeded | failed
+- **Outcome**: succeeded | failed | BLOCKED
 - **Edits**: list of files changed + 1-line note each
 - **Verify**: command + exit code + (if failed) small excerpt
 - **Next**: 1–3 bullets (or “ready for Primary Git/commit”)
+
+For a user-owned blocker, use **Outcome: BLOCKED**, make no dependent edits, and put the exact decision needed from the Primary under **Next**. User input that changes or completes scope requires an updated/re-approved gate before work continues.
 
 #### Mode: EXECUTE
 
@@ -257,13 +274,15 @@ In EXECUTE mode, the subagent must:
 - Subagent must not run Git operations (commit, rebase, push).
 - Start a fresh Implementer for each phase/work package. Reuse its `task_id` only for that package's BLUEPRINT → EXECUTE pair, then retire it after the digest.
 - Skill-first: when this skill is invoked, follow its MODE + output contracts before doing anything else.
-- Keep the Blueprint to **one** explicit approved broad/full verify command unless the work package DoD requires more. It must exercise the changed behavior (for example, run relevant tests, hit the affected endpoint, or trigger the modified flow), not just compile, lint, or type-check.
-- During EXECUTE, checkpoint after each approved Blueprint step or a bounded part of a large step. Telemetry may lag the active turn, and unknown remains unknown. Base capacity and cost decisions only on reported input usage and input K-tokens. Across providers, approximately 220k input tokens are a soft planning signal; at or above approximately 272k, stop expanding the task and use the remaining budget for a coherent checkpointed digest or handoff. The 372k rejection boundary is emergency headroom, not a working target.
+- Keep the Blueprint to **one** explicit approved broad/full verify command unless the work package DoD genuinely requires more. It must exercise the changed behavior (for example, run relevant tests, hit the affected endpoint, or trigger the modified flow), not just compile, lint, or type-check.
+- During EXECUTE, checkpoint after each approved Blueprint step or a bounded part of a large step. Telemetry may lag the active turn, and unknown remains unknown. Base capacity and cost decisions only on reported input usage and input K-tokens. Across providers, approximately 205k input tokens are a soft planning signal; at or above approximately 272k, stop expanding the task and use the remaining budget for a coherent checkpointed digest or handoff. The 372k rejection boundary is emergency headroom, not a working target.
 - During implementation and fixing, run the smallest targeted tests that exercise or reproduce the changed or problematic behavior. Do not run the approved broad/full command after every change or use it as the first iterative diagnostic step when a targeted test is known or can be identified.
+- When browser behavior is in scope, load `browser-walkthrough` and use available Playwright MCP/browser tools without provisioning or configuring Playwright. Keep its automated acceptance subordinate to the approved Blueprint and final verify command.
 - Run the approved broad/full command once only when implementation is ready, as the final gate. If that final gate exposes a failure, return to targeted diagnosis, fix, and retest. Only after targeted tests pass may the broad/full final gate run again. Never weaken or omit the final broad gate.
 - No raw diffs or long logs in responses.
 - If targeted verification or the final gate fails, apply **minimal, targeted fixes** (no refactors) under the staged sequence above. If a larger change is required, stop and report a digest with a minimal relevant excerpt.
 - If the step list must change during execution: stop and ask Primary for a new gate.
+- Never fabricate a product decision in BLUEPRINT or EXECUTE. For a genuine user-owned fork, report the exact blocking decision to the Primary and stop dependent work.
 
 ---
 
@@ -271,7 +290,7 @@ In EXECUTE mode, the subagent must:
 
 These apply to all code written during execution – by the implementer subagent or the primary.
 
-1. **No hardcoded defaults.** Use configuration files or environment variables for values that may change across environments.
+1. **No hidden configurable defaults.** Required runtime values that users or operators may reasonably change across environments—including URLs, addresses, ports, timeouts, and similar values—use the project's existing configuration location or pattern, not embedded code defaults or fallbacks. Do not invent a configuration system or extra options unless gated scope requires them; fixed authorized protocol/domain constants remain fixed.
 2. **Analyze root cause.** Don't patch symptoms. Understand why something is broken before changing code.
 3. **Minimal changes.** Only touch what the work package requires. Don't refactor adjacent code you weren't asked to change.
 4. **Preserve existing patterns.** Match the conventions already established in the codebase (naming, structure, error handling).

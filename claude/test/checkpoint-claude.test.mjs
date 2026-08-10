@@ -712,6 +712,9 @@ test("claude hook injects the checkpoint instruction on SessionStart and Subagen
   ));
   assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes("Across providers"));
   assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
+    "approximately 205k input tokens are a soft planning signal",
+  ));
+  assert.ok(!parentOutput.hookSpecificOutput.additionalContext.includes(
     "approximately 220k input tokens are a soft planning signal",
   ));
   assert.ok(parentOutput.hookSpecificOutput.additionalContext.includes(
@@ -1157,6 +1160,11 @@ test("claude installer deploys the plugin and preserves base configuration", asy
   assert.match(executionSkill, /Execute Work Package/);
   assert.match(executionSkill, /Package Sizing Note/);
   assert.match(executionSkill, /Call `checkpoint_path` with the failed Implementer `task_id`/);
+  const browserSkill = await readFile(
+    path.join(claudeHome, "skills/browser-walkthrough/SKILL.md"),
+    "utf8",
+  );
+  assert.match(browserSkill, /Agent-observed walkthrough — Delegate-owned/);
   assert.match(
     await readFile(path.join(claudeHome, "agents/delegate.md"), "utf8"),
     /Delegate/,

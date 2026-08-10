@@ -19,7 +19,7 @@ updated: "{{date}}"
 
 ## Guiding Decisions & Constraints
 
-<!-- Binding decisions and constraints that govern scope or acceptable solutions. Do not invent unspecified policy. -->
+<!-- Binding decisions and constraints that govern scope or acceptable solutions. Do not invent unspecified product, policy, or operational rules. Resolve material user-owned choices before creating this artifact. -->
 
 - {{decision_or_constraint}}
 
@@ -31,7 +31,7 @@ updated: "{{date}}"
 
 ## Requirements
 
-<!-- Confirmed requirements only. Do not infer generic quality requirements. -->
+<!-- Confirmed requirements plus concrete existing invariants necessary for the requested behavior. Do not infer generic quality requirements. -->
 
 ### Functional
 
@@ -67,7 +67,7 @@ updated: "{{date}}"
 
 ## Phases
 
-<!-- Use the smallest sufficient phase set. For multi-phase plans, state briefly why each phase needs a separate execution boundary. -->
+<!-- Use the smallest complete phase set: cover necessary real paths and existing invariants without speculative work. For multi-phase plans, state briefly why each phase needs a separate execution boundary. -->
 
 | Phase | Title | Contribution | Why Separate | Detail | Status |
 |-------|-------|--------------|--------------|--------|--------|

@@ -34,11 +34,11 @@ Do **not** use this skill to:
 
 ## Review Focus
 
-The default priority is the smallest sufficient implementation: confirm that phase obligations are covered and no implementation step or new artifact is unauthorized, unnecessary, or needlessly indirect. Use the actual codebase to substantiate material concerns, but record only evidence-backed exceptions. The primary may add a focus via `{{focus}}`.
+The default priority is the smallest complete implementation: confirm that phase obligations are covered and no implementation step or new artifact is unauthorized, unnecessary, or needlessly indirect. Use the actual codebase to substantiate material concerns, but record only evidence-backed exceptions. The primary may add a focus via `{{focus}}`.
 
 ### Review posture
 
-**Detect existing gold-plating without becoming an adversarial reviewer.** A reduction finding must name a concrete planned step/artifact and show missing authorization, missing present necessity, or a smaller sufficient path in the current codebase. Do not invent ideal architecture, hardening, tests, infrastructure, policy, or replacement work. Zero findings remains valid.
+**Detect existing gold-plating without becoming an adversarial reviewer.** A reduction finding must name a concrete planned step/artifact and show missing authorization, missing present necessity, or a smaller path in the current codebase that remains complete: the requested behavior must still work, affected real paths must still integrate, and applicable existing invariants must be preserved. Scope discipline is not permission to omit necessary work. Do not invent ideal architecture, hardening, tests, infrastructure, policy, or replacement work. Zero findings remains valid.
 
 Testing, references, Reality Check wording, documentation, and other formal criteria are not checklist obligations. Report them only when a concrete defect would block or misdirect execution.
 

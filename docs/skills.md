@@ -45,9 +45,9 @@ plans/<name>/
 
 ```
 1. Discuss        → User and agent clarify requirements
-2. Create Plan    → create-plan (confirm, then write smallest sufficient plan)
+2. Create Plan    → create-plan (confirm, then write smallest complete plan)
 3. Review Plan    → review-plan (optional; binding once invoked)
-4. Author Impl    → author-and-verify-implementation-plan (smallest sufficient, per phase)
+4. Author Impl    → author-and-verify-implementation-plan (smallest complete, per phase)
 5. Review Impl    → review-implementation-plan (optional; binding once invoked)
 6. Implement      → execute-work-package (gated: blueprint → approve → execute)
 7. Review Code    → review-implementation (optional)
@@ -58,7 +58,7 @@ plans/<name>/
 
 A bounded self-contained work package does not automatically require this hierarchy. It can go directly to `execute-work-package` with an inline gated brief containing the task, DoD, constraints, and approved broad/full final verification.
 
-Plan and implementation-plan authors each perform one author-owned deletion pass before handoff. Reviews remain optional, but plan-oriented reviews audit scope in both directions: every confirmed obligation needs an owner, and every phase, step, or new artifact needs authorization and present necessity. This is evidence-backed scope discipline, not adversarial reviewing or a pretext for replacement work.
+Detailed scope discipline is owned by `create-plan`, `author-and-verify-implementation-plan`, and `execute-work-package` plus their operational templates. Together they prioritize the smallest complete result and return material user-owned decisions to the Maintainer instead of silently filling them. Reviews retain their separate evidence-backed reduction rules.
 
 Once a review is invoked, `Reduction Required: Yes` or unresolved Critical/Major findings block progression until the primary remediates or explicitly rejects them with rationale. Remediation is bounded to one pass; there is no automatic re-review loop.
 
@@ -112,7 +112,7 @@ Creates a structured plan in `plans/<name>/`:
 - `phases/phase-N.md` — scope definition per phase (what/why)
 - `todo.md` — trackable items with status
 
-This is a conversation, not a one-shot prompt. The model asks clarifying questions, proposes the fewest necessary phases, performs one deletion/merge pass, and confirms the scope and structure before writing artifacts. The plan's phase table explains only each phase's contribution and why it needs a separate boundary; phase documents define what and why without repeating authorization. Empty implementation, review, and handover directories are not scaffolded.
+This is a conversation, not a one-shot prompt. The model resolves material user-owned choices before writing, proposes the fewest necessary phases for a complete result, performs one deletion/merge pass, and confirms scope and structure. The plan's phase table explains only each phase's contribution and why it needs a separate boundary; phase documents define what and why without repeating authorization. Empty implementation, review, and handover directories are not scaffolded.
 
 Use it proportionally: for multi-phase or multi-session work, an explicitly requested persistent plan, or durable coordination/tracking. Significance alone does not require a plan when one bounded package can be gated inline.
 
@@ -125,7 +125,7 @@ Use it proportionally: for multi-phase or multi-session work, an explicitly requ
 
 ### `author-and-verify-implementation-plan`
 
-Authors the smallest sufficient per-phase implementation plans (`implementation/phase-N-impl.md`) grounded against the actual codebase. Steps use `What`, `Where`, `Authorized By`, `Why`, and `Considerations`, and survive one author-owned deletion pass. Testing names one primary verify command plus optional checks; `Reality Check` is omitted unless a material mismatch or blocking decision exists.
+Authors the smallest complete per-phase implementation plans (`implementation/phase-N-impl.md`) grounded against the actual codebase. Steps use `What`, `Where`, `Authorized By`, `Why`, and `Considerations`, and survive one author-owned deletion pass. Testing names one primary verify command plus optional checks; `Reality Check` is omitted unless a material mismatch or exact blocking decision exists.
 
 Default routing: the canonical `delegate` writes the explicit implementation-plan artifact using the skill's template. Use `delegate-strong` only when phase complexity or risk justifies the premium model.
 
@@ -204,6 +204,10 @@ Applies accepted related findings from an implementation or implementation-plan 
 
 ## Execution Skills
 
+### `browser-walkthrough`
+
+Uses available Playwright MCP/browser tools for three role-routed modes without introducing a browser persona: automated browser acceptance belongs to an Implementer during approved execution, agent-observed walkthroughs belong to a Delegate, and user-attended walkthroughs are Maintainer-coordinated with optional retained-Delegate execution between user-interaction points. `delegate-fast` fits bounded mechanical browser steps; `retriever` handles only separable evidence. Each completed journey or bounded browser hypothesis/evidence/decision cycle is a checkpoint unit. Large snapshots, DOM output, console logs, traces, and similar evidence use existing spooling or Retriever routing, and the result is a compact outcome/steps/results/failure/evidence-paths/cleanup digest.
+
 ### `delegate-analysis`
 
 Provides the canonical delegate with explicit modes for code exploration, targeted reading, web research, and deep-dive investigation. Model variants use this same skill and persona. Delegates read scoped and compact evidence directly, but route uncurated bulk artifacts and coherent multi-file evidence to `retriever`.
@@ -223,8 +227,12 @@ Gated execution protocol:
 
 The authoritative input can be persistent plan references or an inline gated brief containing task, DoD, constraints, and final verification. The primary verifies understanding before any code gets written. A Blueprint may include an optional concise Package Sizing Note with natural cuts, but only the primary may approve the full package or issue a smaller fresh one. Normal BLUEPRINT and EXECUTE calls reuse the same compact implementer `task_id`; Git operations stay with you.
 
+The execution skill owns completeness, underspecification, and configurable-value handling. An Implementer returns an exact material user-owned blocker rather than fabricating a decision, and dependent work resumes only under the appropriate updated gate.
+
 Verification is staged during execution and remediation: use the smallest targeted test to exercise or reproduce behavior while iterating, then run the approved broad/full command only when ready as the final gate. If that gate fails, return to targeted diagnosis, fix, and retest before rerunning it. Targeted tests never replace or weaken the final broad verification.
 
 During Execute, complete potentially verbose command and verification output is spooled to a predictable path under `/tmp/opencode/`. The owning context retains the path, command, exit status, and compact metadata/evidence; `retriever` may inspect the complete spool when needed. These temporary files aid same-machine continuation after an interruption, but are not reboot-durable.
+
+When approved execution includes automated browser acceptance, the Implementer loads `browser-walkthrough` and uses the available Playwright MCP/browser tools without provisioning or configuring Playwright. The approved Blueprint and broad/full final gate remain authoritative.
 
 The Implementer checkpoints after approved Blueprint steps or bounded parts of a large step. If a started execution returns an empty or missing digest, the primary does not resume that bloated session: it resolves `checkpoint_path(task_id)`, inspects the selected log and current tree, maps progress to the approved Blueprint, and issues a smaller fresh package. This recovery reuses existing evidence and adds no digest outcome, handoff format, or partial-state schema.

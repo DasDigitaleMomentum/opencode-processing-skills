@@ -38,13 +38,13 @@ updated: "{{date}}"
 
 ## Deliverables
 
-<!-- Concrete outputs of this phase -->
+<!-- Smallest complete set of concrete outputs: include necessary real integration paths, but no speculative deliverables. -->
 
 - [ ] {{deliverable}}
 
 ## Acceptance Criteria
 
-<!-- How to verify this phase is complete -->
+<!-- How to verify the requested behavior, affected real paths, and applicable existing invariants are complete -->
 
 - [ ] {{criterion}}
 
