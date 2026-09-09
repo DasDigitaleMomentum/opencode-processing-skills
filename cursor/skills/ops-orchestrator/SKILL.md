@@ -1,9 +1,9 @@
 ---
 name: ops-orchestrator
 description: >-
-  Interactive orchestrator for structured planning, documentation, and gated
-  implementation using docs/ and plans/. Use when planning features,
-  documenting codebases, executing plan phases, or resuming multi-session work.
+  Orchestrator for structured planning, documentation, and gated implementation
+  using docs/ and plans/. Use when planning features, documenting codebases,
+  executing plan phases, or resuming multi-session work.
 compatibility: cursor
 metadata:
   category: orchestration
@@ -32,12 +32,12 @@ intact while discovering related files and tests required for accepted work.
 ## Operating Rules
 
 1. **Always use existing documentation.** Check `docs/` and `plans/` before exploring the codebase.
-2. **Ask, don't assume.** Use the `AskQuestion` tool (when available) or ask conversationally before ambiguous multi-step work. **Always ask before:** destructive actions or external effects (git push, deployments, production API calls) unless explicitly requested.
-3. **Delegate by task, not prestige.** Routine analysis uses the canonical delegate persona with `delegate-analysis`. Independent reviews use the `delegate-strong` routing role; quick lookups may use `delegate-fast`. These semantic roles share one installed persona, while Cursor selects model capacity through the mapped Task type. Do not escalate merely because a task is multi-step.
+2. **Resolve first; ask only for real forks.** Resolve ambiguity from `docs/`, `plans/`, and targeted reading. Use `AskQuestion` only for a genuine user-owned decision that changes observable behavior, scope/DoD, policy, configuration, or acceptance. When in doubt, decide local reversible choices that do not change observable behavior and state the assumption; otherwise ask. **Always ask before:** destructive actions or external effects (git push, deployments, production API calls) unless explicitly requested.
+3. **Delegate by task, not prestige.** Routine analysis uses the canonical delegate persona with `delegate-analysis`. Independent reviews use the `delegate-strong` routing role; quick lookups may use `delegate-fast`. These semantic roles share one installed persona, while Cursor selects model capacity through the mapped Task type. Do not escalate merely because a task is multi-step. Spend at most one lookup per question; if it does not answer, delegate and let the delegate route evidence to `retriever`. Do not pre-collect evidence for a delegated judgment task.
 4. **Context hygiene.** Keep the primary session lean. Delegate exploration; read only what informs your next decision.
 5. **Bounded low-risk edits may be inline** when files are known and verification is obvious. Behavioral, architectural, or uncertain new work uses `implementer` with the blueprint gate. Accepted related review findings may use `review-fix` in the existing reviewer session, including multi-file fixes.
 6. **Search:** prefer `SemanticSearch` / `Grep` for code navigation.
-7. **End turns with a follow-up.** Use `AskQuestion` to confirm results or offer next steps. The user decides when the conversation is done.
+7. **End turns with a report.** State what was done and what comes next; use `AskQuestion` only for a genuine choice. The user can interrupt to redirect.
 8. **Parallelize** independent tool calls in one turn.
 
 ### Delegation anti-patterns
@@ -46,7 +46,7 @@ intact while discovering related files and tests required for accepted work.
 |---|---|
 | Reading 4–5 files to understand structure | `Task(explore)` + delegate persona: code-exploration |
 | Multi-file edits yourself | `Task(generalPurpose)` + implementer persona: MODE BLUEPRINT |
-| Grepping 8 files to trace a bug | `Task(explore)` or `generalPurpose`: deep-dive |
+| A series of greps/reads to diagnose a bug | One `Task`: deep-dive (no pre-collection) |
 | Re-exploring before planning | Read `docs/`; delegate code-exploration if gaps remain |
 
 ## When to use which role
@@ -71,13 +71,13 @@ Skill-defined artifacts with explicit path/template (reviews, implementation pla
 6. [REVIEW IMPL]       → delegate-strong → review-implementation
 7. [REVIEW FIX]        → reviewer/fresh  → review-fix
 8. UPDATE PLAN         → primary         → update-plan
-9. [HANDOVER]          → doc-explorer    → generate-handover
+9. [HANDOVER]          → primary         → generate-handover
 ```
 
 - Create **all** implementation plans before executing phases (wave 1 → wave 2).
 - Reviews go to `plans/<name>/reviews/`.
 - Reviews check for gaps and unnecessary work but report only evidence-backed exceptions. Once invoked, `Reduction Required: Yes` or unresolved Critical/Major findings block progression until applied or explicitly rejected with rationale.
-- Accepted plan-review reductions run once through primary-owned `update-plan`. Accepted implementation-plan/implementation findings use `review-fix`, reusing the reviewer Task only when retained reasoning helps. The remediation digest ends the pass; do not create automatic re-review loops.
+- Accepted plan-review reductions run once through primary-owned `update-plan`. Accepted implementation-plan/implementation findings use `review-fix`, reusing the reviewer Task when it is available. The remediation digest ends the pass; do not create automatic re-review loops.
 - Plan updates → primary through `update-plan`; doc-explorer is an optional helper, never implementer.
 
 ### Additional loops

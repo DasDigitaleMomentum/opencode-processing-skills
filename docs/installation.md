@@ -134,7 +134,7 @@ node packages/checkpoint-core/bin/checkpoint-watch.js --refresh-ms 500 --stale-m
 
 Refresh values are positive integer milliseconds. `--stale-ms` and `CHECKPOINT_WATCH_STALE_MS` remain accepted and positively validated for compatibility but are output-neutral no-ops; they do not configure old-row visibility. The fixed presentation cutoff is exactly 10,800,000 ms from the latest physical event. Rows below it remain visible, while valid rows at or above it are hidden initially in both live and `--once` output. Lowercase `v` alone toggles all old rows in live mode; uppercase `V` and unrelated input do nothing. When shown, current open/unknown rows come first, old open/unknown rows form a separate paragraph, closed rows form one paragraph, and errors remain last and always visible because they have no trustworthy event age.
 
-The exact columns are `AGENT`, `NAME`, `AGE`, `STATE`, `CP`, `C/W/3 %`, `INPUT`, `DONE`, and `CURRENT`; session IDs appear only in paths/raw logs and the detailed inspector. At the ordinary 120-column width, complete known agent identities such as `maintainer-direct` take priority and long `NAME` values ellipsize first; genuinely narrow output remains deterministic and bounded. `C/W/3 %` is slash-separated, for example `100/66.7/100%`, while `CP` carries checkpoint count. Valid rows stay newest-first inside each paragraph; closed `CURRENT` is `—`, while unclosed rows show raw `next`. Age filtering never changes lifecycle state or proves liveness.
+The exact columns are `AGENT`, `NAME`, `AGE`, `STATE`, `CP`, `C/W/3 %`, `INPUT`, `DONE`, and `CURRENT`; session IDs appear only in paths/raw logs and the detailed inspector. At the ordinary 120-column width, complete known agent identities such as `implementer-strong` take priority and long `NAME` values ellipsize first; genuinely narrow output remains deterministic and bounded. `C/W/3 %` is slash-separated, for example `100/66.7/100%`, while `CP` carries checkpoint count. Valid rows stay newest-first inside each paragraph; closed `CURRENT` is `—`, while unclosed rows show raw `next`. Age filtering never changes lifecycle state or proves liveness.
 
 The dashboard divides adaptive width among `NAME`, `DONE`, and `CURRENT`, deterministically truncates overlong values, and caps every line at terminal width. The detailed inspector is unchanged: it still shows selected-path session identity, raw `Next announced`, detailed metric counts, and strict stderr/nonzero failure behavior.
 
@@ -373,7 +373,7 @@ The Cursor target installs **workflow skills** (same files as OpenCode) plus a t
 | Artifact | Cursor location | Installed? |
 |----------|-----------------|------------|
 | Workflow skills + templates | `~/.cursor/skills/<skill>/` | Yes (from `skills/`) |
-| Orchestrator skills | `~/.cursor/skills/ops-orchestrator/` (+ `-direct`) | Yes (from `cursor/skills/`) |
+| Orchestrator skill | `~/.cursor/skills/ops-orchestrator/` | Yes (from `cursor/skills/`) |
 | Subagent personas | `~/.cursor/subagents/*.md` | Yes (from `agents/`, frontmatter stripped) |
 | AGENTS bootstrap | `~/.cursor/ops/AGENTS.snippet.md` | Yes |
 | Project rule (`--project`) | `.cursor/rules/ops-orchestrator.mdc` | Yes |
@@ -405,7 +405,7 @@ OPS_CURSOR_HOME=/tmp/cursor-test ./install.sh   # sandbox install (tests/CI)
 
 ### Subagent activation
 
-The orchestrator skills (`ops-orchestrator`) and `task-delegation.md` define how framework roles map to Cursor's `Task` tool:
+The `ops-orchestrator` skill and `task-delegation.md` define how framework roles map to Cursor's `Task` tool:
 
 | Framework role | `subagent_type` | Persona file |
 |----------------|-----------------|--------------|

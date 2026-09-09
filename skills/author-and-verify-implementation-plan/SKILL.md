@@ -64,13 +64,9 @@ Do **not** use this skill to:
 
 ### Scope and Specification Boundary
 
-Gold-plating is work not required by an explicit user requirement, gated scope/DoD, or a concrete existing invariant necessary for the requested behavior to function. It includes invented product rules or guardrails, speculative configurability, generalized abstractions or future-proofing, and exhaustive treatment of hypothetical edge cases. Do not invent product, policy, or operational rules or guardrails, and do not plan every conceivable edge case.
+Author the **smallest complete implementation plan**: the phase outcome must work, affected real paths must integrate, and applicable existing invariants must be preserved. Do not invent product rules, guardrails, configurability, abstractions, or future-proofing. Record a genuine user-owned fork as a blocking Reality Check for the Maintainer; resolve codebase-answerable questions yourself. Runtime values that operators may change belong in the project's existing configuration pattern.
 
-Minimal means the **smallest complete solution**, never an incomplete implementation plan: the requested behavior must work, affected real paths must integrate, applicable existing invariants must be preserved, and the approved verification must pass. Functionality and correctness come first; scope discipline is not permission to omit necessary work or obstruct progress.
-
-Stop only when missing specification creates a genuine user-owned fork that changes observable behavior, scope/DoD, policy or rules, configuration behavior, or acceptance. Resolve codebase-answerable questions and select local, reversible technical details that do not change observable behavior. A Delegate cannot ask the user: record the exact blocking decision as a blocking **Reality Check**, stop dependent planning, and have the Maintainer obtain the user decision.
-
-Required values that users or operators may reasonably change across environments—including URLs, addresses, ports, timeouts, and similar runtime values—belong in the project's existing configuration location or pattern, not in hidden code defaults or fallbacks. Do not invent a new configuration system or extra options unless gated scope requires them. If a required configurable value has no established project configuration location, or its behavior is a user-owned choice, record the blocking decision for the Maintainer. Fixed protocol or domain constants authorized by requirements do not become configurable merely to appear flexible.
+The full boundary (gold-plating definition, configurable-value rule, and blocking-decision handling) is owned by the `execute-work-package` skill; this summary is not a separate policy.
 
 ---
 

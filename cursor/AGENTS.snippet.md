@@ -16,7 +16,7 @@ sites, integration points, and tests remain in scope.
 
 ## Orchestration
 
-Load the **`ops-orchestrator`** skill when doing structured planning or implementation (`ops-orchestrator-direct` for non-interactive mode).
+Load the **`ops-orchestrator`** skill when doing structured planning or implementation.
 
 **Default to delegation** via the Cursor `Task` tool. Subagent personas live in `.cursor/subagents/` (project) or `~/.cursor/subagents/` (global). Full routing table: see `task-delegation.md` in the `ops-orchestrator` skill directory.
 

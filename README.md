@@ -111,9 +111,7 @@ The maintainer delegates to specialized subagents:
 - `implementer` — code changes with gated execution
 - `legacy-curator` — archive cleanup
 
-Two maintainer variants are available:
-- `@maintainer` — interactive: asks for confirmation at decision points
-- `@maintainer-direct` — non-interactive: acts and reports, asks only for genuine choices
+One `@maintainer` orchestrator is available: it acts and reports, and asks only for genuine choices.
 
 Everything persists to files. New session? Read the plan and continue.
 
@@ -171,7 +169,7 @@ process liveness from age.
 
 **Gated execution.** Subagents propose a blueprint (step list) before writing any code. The primary reviews and approves. Then execution happens. The blueprint acts as Chain-of-Thought — it forces structured thinking before implementation.
 
-**Reuse review context conditionally.** Accepted related findings may return to the same reviewer through `review-fix` when retained reasoning materially helps, including multi-file runtime fixes. This does not carry authoring or implementation sessions across phases/work packages; further reviews are optional and never loop automatically.
+**Reuse review context.** Accepted related findings return to the same reviewer through `review-fix` when the session is available, including multi-file runtime fixes. This does not carry authoring or implementation sessions across phases/work packages; further reviews are optional and never loop automatically.
 
 **Generate the smallest complete plan.** Confirm scope and the minimum necessary phase set before writing artifacts. Plan and implementation-plan authors prefer direct changes and existing structures, justify new foundations or abstractions by present need, and perform one deletion pass before handoff.
 

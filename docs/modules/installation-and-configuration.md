@@ -69,7 +69,7 @@ This module owns the public repository entry points and the mechanics that turn 
 | `OpenCode Processing Skills` | section | public | `README.md:1` | Names and summarizes the public project. |
 | `Why this exists` | section | public | `README.md:19` | Frames structured docs, multi-session planning, gated execution, persistence, templates, and provider independence. |
 | `Quick Start` | section | public | `README.md:35` | Gives the clone, optional config, global/project install, restart, and reference entry points. |
-| `How it works` | section | public | `README.md:60` | Summarizes skill activation, role routing, maintainer variants, and file persistence. |
+| `How it works` | section | public | `README.md:96` | Summarizes skill activation, role routing, and file persistence. |
 | `Principles` | section | public | `README.md:124` | States deliberate delegation, gated execution, review-context reuse, review discipline, and durable files. |
 | `targets` | config | public | `config.yaml.example:64` | Root installer target map; each target uses `enabled` and `home` fields. |
 | `targets.opencode` | config | public | `config.yaml.example:65` | Required OpenCode destination, enabled unconditionally by installer policy. |

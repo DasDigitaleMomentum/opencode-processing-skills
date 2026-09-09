@@ -66,13 +66,9 @@ If the user provided a detailed brief, extract these from the brief and confirm 
 
 ### Scope and Specification Boundary
 
-Gold-plating is work not required by an explicit user requirement, gated scope/DoD, or a concrete existing invariant necessary for the requested behavior to function. It includes invented product rules or guardrails, speculative configurability, generalized abstractions or future-proofing, and exhaustive treatment of hypothetical edge cases. Do not invent product, policy, or operational rules or guardrails, and do not design every conceivable edge case.
+Plan the **smallest complete solution**: the confirmed outcome must work, affected real paths must integrate, and applicable existing invariants must be preserved. Do not invent product rules, guardrails, configurability, abstractions, or future-proofing. Ask the user only for a genuine user-owned fork that changes observable behavior, scope/DoD, policy, or acceptance; resolve codebase-answerable questions through documentation and targeted analysis. Runtime values that operators may change belong in the project's existing configuration pattern.
 
-Minimal means the **smallest complete solution**, never an incomplete plan: the requested behavior must work, affected real paths must integrate, applicable existing invariants must be preserved, and the approved verification must pass. Functionality and correctness come first; scope discipline is not permission to omit necessary work or obstruct progress.
-
-Ask the user only when missing specification creates a genuine user-owned fork that changes observable behavior, scope/DoD, policy or rules, configuration behavior, or acceptance. Resolve codebase-answerable questions through documentation and targeted analysis, and choose local, reversible technical details that do not change observable behavior without asking. If a material user-owned choice is missing, ask through the Primary and obtain the answer before creating plan artifacts rather than filling the gap.
-
-Required values that users or operators may reasonably change across environments—including URLs, addresses, ports, timeouts, and similar runtime values—belong in the project's existing configuration location or pattern, not in hidden code defaults or fallbacks. Do not invent a new configuration system or extra options unless gated scope requires them. If a required configurable value has no established project configuration location, or its behavior is a user-owned choice, ask through the Primary before artifact creation. Fixed protocol or domain constants authorized by requirements do not become configurable merely to appear flexible.
+The full boundary (gold-plating definition, configurable-value rule, and blocking-decision handling) is owned by the `execute-work-package` skill; this summary is not a separate policy.
 
 ### Step 2: Analyze the Codebase (if applicable)
 

@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "agent-personas"
-version: 1.8
+version: 1.9
 ---
 
 # Module: Agent Personas
@@ -15,7 +15,7 @@ The `agents/` module defines the prompt-level personas that divide orchestration
 
 ### Responsibility
 
-This module is the canonical source for the interactive and non-interactive primary orchestrators and for the five installed subagent personas. It owns role behavior, delegation permissions, workflow boundaries, and compact-return expectations. It does not own task expertise or artifact templates, which live in `skills/`; installation mechanics, which live in `install.sh`; or Cursor-specific orchestration, which is documented in [Cursor Adapter](cursor-adapter.md).
+This module is the canonical source for the primary orchestrator and for the five installed subagent personas. It owns role behavior, delegation permissions, workflow boundaries, and compact-return expectations. It does not own task expertise or artifact templates, which live in `skills/`; installation mechanics, which live in `install.sh`; or Cursor-specific orchestration, which is documented in [Cursor Adapter](cursor-adapter.md).
 
 ### Dependencies
 
@@ -36,8 +36,7 @@ This module is the canonical source for the interactive and non-interactive prim
 | `agents/doc-explorer.md` | file | Defines the docs-focused writer for `docs/**` and explicitly routed, template-governed `plans/**` artifacts. |
 | `agents/implementer.md` | file | Defines the execution-only subagent and its gated BLUEPRINT → GATE → EXECUTE → DIGEST protocol. |
 | `agents/legacy-curator.md` | file | Defines the legacy-document archiving persona restricted to `docs-legacy/**`. |
-| `agents/maintainer-direct.md` | file | Defines the non-interactive primary orchestrator that asks only at genuine decision points. |
-| `agents/maintainer.md` | file | Defines the interactive primary orchestrator, delegation policy, lifecycle routing, testing rules, and safety discipline. |
+| `agents/maintainer.md` | file | Defines the primary orchestrator, deterministic task-class delegation policy, lifecycle routing, testing rules, and safety discipline. |
 | `agents/retriever.md` | file | Defines the read-only leaf evidence worker available to maintainers, delegates, and implementers. |
 
 ## Key Symbols
@@ -50,7 +49,7 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Delegate.Skill-Owned Scope Authority` | policy | public | `agents/delegate.md:38` | Routes detailed scope and underspecification behavior to the loaded skill and user-owned decisions to the Maintainer. |
 | `Delegate.How You Work` | workflow | public | `agents/delegate.md:42` | Makes retriever delegation the default for separable evidence while keeping synthesis and decisive verification with the parent. |
 | `Delegate.Tool Preferences` | policy | internal | `agents/delegate.md:53` | Allows direct scoped reads and compact targeted evidence, routes uncurated bulk or coherent multi-file evidence to retriever, and requires verbose command output to be spooled under `/tmp/opencode/`. |
-| `Delegate.Constraints` | policy | public | `agents/delegate.md:69` | Sets the write/Git boundary and requires checkpoints after bounded investigation, synthesis, or artifact units with lag-aware input-budget guidance. |
+| `Delegate.Constraints` | policy | public | `agents/delegate.md:69` | Makes the loaded skill's output contract the single write authority, with `review-fix` as the code-editing exception, and sets the Git boundary plus lag-aware checkpoint cadence. |
 | `Retriever frontmatter` | frontmatter | public | `agents/retriever.md:1` | Denies edits and further tasks while leaving read, search, Bash, crawl, and other evidence tools available. |
 | `Retriever` | persona | public | `agents/retriever.md:11` | Establishes focused evidence retrieval for maintainers, delegates, and implementers. |
 | `Retriever.How You Work` | workflow | public | `agents/retriever.md:15` | Authorizes complete large raw-artifact consumption and coherent evidence assembly across definitions, call sites, configuration, tests, and behavior, while returning referenced synthesis and routing open-ended web research back to delegates. |
@@ -77,42 +76,24 @@ This module is the canonical source for the interactive and non-interactive prim
 | `Legacy Curator.Ground Truth` | section | public | `agents/legacy-curator.md:21` | Makes `archive-legacy-docs` authoritative and defines the clean-state objective. |
 | `Legacy Curator.What you do` | workflow | public | `agents/legacy-curator.md:27` | Defines discovery, git-aware moves, and summary generation for legacy documents. |
 | `Legacy Curator.Hard Constraints` | policy | public | `agents/legacy-curator.md:33` | Restricts writes to `docs-legacy/**` and prohibits commits, pushes, code refactors, and risky ambiguous moves. |
-| `Maintainer Direct frontmatter` | frontmatter | public | `agents/maintainer-direct.md:1` | Declares primary mode and the task allowlist, including level-1 access to `retriever`. |
-| `Maintainer Direct` | persona | public | `agents/maintainer-direct.md:20` | Establishes the forward-moving primary variant that interrupts only for genuine choices. |
-| `Maintainer Direct.Ground Truth` | section | public | `agents/maintainer-direct.md:28` | Assigns scope/DoD authority to persistent plans when present or an approved inline brief for self-contained work, with curated navigation in `docs/**`. |
-| `Maintainer Direct.Skill-Owned Scope Authority` | policy | public | `agents/maintainer-direct.md:37` | Routes detailed planning, execution, and review scope behavior to the active skill while retaining user-decision ownership. |
-| `Maintainer Direct.Operating Rules (Meta)` | policy | public | `agents/maintainer-direct.md:42` | Defines documentation-first operation, safety questions, task-based delegation, non-interactive turn endings, and the uncurated-evidence and `/tmp/opencode/` spooling boundary. |
-| `Maintainer Direct.Delegation Anti-Patterns` | table | internal | `agents/maintainer-direct.md:57` | Maps common context-expensive behaviors to the intended self-execution or delegation route. |
-| `Maintainer Direct.Delegation Quick-Reference` | table | public | `agents/maintainer-direct.md:70` | Provides standard labels and prompt patterns for exploration, targeted reading, web research, and deep dives. |
-| `Maintainer Direct.Delegate Session Reuse` | policy | public | `agents/maintainer-direct.md:83` | Chooses continuation from retained reasoning value versus context cost and favors fresh lean work for self-contained checks or fixes. |
-| `Maintainer Direct.Aborted Delegate Recovery` | policy | public | `agents/maintainer-direct.md:97` | Uses `checkpoint_path(task_id)`, the selected log, current tree, and Blueprint or delegated objective to issue a smaller fresh recovery task. |
-| `Maintainer Direct.Delegate Write Boundary` | policy | public | `agents/maintainer-direct.md:101` | Routes code, review remediation, explicit artifacts, documentation, and ad-hoc writes to their owning workflows. |
-| `Maintainer Direct.When to Use Which Agent` | section | public | `agents/maintainer-direct.md:111` | Provides the authoritative semantic role-to-persona routing guidance. |
-| `Maintainer Direct.Persistent Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer-direct.md:126` | Applies proportional durable planning and routes multiple implementation plans through one dependency-ordered reviewer session by default, with contiguous partitioning only when combined review context is impractical. |
-| `Maintainer Direct.Skill-Owned Workflow Authority` | policy | public | `agents/maintainer-direct.md:151` | Leaves workflow guardrails with active skills while the persona owns routing and progression gates. |
-| `Maintainer Direct.Additional skill loops` | section | internal | `agents/maintainer-direct.md:161` | Routes legacy preparation, documentation maintenance, and session resumption. |
-| `Maintainer Direct.Execution (Implementation) Summary` | workflow | public | `agents/maintainer-direct.md:167` | Accepts plan references or inline briefs and mandates same-session BLUEPRINT → EXECUTE reuse for approval context. |
-| `Maintainer Direct.Work Tracking` | policy | public | `agents/maintainer-direct.md:183` | Requires a single in-progress todo for work with three or more steps. |
-| `Maintainer Direct.Testing & Verification Policy` | policy | public | `agents/maintainer-direct.md:189` | Requires targeted iterative tests followed by the unchanged approved broad/full final gate and separates ownership from raw-output ingestion. |
-| `Maintainer Direct.Safety and Change Discipline` | policy | public | `agents/maintainer-direct.md:199` | Requires explicit authority for destructive operations, minimal deltas, and synchronized state when a persistent plan exists. |
 | `Maintainer frontmatter` | frontmatter | public | `agents/maintainer.md:1` | Declares primary mode and the task allowlist for all supported execution and analysis roles. |
-| `Maintainer` | persona | public | `agents/maintainer.md:22` | Establishes the interactive primary orchestrator for planning and implementation. |
+| `Maintainer` | persona | public | `agents/maintainer.md:20` | Establishes the primary orchestrator for planning and implementation. |
 | `Maintainer.Ground Truth` | section | public | `agents/maintainer.md:30` | Assigns scope/DoD authority to persistent plans when present or an approved inline brief for self-contained work, with curated navigation in `docs/**`. |
 | `Maintainer.Skill-Owned Scope Authority` | policy | public | `agents/maintainer.md:35` | Routes detailed planning, execution, and review scope behavior to the active skill while retaining user-decision ownership. |
-| `Maintainer.Operating Rules (Meta)` | policy | public | `agents/maintainer.md:45` | Defines documentation-first operation, safety questions, task-based delegation, interactive turn endings, and the uncurated-evidence and `/tmp/opencode/` spooling boundary. |
-| `Maintainer.Delegation Anti-Patterns` | table | internal | `agents/maintainer.md:60` | Maps common context-expensive behaviors to the intended self-execution or delegation route. |
-| `Maintainer.Delegation Quick-Reference` | table | public | `agents/maintainer.md:74` | Provides standard labels and prompt patterns for exploration, targeted reading, web research, and deep dives. |
-| `Maintainer.Delegate Session Reuse` | policy | public | `agents/maintainer.md:87` | Chooses continuation from retained reasoning value versus context cost and favors fresh lean work for self-contained checks or fixes. |
-| `Maintainer.Aborted Delegate Recovery` | policy | public | `agents/maintainer.md:101` | Uses `checkpoint_path(task_id)`, the selected log, current tree, and Blueprint or delegated objective to issue a smaller fresh recovery task. |
-| `Maintainer.Delegate Write Boundary` | policy | public | `agents/maintainer.md:105` | Routes code, review remediation, explicit artifacts, documentation, and ad-hoc writes to their owning workflows. |
-| `Maintainer.When to Use Which Agent` | section | public | `agents/maintainer.md:115` | Provides the authoritative semantic role-to-persona routing guidance. |
-| `Maintainer.Persistent Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer.md:130` | Applies proportional durable planning and routes multiple implementation plans through one dependency-ordered reviewer session by default, with contiguous partitioning only when combined review context is impractical. |
-| `Maintainer.Skill-Owned Workflow Authority` | policy | public | `agents/maintainer.md:155` | Leaves workflow guardrails with active skills while the persona owns routing and progression gates. |
-| `Maintainer.Additional skill loops` | section | internal | `agents/maintainer.md:167` | Routes legacy preparation, documentation maintenance, and session resumption. |
-| `Maintainer.Execution (Implementation) Summary` | workflow | public | `agents/maintainer.md:173` | Accepts plan references or inline briefs and mandates same-session BLUEPRINT → EXECUTE reuse for approval context. |
-| `Maintainer.Work Tracking` | policy | public | `agents/maintainer.md:190` | Requires a single in-progress todo for work with three or more steps. |
-| `Maintainer.Testing & Verification Policy` | policy | public | `agents/maintainer.md:196` | Requires targeted iterative tests followed by the unchanged approved broad/full final gate and separates ownership from raw-output ingestion. |
-| `Maintainer.Safety and Change Discipline` | policy | public | `agents/maintainer.md:206` | Requires explicit authority for destructive operations, minimal deltas, and synchronized state when a persistent plan exists. |
+| `Maintainer.Operating Rules (Meta)` | policy | public | `agents/maintainer.md:39` | Defines documentation-first operation, safety questions, deterministic task-class routing, report-first turn endings, and the uncurated-evidence and `/tmp/opencode/` spooling boundary. |
+| `Maintainer.Delegation Anti-Patterns` | table | internal | `agents/maintainer.md:54` | Maps common context-expensive behaviors to the intended deterministic delegation route. |
+| `Maintainer.Delegation Quick-Reference` | table | public | `agents/maintainer.md:69` | Provides standard labels and prompt patterns for exploration, targeted reading, web research, and deep dives. |
+| `Maintainer.Delegate Session Reuse` | policy | public | `agents/maintainer.md:82` | Resumes a delegate only for the same thread, a narrower drill-down, small added context, or review-fix; otherwise starts fresh. |
+| `Maintainer.Aborted Delegate Recovery` | policy | public | `agents/maintainer.md:90` | Uses `checkpoint_path(task_id)`, the selected log, current tree, and Blueprint or delegated objective to issue a smaller fresh recovery task. |
+| `Maintainer.Delegate Write Boundary` | policy | public | `agents/maintainer.md:94` | Makes the loaded skill's output contract the single write authority, with `review-fix` as the code-editing exception. |
+| `Maintainer.When to Use Which Agent` | section | public | `agents/maintainer.md:98` | Provides the authoritative semantic role-to-persona routing guidance. |
+| `Maintainer.Persistent Plan-to-Implementation Lifecycle` | workflow | public | `agents/maintainer.md:113` | Applies proportional durable planning and routes multiple implementation plans through one dependency-ordered reviewer session by default, with contiguous partitioning only when combined review context is impractical. |
+| `Maintainer.Skill-Owned Workflow Authority` | policy | public | `agents/maintainer.md:140` | Leaves workflow guardrails with active skills while the persona owns routing and progression gates. |
+| `Maintainer.Additional skill loops` | section | internal | `agents/maintainer.md:144` | Routes legacy preparation, documentation maintenance, and session resumption. |
+| `Maintainer.Execution (Implementation) Summary` | workflow | public | `agents/maintainer.md:151` | Accepts plan references or inline briefs and mandates same-session BLUEPRINT → EXECUTE reuse for approval context. |
+| `Maintainer.Work Tracking` | policy | public | `agents/maintainer.md:166` | Requires a single in-progress todo for work with three or more steps. |
+| `Maintainer.Testing & Verification Policy` | policy | public | `agents/maintainer.md:172` | Requires targeted iterative tests followed by the unchanged approved broad/full final gate and separates ownership from raw-output ingestion. |
+| `Maintainer.Safety and Change Discipline` | policy | public | `agents/maintainer.md:179` | Requires explicit authority for destructive operations, minimal deltas, and synchronized state when a persistent plan exists. |
 
 ## Data Flow
 
@@ -136,4 +117,4 @@ This module is the canonical source for the interactive and non-interactive prim
 ## Inventory Notes
 
 - **Coverage**: full
-- **Notes**: Structure includes all seven agent source files plus the module directory. Key Symbols cover every frontmatter manifest and every named behavioral section or workflow in the Markdown personas; line numbers refer to the current repository files. The module contains configuration Markdown rather than language-level symbols.
+- **Notes**: Structure includes all six agent source files plus the module directory. Key Symbols cover every frontmatter manifest and every named behavioral section or workflow in the Markdown personas; line numbers refer to the current repository files. The module contains configuration Markdown rather than language-level symbols.
