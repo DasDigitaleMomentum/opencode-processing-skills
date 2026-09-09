@@ -27,7 +27,7 @@ Select one mode before using browser tools. Existing personas remain defined by 
 3. **User-attended walkthrough — Maintainer-coordinated, optionally Delegate-executed**
    - Use when the user participates in or directs the journey while it is in progress.
    - The Maintainer owns the user conversation and attended decision points. A Delegate may execute each bounded browser segment and return when user input is needed.
-   - Resume the same Delegate `task_id` after user input when retained browser and observation context materially helps; otherwise use a fresh bounded delegation.
+   - Resume the same Delegate `task_id` after user input when it is available; otherwise use a fresh bounded delegation.
 
 Do not route any mode to a `browser-runner` agent or model alias.
 

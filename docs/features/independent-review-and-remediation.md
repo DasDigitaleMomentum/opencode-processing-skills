@@ -23,7 +23,7 @@ Each review workflow defines its own focus, references, immutable output artifac
 2. A fresh review delegate evaluates the authoritative scope and sends separable evidence collection to leaf `retriever` by default, or to `doc-explorer` for a genuinely documentation/module-oriented child task where the prompt permits it.
 3. A plan-oriented review returns a verdict, `Reduction Required` flag, severity counts, stable finding IDs, top actionable findings, and the required next action. `Ready` requires no required reduction and no Critical/Major findings.
 4. Once invoked, the review blocks progression on `Reduction Required: Yes` or unresolved Critical/Major findings. The maintainer accepts or explicitly rejects each blocking finding with rationale.
-5. Accepted plan-review findings run once through primary-owned `update-plan`. Accepted implementation-plan findings run once through `review-fix`, reusing reviewer context only when its reasoning materially helps. The remediation digest records fixed/unresolved IDs, edits, verification, and next action; no automatic re-review follows.
+5. Accepted plan-review findings run once through primary-owned `update-plan`. Accepted implementation-plan findings run once through `review-fix`, resuming the reviewer session when available. The remediation digest records fixed/unresolved IDs, edits, verification, and next action; no automatic re-review follows.
 6. For completed-implementation findings, remediation still changes only approved scope, runs targeted checks while fixing, preserves any supplied broad/full final verification, and leaves the original review artifact unchanged.
 
 ### Technical Flow

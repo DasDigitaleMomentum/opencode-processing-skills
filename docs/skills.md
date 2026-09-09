@@ -51,9 +51,9 @@ plans/<name>/
 5. Review Impl    → review-implementation-plan (optional; binding once invoked)
 6. Implement      → execute-work-package (gated: blueprint → approve → execute)
 7. Review Code    → review-implementation (optional)
-8. Fix Findings   → review-fix (reuse reviewer when retained reasoning is valuable)
+8. Fix Findings   → review-fix (resume the reviewer session when available)
 9. Update Plan    → update-plan (track progress, transition phases)
-10. Handover      → generate-handover (end of session)
+10. Handover      → generate-handover (primary-authored; end of session)
 ```
 
 A bounded self-contained work package does not automatically require this hierarchy. It can go directly to `execute-work-package` with an inline gated brief containing the task, DoD, constraints, and approved broad/full final verification.
@@ -194,7 +194,7 @@ The reviewer owns findings and verdicts but does not need to ingest raw verbose 
 
 ### `review-fix`
 
-Applies accepted related findings from an implementation or implementation-plan review in one bounded pass. It verifies only changed or directly affected checks and reports fixed/unresolved finding IDs, edits, verification, and next action. Resume the reviewer when retained analysis materially benefits remediation; otherwise prefer a fresh lean session. The immutable review plus one remediation digest ends the pass—further review requires an explicit decision, not an automatic loop.
+Applies accepted related findings from an implementation or implementation-plan review in one bounded pass. It verifies only changed or directly affected checks and reports fixed/unresolved finding IDs, edits, verification, and next action. Resume the reviewer session when it is available; otherwise use a fresh lean session. The immutable review plus one remediation digest ends the pass—further review requires an explicit decision, not an automatic loop.
 
 ```
 > Fix findings F-1 and F-3 from that review in the same delegate session
@@ -236,3 +236,11 @@ During Execute, complete potentially verbose command and verification output is 
 When approved execution includes automated browser acceptance, the Implementer loads `browser-walkthrough` and uses the available Playwright MCP/browser tools without provisioning or configuring Playwright. The approved Blueprint and broad/full final gate remain authoritative.
 
 The Implementer checkpoints after approved Blueprint steps or bounded parts of a large step. If a started execution returns an empty or missing digest, the primary does not resume that bloated session: it resolves `checkpoint_path(task_id)`, inspects the selected log and current tree, maps progress to the approved Blueprint, and issues a smaller fresh package. This recovery reuses existing evidence and adds no digest outcome, handoff format, or partial-state schema.
+
+---
+
+## Maintenance Skills
+
+### `report-environment-issue`
+
+Records environment, harness, and tooling blockers that are outside the current work package into an append-only, deduplicated log at `docs/environment-issues.md`. The Maintainer records directly observed issues and issues surfaced by a subagent return or digest; `doc-explorer` may curate or deduplicate when routed. Fixable in-package problems are fixed, not logged. Each entry carries a stable `ENV-NNN` ID, category, symptom, impact, workaround, suggested improvement, evidence, and `open`/`mitigated`/`resolved` status; recurring issues increase their count instead of duplicating.

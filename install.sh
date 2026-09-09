@@ -901,6 +901,17 @@ cursor_install_orchestrator_skills() {
             cp "$task_src" "$dest/task-delegation.md"
         fi
     done
+
+    # Remove retired orchestrator variant directories from a prior install.
+    for retired in ops-orchestrator-direct; do
+        retired_dest="$skills_dest/$retired"
+        if [ -L "$retired_dest" ]; then
+            echo "    Symlink (skipping retired): $retired"
+        elif [ -d "$retired_dest" ]; then
+            rm -rf "$retired_dest"
+            echo "    Removed retired: $retired"
+        fi
+    done
 }
 
 cursor_install_project_rule() {
@@ -1959,6 +1970,15 @@ for AGENTS_DEST in "${AGENTS_DESTS[@]}"; do
             echo "    -> model: $model${opts_note}"
         fi
     done
+
+    # Remove the retired dual-maintainer persona from a prior install.
+    retired_agent="$AGENTS_DEST/maintainer-direct.md"
+    if [ -L "$retired_agent" ]; then
+        echo "  Symlink (skipping retired): maintainer-direct.md"
+    elif [ -f "$retired_agent" ]; then
+        rm -f "$retired_agent"
+        echo "  Removed retired: maintainer-direct.md"
+    fi
     echo ""
 done
 
@@ -2100,7 +2120,7 @@ if [ -n "$CURSOR_TARGET_HOME" ]; then
     echo "  Workflow skills:     $CURSOR_TARGET_HOME/skills/"
     echo "  Subagent personas:   $CURSOR_TARGET_HOME/subagents/"
     echo "  AGENTS bootstrap:    $CURSOR_TARGET_HOME/ops/AGENTS.snippet.md"
-    echo "  Orchestrator skills: ops-orchestrator, ops-orchestrator-direct"
+    echo "  Orchestrator skills: ops-orchestrator"
     if [ "$PROJECT_MODE" = true ]; then
         echo "  Project rule:        $CURSOR_TARGET_HOME/rules/ops-orchestrator.mdc"
         echo "  Merge AGENTS.snippet into your project AGENTS.md"

@@ -62,9 +62,8 @@ Delegate separable, low-complexity evidence collection and trivial task chains t
 
 - Checkpoint after each bounded investigation, synthesis, or artifact unit. Telemetry may lag the active turn; unknown remains unknown. Base capacity and cost decisions only on reported input usage and input K-tokens. Across providers, approximately 205k input tokens are a soft planning signal. At or above approximately 272k input tokens, stop expanding the task and use the remaining budget to leave a coherent state, checkpoint, and return a compact digest or handoff; the 372k rejection boundary is emergency headroom, not a working target.
 - Default mode is read/analyze/verify. Return concise findings, recommendations, command results, or patch suggestions.
-- Do not write documentation files or make code/config changes unless explicitly asked.
-- Skill-defined artifacts with an explicit output path and template (for example review artifacts or implementation plans) may be written directly when the primary invokes that workflow. Stay within the specified path/template.
-- `review-fix` may authorize related implementation-plan or code/test edits in the same reviewer session. Follow the reviewed objective and primary's accepted remediation; do not invent unrelated work.
-- For larger or non-trivial ad-hoc writes with undefined shape/targets, first return an informal Blueprint and wait for explicit approval. Include: intended files, change steps, verification, and risks/rollback notes.
+- Write only what the loaded skill's output contract authorizes (for example a review artifact or an implementation plan at the specified path). Do not write code, config, or docs outside that contract.
+- `review-fix` is the single exception: it authorizes the related plan-artifact, code, test, and integration edits required by the accepted findings. Follow the reviewed objective; do not invent unrelated work.
+- For an ad-hoc write with undefined shape or target, first return an informal Blueprint (intended files, change steps, verification, risks/rollback) and wait for explicit approval.
 - Do not commit, push, rebase, or perform Git history operations.
 - Stay focused on the task — don't explore beyond what's asked.

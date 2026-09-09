@@ -25,10 +25,6 @@ The main-loop orchestrator. Handles user interaction, planning decisions, scope,
 
 Maintainers may directly read scoped source, `docs/`/`plans/`, symbols, and compact targeted results. They keep uncurated bulk evidence out of the owning context: reliable focused filters are used when sufficient, while large logs, verbose command/test output, generated dumps, mass-search output, and evidence requiring broad assembly route to `retriever`.
 
-### `maintainer-direct`
-
-Non-interactive variant of `maintainer`. It uses the same routing, safety, testing, and planning rules, but asks questions only for genuine decisions and otherwise reports progress directly.
-
 ---
 
 ## Subagents
@@ -48,7 +44,7 @@ The one canonical, skill-driven persona and standard choice for normal delegatio
 
 Each phase implementation plan uses one fresh Delegate session. The Maintainer invokes phases sequentially, and each later phase delegate reads completed prior artifacts rather than inheriting an increasingly expensive authoring session.
 
-After an implementation or implementation-plan review, choose remediation-session reuse by retained context value versus context cost. Accepted implementation-plan findings receive one `review-fix` pass that reports fixed/unresolved IDs, edits, changed/directly affected verification, and next action. The review artifact remains unchanged, and no review/fix/re-review loop starts automatically. Plan-review findings instead remain primary-owned through one `update-plan` pass.
+After an implementation or implementation-plan review, resume the reviewer session through `review-fix` whenever it is available; use a fresh lean session only if it is unavailable. Accepted implementation-plan findings receive one `review-fix` pass that reports fixed/unresolved IDs, edits, changed/directly affected verification, and next action. The review artifact remains unchanged, and no review/fix/re-review loop starts automatically. Plan-review findings instead remain primary-owned through one `update-plan` pass.
 
 For multiple implementation-plan reviews, the maintainer defaults to one reviewer session that is fresh from the authoring work, not one reviewer per phase. The reviewer works sequentially in dependency order, reuses consolidated evidence, writes each per-phase review artifact, records material cross-phase conflicts only in affected artifacts, and returns one compact aggregate digest. Parallel per-phase reviewers and nested phase-oriented retriever fan-out are not defaults; oversized review is divided only into contiguous dependency/domain groups with a central cross-partition interface check.
 
@@ -80,7 +76,7 @@ Doc Explorer is the documentation-specialized Delegate. It sends separable broad
 
 **Does NOT write:** Code files or ad-hoc analysis writeups; use `delegate` for those. Implementation plans default to the canonical delegate via `author-and-verify-implementation-plan`.
 
-**Used by:** `generate-docs`, `update-docs`, and `generate-handover`; it may provide bounded evidence or mechanical assistance to `create-plan`/`update-plan`, but the primary owns plan decisions and reduction remediation.
+**Used by:** `generate-docs` and `update-docs`; it may provide bounded evidence or mechanical assistance to `create-plan`/`update-plan`/`generate-handover`, but the primary owns plan decisions, the handover narrative, and reduction remediation.
 
 ### `implementer`
 
@@ -151,7 +147,7 @@ Potentially verbose commands spool their complete output to a predictable path u
 
 ### Stateful delegate reuse
 
-Reuse a delegate `task_id` when retained reasoning materially reduces reconstruction cost: follow-up analysis, unresolved assumptions, cross-file reasoning, or review remediation that depends on the original findings. Prefer a fresh lean task—or the primary for a tiny focused check—when a test, command, verification, or fully specified fix is self-contained, or accumulated context costs more than it contributes. Phase implementation-plan authoring is stricter: start one fresh Delegate per phase, keep phases sequential at the Maintainer, and have later agents read prior artifacts. Work-package execution is also strict: start one fresh Implementer per package, reuse it only for BLUEPRINT → EXECUTE, and retire it after the digest. Start fresh for changed scope, parallel work, model/variant changes, or an independent opinion. `task_id`s are session-local; durable continuity belongs in files when a persistent workflow exists.
+Resume a delegate `task_id` for follow-up on the same thread, a narrower drill-down, small added context, or `review-fix` remediation; otherwise start a fresh lean task. Phase implementation-plan authoring is stricter: start one fresh Delegate per phase, keep phases sequential at the Maintainer, and have later agents read prior artifacts. Work-package execution is also strict: start one fresh Implementer per package, reuse it only for BLUEPRINT → EXECUTE, and retire it after the digest. Start fresh for changed scope, parallel work, model/variant changes, or an independent opinion. `task_id`s are session-local; durable continuity belongs in files when a persistent workflow exists.
 
 Batch implementation-plan review is another deliberate reuse case: the reviewer starts independently from the author, then keeps its session across the ordered phases because shared evidence and cross-phase reasoning are review inputs. Separate reviewers are exceptions for explicit independent perspectives, unrelated domains, specialist requirements, or impractical combined context—not an automatic phase fan-out.
 

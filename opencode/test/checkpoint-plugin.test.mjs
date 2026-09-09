@@ -368,7 +368,6 @@ async function assertInstalledOpenCodePilot(home) {
 
   for (const name of [
     "maintainer",
-    "maintainer-direct",
     "delegate",
     "retriever",
     "doc-explorer",
@@ -404,8 +403,14 @@ async function assertInstalledOpenCodePilot(home) {
   );
   assert.match(browserSkill, /Automated browser acceptance — Implementer-owned/);
   assert.match(browserSkill, /Agent-observed walkthrough — Delegate-owned/);
-  assert.match(browserSkill, /User-attended walkthrough — Maintainer-owned/);
+  assert.match(browserSkill, /User-attended walkthrough — Maintainer-coordinated/);
   assert.match(browserSkill, /Evidence paths/);
+  const environmentSkill = await readFile(
+    path.join(home, "skills/report-environment-issue/SKILL.md"),
+    "utf8",
+  );
+  assert.match(environmentSkill, /Report Environment Issue/);
+  assert.match(environmentSkill, /docs\/environment-issues\.md/);
   const implementer = await readFile(path.join(home, "agents/implementer.md"), "utf8");
   assert.match(implementer, /browser-walkthrough: allow/);
 }
@@ -714,7 +719,7 @@ test("native checkpoints snapshot parent and subagent persona and session title"
       sessionID: "parent-session",
       directory: "/workspace",
       worktree,
-      agent: "maintainer-direct",
+      agent: "doc-explorer",
     },
   );
 
@@ -732,7 +737,7 @@ test("native checkpoints snapshot parent and subagent persona and session title"
     parentRecords.map(({ agent, session_title: sessionTitle }) => ({ agent, sessionTitle })),
     [
       { agent: "maintainer", sessionTitle: "Parent planning session" },
-      { agent: "maintainer-direct", sessionTitle: "Renamed parent session" },
+      { agent: "doc-explorer", sessionTitle: "Renamed parent session" },
     ],
   );
   assert.equal(subagentRecord.agent, "implementer");

@@ -114,8 +114,8 @@ Subagent returns:
 
 Primary decides:
 - **Accepted**: Proceed to commit/merge. Update plan via `update-plan`.
-- **Needs Rework**: After accepting findings, resume the same reviewer `task_id` through `review-fix` when remediation materially benefits from retained analysis, unresolved assumptions, or cross-file reasoning. Related fixes may span multiple files, call sites, tests, and runtime code; size alone does not decide reuse.
-- **Fresh lean work**: Prefer a fresh session for a fully specified, self-contained fix or verification when accumulated context cost is disproportionate. Use a new gated `execute-work-package` when the objective/gated scope changes, a new dependency or primary decision is required, or a fresh implementation context is explicitly chosen.
+- **Needs Rework**: After accepting findings, resume the same reviewer `task_id` through `review-fix` when it is available; otherwise use a fresh lean session. Related fixes may span multiple files, call sites, tests, and runtime code; size alone does not decide reuse.
+- **Fresh lean work**: Use a fresh session when the reviewer session is unavailable or a fresh context is deliberately wanted. Use a new gated `execute-work-package` when the objective/gated scope changes, a new dependency or primary decision is required, or a fresh implementation context is explicitly chosen.
 - **Rejected**: Discuss with user. May require replanning via `update-plan`.
 
 The review pass ends before remediation begins. A reviewer that applies fixes is no longer independent; an additional review is optional and requires an explicit primary or user decision. Do not automatically chain review and remediation loops.

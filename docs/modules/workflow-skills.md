@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "workflow-skills"
-version: 1.4
+version: 1.5
 ---
 
 # Module: Workflow Skills
@@ -15,7 +15,7 @@ The `skills/` tree is the reusable workflow library. Each package combines a dis
 
 ### Responsibility
 
-This module owns workflow semantics and their canonical Markdown artifact shapes. It covers initial documentation, smallest-complete persistent planning, gated inline or plan-bound execution, two-way scope review, bounded reduction remediation, and legacy-document archiving. It does not define agent personas, select models, install files into a harness, or own a target project's generated `docs/` and `plans/`; those responsibilities belong to the agent definitions, installer/configuration surface, and the target repository respectively. Agent-role behavior and routing are described in the [Agents Reference](../agents.md).
+This module owns workflow semantics and their canonical Markdown artifact shapes. It covers initial documentation, smallest-complete persistent planning, gated inline or plan-bound execution, two-way scope review, bounded reduction remediation, legacy-document archiving, and append-only environment-issue logging. It does not define agent personas, select models, install files into a harness, or own a target project's generated `docs/` and `plans/`; those responsibilities belong to the agent definitions, installer/configuration surface, and the target repository respectively. Agent-role behavior and routing are described in the [Agents Reference](../agents.md).
 
 ### Dependencies
 
@@ -64,6 +64,9 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `skills/generate-handover/` | dir | Session-continuity handover package. |
 | `skills/generate-handover/SKILL.md` | file | Defines plan-bound and standalone handover creation from actual progress, decisions, file state, blockers, and next steps. |
 | `skills/generate-handover/tpl-session-handover.md` | file | Canonical session handover artifact for progress, decisions, implementation state, blockers, and continuation context. |
+| `skills/report-environment-issue/` | dir | Environment-issue logging package. |
+| `skills/report-environment-issue/SKILL.md` | file | Defines append-only, deduplicated environment/harness blocker logging with stable IDs, status, workarounds, and suggested improvements. |
+| `skills/report-environment-issue/tpl-environment-issues.md` | file | Canonical `docs/environment-issues.md` summary table and per-issue entry format. |
 | `skills/resume-plan/` | dir | Read-only multi-session plan bootstrap package. |
 | `skills/resume-plan/SKILL.md` | file | Defines ordered plan/todo/handover/phase/implementation-plan loading, prerequisite validation, and session briefing. |
 | `skills/review-fix/` | dir | Accepted-finding remediation package with context-value-based session routing. |
@@ -120,6 +123,8 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `project-overview` (`generate-docs`) | template | public | `skills/generate-docs/tpl-project-overview.md:3` | Canonical project-overview schema. |
 | `generate-handover` | workflow | public | `skills/generate-handover/SKILL.md:2` | Skill entry point for on-demand plan-bound or standalone session handovers. |
 | `session-handover` | template | public | `skills/generate-handover/tpl-session-handover.md:3` | Canonical handover schema for session state and continuation context. |
+| `report-environment-issue` | workflow | public | `skills/report-environment-issue/SKILL.md:2` | Records outside-work-package environment, harness, and tooling blockers in a deduplicated append-only log for incremental improvement. |
+| `environment-issues` | template | public | `skills/report-environment-issue/tpl-environment-issues.md:3` | Canonical summary table and per-issue entry schema for `docs/environment-issues.md`. |
 | `resume-plan` | workflow | public | `skills/resume-plan/SKILL.md:2` | Skill entry point for read-only, ordered session bootstrap from persisted plan artifacts. |
 | `review-fix` | workflow | public | `skills/review-fix/SKILL.md:2` | Applies one accepted implementation-plan/implementation remediation pass, emits reduction details where applicable, and stops. |
 | `continuation-prompt` | template | public | `skills/review-fix/tpl-review-fix-prompt.md:3` | Canonical remediation prompt with reduction instructions, context-value routing, and staged verification. |
@@ -148,7 +153,7 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 2. The skill identifies the owning role, required inputs, read/write boundary, ordered workflow, and output contract. Where a delegate is involved, the primary fills the package's prompt template with paths and decisions rather than copying source content into chat.
 3. `create-plan`, `author-and-verify-implementation-plan`, and `execute-work-package` own detailed scope, completeness, underspecification, and configurable-value behavior for their stages. Personas route user-owned decisions rather than duplicating those rules; planning authors retain one deletion pass and on-demand artifact creation.
 4. Review workflows inspect for gaps and unnecessary work but persist only evidence-backed exceptions. Their artifacts contain an assessment, reduction flag, stable severity-rated findings, and required action.
-5. The primary accepts or explicitly rejects blocking findings. Accepted plan findings run once through primary-owned `update-plan`; accepted implementation-plan findings run once through `review-fix`, reusing reviewer context only when materially helpful. Both preserve the immutable review, verify only changed/directly affected checks, and end without automatic re-review.
+5. The primary accepts or explicitly rejects blocking findings. Accepted plan findings run once through primary-owned `update-plan`; accepted implementation-plan findings run once through `review-fix`, resuming the reviewer session when available. Both preserve the immutable review, verify only changed/directly affected checks, and end without automatic re-review.
 6. Multiple implementation plans normally use one reviewer session fresh from authoring, sequential dependency-order review, material conflict notes only in affected artifacts, and one compact aggregate digest. Evidence retrieval is consolidated rather than recursively fanned out by phase.
 7. Work that warrants durable coordination uses plan maintenance, handovers, and later `resume-plan` restoration; a bounded package may instead execute from an inline gated brief. The installer distributes the same self-contained skill packages to each enabled harness, while harness-specific agent/tool semantics remain outside this module.
 

@@ -108,7 +108,7 @@ For single-phase mode, the subagent returns the same fields for that phase. For 
 
 Primary decides:
 - **Ready**: Proceed to `execute-work-package` only when reduction is not required and no Critical/Major findings remain.
-- **Needs Revision**: Do not execute. Accept or explicitly reject each blocking finding. Apply accepted implementation-plan reductions once through `review-fix`, reusing the reviewer only when retained reasoning materially helps; otherwise use a fresh lean path.
+- **Needs Revision**: Do not execute. Accept or explicitly reject each blocking finding. Apply accepted implementation-plan reductions once through `review-fix`, reusing the reviewer session when it is available; otherwise use a fresh lean path.
 - **New authoring pass**: Re-run `author-and-verify-implementation-plan` only when the objective/gated scope changes, a new primary decision or investigation is required, the reviewer session is unavailable, or the primary explicitly wants a fresh planning context.
 - **Major Gaps**: Discuss with user; potentially revise phase scope via `update-plan`.
 

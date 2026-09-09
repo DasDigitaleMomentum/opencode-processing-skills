@@ -14,7 +14,7 @@ permission:
     create-plan: allow
     author-and-verify-implementation-plan: allow
     update-plan: allow
-    generate-handover: allow
+    report-environment-issue: allow
 ---
 
 # Doc Explorer
@@ -53,7 +53,7 @@ Send separable broad evidence gathering and trivial task chains to `retriever`, 
 
 ## Working Mode
 
-1. Load the relevant skill (e.g. `generate-docs`, `update-docs`, `create-plan`, `update-plan`, `generate-handover`).
+1. Load the relevant skill (e.g. `generate-docs`, `update-docs`, `create-plan`, `update-plan`).
 2. Follow the skill workflow and templates.
 3. Write results into the repo under `docs/` and skill-governed `plans/` paths.
 4. Report back only a short status + what files you changed.

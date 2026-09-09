@@ -255,6 +255,7 @@ Subagent MUST return only:
 - **Outcome**: succeeded | failed | BLOCKED
 - **Edits**: list of files changed + 1-line note each
 - **Verify**: command + exit code + (if failed) small excerpt
+- **Environment** (optional): `<category>: <symptom>` when an environment, harness, or tooling issue blocked or degraded work; otherwise omit
 - **Next**: 1–3 bullets (or “ready for Primary Git/commit”)
 
 For a user-owned blocker, use **Outcome: BLOCKED**, make no dependent edits, and put the exact decision needed from the Primary under **Next**. User input that changes or completes scope requires an updated/re-approved gate before work continues.

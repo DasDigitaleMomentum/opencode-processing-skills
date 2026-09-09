@@ -5,11 +5,21 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Added
+- **Environment-issue reporting**: The new `report-environment-issue` skill records harness, tooling, sandbox, and infrastructure blockers that are outside the current work package into an append-only, deduplicated `docs/environment-issues.md` log with stable `ENV-NNN` IDs, status, workarounds, and suggested improvements, so the environment can be improved incrementally.
 - **Browser walkthrough workflow**: The new `browser-walkthrough` skill uses available Playwright MCP/browser tools for Implementer-owned automated acceptance, Delegate-observed journeys, and Maintainer-coordinated user-attended walkthroughs with optional retained-Delegate execution between interaction points, without adding a persona.
 
 ### Changed
+- **Single maintainer persona**: `maintainer-direct` is removed; the single `maintainer` uses the forward-moving, report-first turn-end policy that asks only at genuine choices. The Cursor adapter likewise drops `ops-orchestrator-direct`.
+- **Upgrade cleanup**: Installation removes the retired `maintainer-direct.md` persona and the retired `ops-orchestrator-direct` Cursor skill from a prior install, preserving user-managed symlinks.
+- **Deterministic delegation routing**: the task class decides the route — evidence to `retriever`, judgment to `delegate`, code change to `implementer` — replacing the predicted-context-bloat heuristic and the self-execute ambiguity.
+- **One write boundary**: delegates write only what the loaded skill authorizes; `review-fix` is the single code/test/plan editing exception.
+- **Deterministic review remediation**: `review-fix` resumes the reviewer session whenever it is available instead of judging whether retained reasoning "materially benefits".
+- **De-duplicated scope boundary**: the scope/specification boundary is owned by `execute-work-package`; `create-plan` and `author-and-verify-implementation-plan` reference it.
 - **Earlier input planning signal**: Current cross-harness guidance now uses approximately 205k input tokens as the soft planning signal while preserving the approximately 272k orderly-exit signal and 372k emergency boundary; installer migration recognizes the immediately previous 220k managed block.
 - **Skill-owned scope discipline**: Planning, implementation-plan authoring, and gated execution now own consistent minimal-completeness, underspecification, and configurable-value behavior in their skills and operational templates; agent personas retain only routing references to that authority.
+
+### Fixed
+- **Handover authorship routing**: A handover is primary/Maintainer-authored session-context transfer. The Maintainer lifecycle and the Cursor orchestrator route `generate-handover` to the Primary, and `doc-explorer` can no longer load the handover skill (it may still provide bounded evidence). A subagent cannot faithfully transfer the primary's session context, decisions, and rationale.
 
 ## 0.8.0 — 2026-08-08
 
