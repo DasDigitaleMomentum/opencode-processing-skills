@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "workflow-skills"
-version: 1.5
+version: 1.6
 ---
 
 # Module: Workflow Skills
@@ -69,9 +69,9 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `skills/report-environment-issue/tpl-environment-issues.md` | file | Canonical `docs/environment-issues.md` summary table and per-issue entry format. |
 | `skills/resume-plan/` | dir | Read-only multi-session plan bootstrap package. |
 | `skills/resume-plan/SKILL.md` | file | Defines ordered plan/todo/handover/phase/implementation-plan loading, prerequisite validation, and session briefing. |
-| `skills/review-fix/` | dir | Accepted-finding remediation package with context-value-based session routing. |
-| `skills/review-fix/SKILL.md` | file | Defines one-pass implementation-plan/implementation remediation, including reduction digests, context-value routing, immutable review records, and no automatic re-review. |
-| `skills/review-fix/tpl-review-fix-prompt.md` | file | Remediation prompt carrying accepted finding IDs, reduction instructions, routing guidance, scope, and targeted/final verification expectations. |
+| `skills/review-fix/` | dir | Context-preserving remediation package for explicitly accepted defects from a review or diagnosis. |
+| `skills/review-fix/SKILL.md` | file | Defines token-free Primary authorization, correctness-based source-session reuse or fresh fallback, multi-source assignment, bounded same-package Implementer reuse, one-pass remediation, and Primary-decided re-review. |
+| `skills/review-fix/tpl-review-fix-prompt.md` | file | Continuation prompt carrying finding sources, accepted defects and evidence, exact source-session assignments, eligibility basis, scope, and verification expectations. |
 | `skills/review-implementation-plan/` | dir | Independent implementation-plan review package. |
 | `skills/review-implementation-plan/SKILL.md` | file | Defines single/batch exception-only review for gaps, unnecessary work, technical reality, binding findings, and one-pass remediation routing. |
 | `skills/review-implementation-plan/tpl-impl-plan-review.md` | file | Canonical compact per-phase assessment with reduction flag and evidence-backed exception findings. |
@@ -126,8 +126,8 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 | `report-environment-issue` | workflow | public | `skills/report-environment-issue/SKILL.md:2` | Records outside-work-package environment, harness, and tooling blockers in a deduplicated append-only log for incremental improvement. |
 | `environment-issues` | template | public | `skills/report-environment-issue/tpl-environment-issues.md:3` | Canonical summary table and per-issue entry schema for `docs/environment-issues.md`. |
 | `resume-plan` | workflow | public | `skills/resume-plan/SKILL.md:2` | Skill entry point for read-only, ordered session bootstrap from persisted plan artifacts. |
-| `review-fix` | workflow | public | `skills/review-fix/SKILL.md:2` | Applies one accepted implementation-plan/implementation remediation pass, emits reduction details where applicable, and stops. |
-| `continuation-prompt` | template | public | `skills/review-fix/tpl-review-fix-prompt.md:3` | Canonical remediation prompt with reduction instructions, context-value routing, and staged verification. |
+| `review-fix` | workflow | public | `skills/review-fix/SKILL.md:2` | Applies one explicitly instructed pass for accepted defects using eligible review/diagnosis source sessions and stops. |
+| `continuation-prompt` | template | public | `skills/review-fix/tpl-review-fix-prompt.md:3` | Canonical continuation prompt with source-session assignments, eligibility basis, scope, and staged verification. |
 | `review-implementation-plan` | workflow | public | `skills/review-implementation-plan/SKILL.md:2` | Audits ordered implementation plans for forward coverage, reverse authorization/necessity, technical reality, and smallest complete scope. |
 | `implementation-plan-review` | template | public | `skills/review-implementation-plan/tpl-impl-plan-review.md:3` | Canonical exception-only per-phase assessment and severity-rated findings schema. |
 | `delegation-prompt` (`review-implementation-plan`) | template | public | `skills/review-implementation-plan/tpl-review-impl-plan-prompt.md:3` | Contract for one fresh batch reviewer, consolidated evidence, per-phase artifacts, and compact aggregate digest. |
@@ -153,7 +153,7 @@ This module owns workflow semantics and their canonical Markdown artifact shapes
 2. The skill identifies the owning role, required inputs, read/write boundary, ordered workflow, and output contract. Where a delegate is involved, the primary fills the package's prompt template with paths and decisions rather than copying source content into chat.
 3. `create-plan`, `author-and-verify-implementation-plan`, and `execute-work-package` own detailed scope, completeness, underspecification, and configurable-value behavior for their stages. Personas route user-owned decisions rather than duplicating those rules; planning authors retain one deletion pass and on-demand artifact creation.
 4. Review workflows inspect for gaps and unnecessary work but persist only evidence-backed exceptions. Their artifacts contain an assessment, reduction flag, stable severity-rated findings, and required action.
-5. The primary accepts or explicitly rejects blocking findings. Accepted plan findings run once through primary-owned `update-plan`; accepted implementation-plan findings run once through `review-fix`, resuming the reviewer session when available. Both preserve the immutable review, verify only changed/directly affected checks, and end without automatic re-review.
+5. The Primary accepts or explicitly rejects blocking findings. Accepted plan findings run once through primary-owned `update-plan`. Explicitly instructed, evidence-backed technical defects from a review or diagnosis use `review-fix`: reuse each assigned source session only when retained context/output is correct and sufficient; otherwise start the appropriate fresh workflow with a finding-source hint. Multiple eligible source sessions may share a bounded pass, and the Primary decides any independent re-review after materially new risk. Review artifacts remain immutable and no automatic loop begins.
 6. Multiple implementation plans normally use one reviewer session fresh from authoring, sequential dependency-order review, material conflict notes only in affected artifacts, and one compact aggregate digest. Evidence retrieval is consolidated rather than recursively fanned out by phase.
 7. Work that warrants durable coordination uses plan maintenance, handovers, and later `resume-plan` restoration; a bounded package may instead execute from an inline gated brief. The installer distributes the same self-contained skill packages to each enabled harness, while harness-specific agent/tool semantics remain outside this module.
 

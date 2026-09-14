@@ -35,7 +35,7 @@ intact while discovering related files and tests required for accepted work.
 2. **Resolve first; ask only for real forks.** Resolve ambiguity from `docs/`, `plans/`, and targeted reading. Use `AskQuestion` only for a genuine user-owned decision that changes observable behavior, scope/DoD, policy, configuration, or acceptance. When in doubt, decide local reversible choices that do not change observable behavior and state the assumption; otherwise ask. **Always ask before:** destructive actions or external effects (git push, deployments, production API calls) unless explicitly requested.
 3. **Delegate by task, not prestige.** Routine analysis uses the canonical delegate persona with `delegate-analysis`. Independent reviews use the `delegate-strong` routing role; quick lookups may use `delegate-fast`. These semantic roles share one installed persona, while Cursor selects model capacity through the mapped Task type. Do not escalate merely because a task is multi-step. Spend at most one lookup per question; if it does not answer, delegate and let the delegate route evidence to `retriever`. Do not pre-collect evidence for a delegated judgment task.
 4. **Context hygiene.** Keep the primary session lean. Delegate exploration; read only what informs your next decision.
-5. **Bounded low-risk edits may be inline** when files are known and verification is obvious. Behavioral, architectural, or uncertain new work uses `implementer` with the blueprint gate. Accepted related review findings may use `review-fix` in the existing reviewer session, including multi-file fixes.
+5. **Bounded low-risk edits may be inline** when files are known and verification is obvious. Behavioral, architectural, or uncertain new work uses `implementer` with the blueprint gate. Explicitly instructed, accepted evidence-backed defects from a review or diagnosis may use `review-fix` in the eligible existing source Task, including multi-file fixes. Reuse correct and sufficient retained context/output rather than collecting secured evidence again; see the remediation routing below.
 6. **Search:** prefer `SemanticSearch` / `Grep` for code navigation.
 7. **End turns with a report.** State what was done and what comes next; use `AskQuestion` only for a genuine choice. The user can interrupt to redirect.
 8. **Parallelize** independent tool calls in one turn.
@@ -69,7 +69,7 @@ Skill-defined artifacts with explicit path/template (reviews, implementation pla
 4. [REVIEW IMPL PLAN]  → delegate-strong → review-implementation-plan
 5. EXECUTE             → implementer     → execute-work-package
 6. [REVIEW IMPL]       → delegate-strong → review-implementation
-7. [REVIEW FIX]        → reviewer/fresh  → review-fix
+7. [REVIEW FIX]        → eligible source → review-fix
 8. UPDATE PLAN         → primary         → update-plan
 9. [HANDOVER]          → primary         → generate-handover
 ```
@@ -77,7 +77,10 @@ Skill-defined artifacts with explicit path/template (reviews, implementation pla
 - Create **all** implementation plans before executing phases (wave 1 → wave 2).
 - Reviews go to `plans/<name>/reviews/`.
 - Reviews check for gaps and unnecessary work but report only evidence-backed exceptions. Once invoked, `Reduction Required: Yes` or unresolved Critical/Major findings block progression until applied or explicitly rejected with rationale.
-- Accepted plan-review reductions run once through primary-owned `update-plan`. Accepted implementation-plan/implementation findings use `review-fix`, reusing the reviewer Task when it is available. The remediation digest ends the pass; do not create automatic re-review loops.
+- Accepted conversation-owned plan corrections, including plan-review reductions, stay primary-owned through `update-plan`. Technical implementation-plan/implementation defects may use `review-fix`: review artifacts or analysis/implementation digests or messages are supported sources; step 7 does not require a preceding review. The Primary's explicit instruction naming accepted defects and scope is sufficient; no approval token or new Blueprint is required.
+- Resume the exact source Task with unchanged persona and model/variant only when its retained review/diagnosis context/output is correct and sufficient. If faulty, insufficient, or unavailable, start a fresh `execute-work-package` for implementation or `author-and-verify-implementation-plan` for technical planning, with a finding-source hint, not claimed inherited context. This fresh workflow is not `review-fix` session reuse.
+- The Primary may assign defects across multiple eligible source Tasks in one bounded pass; each keeps its own retained context. Post-digest Implementer reuse through `review-fix` is limited to accepted defects of the same completed package, never another phase/package or indefinite continuation.
+- Return a compact remediation digest and stop. A fix is not an independent review. Escalate materially new risk/uncertainty to the Primary, who decides whether to request independent re-review; do not create automatic review/fix loops.
 - Plan updates → primary through `update-plan`; doc-explorer is an optional helper, never implementer.
 
 ### Additional loops

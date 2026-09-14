@@ -46,10 +46,12 @@ Return only a **compact digest** to the primary session — not full file conten
 - `delegate-strong`: use for independent reviews and genuinely difficult or high-risk skill-defined artifacts. Implementation plans may use the canonical delegate and may be written directly because the skill provides an explicit path/template; do **not** add a Blueprint gate.
 - `delegate`: use for routine analysis with `delegate-analysis`; do not escalate to `delegate-strong` merely because work has multiple steps.
 - Reviews check for gaps and unnecessary work but report only evidence-backed exceptions. Once invoked, `Reduction Required: Yes` or unresolved Critical/Major findings block progression until applied or explicitly rejected with rationale.
-- Apply accepted plan-review reductions once through primary-owned `update-plan`. After an implementation or implementation-plan review, resume the same Task using `review-fix` whenever it is available; otherwise use a fresh lean path. The remediation digest ends the pass; do not automatically re-review.
+- Apply accepted conversation-owned plan corrections, including plan-review reductions, once through primary-owned `update-plan`. Explicitly instructed, accepted evidence-backed technical implementation-plan/implementation defects from a review or diagnosis may use `review-fix` in the eligible source Task. Reuse correct and sufficient retained context/output rather than collecting secured evidence again; a review artifact is not a prerequisite.
+- If retained context/output is faulty, insufficient, or unavailable, the Primary starts a fresh `execute-work-package` for implementation or `author-and-verify-implementation-plan` for technical planning, with a finding-source hint. The fresh Task must establish its own evidence; this is not `review-fix` reuse or inherited context.
+- Perform one bounded remediation pass, return a compact digest, and stop. A fix is not an independent review. Escalate materially new risk/uncertainty to the Primary, who decides on independent re-review; do not automatically start a review/fix loop.
 - `doc-explorer`: docs-focused; use for `generate-docs`/`update-docs` and selected skill-governed `plans/**` maintenance where applicable.
 - Larger ad-hoc writes with undefined shape/targets should start with an informal Blueprint before mutation.
-- Start one fresh authoring Task per phase implementation plan and one fresh `implementer` per phase/work package. Resume only that package's BLUEPRINT → EXECUTE pair; after its digest the Task retires. `review-fix` reuses its reviewer Task when available; do not create automatic review-fix loops.
+- Start one fresh authoring Task per phase implementation plan and one fresh `implementer` per phase/work package. Resume that package's BLUEPRINT → EXECUTE pair; after its digest the Task retires by default. The sole post-digest exception is eligible `review-fix` remediation of accepted defects of the same completed package, never another phase/package or indefinite continuation.
 
 ## Gated implementation (blueprint → execute)
 
@@ -70,7 +72,9 @@ Never combine blueprint and execute in one call.
 | `web-research` | `Task: web-research. Scope: <topic>. Constraints: <optional>` |
 | `deep-dive` | `Task: deep-dive. Scope: <entry>. Question: <what>` |
 
-Prefix analysis prompts with `Load skill delegate-analysis.` For accepted review findings, load `review-fix` and include finding IDs, allowed scope, and verification. Use `Task(resume="<reviewer-id>", ...)` whenever the reviewer Task is available; otherwise start a fresh lean Task.
+Prefix analysis prompts with `Load skill delegate-analysis.` For eligible accepted-defect remediation, use `Task(resume="<source-agent-id>", ...)` with the unchanged persona and model/variant and load `review-fix`. Include review artifact paths or analysis/implementation digest/message references; defect IDs or stable short labels with concrete descriptions, expected behavior/invariants, and evidence; accepted objective and scope; and verification commands/checks or goals, identifying any broad/full final gate. The Primary must explicitly instruct remediation of the accepted defects within scope; that instruction is sufficient, with no approval token or new Blueprint. This does not change the normal gated EXECUTE protocol above.
+
+The Primary may bundle findings from multiple source sessions in one bounded pass and explicitly assign defects to each eligible Task. Resume each exact source agent ID separately, preserving its persona/model variant and correct and sufficient retained context/output; pointers to other sources do not confer their retained context. Each assigned Task returns its digest and stops. If eligibility fails, report the fresh-workflow fallback need to the Primary before dependent edits.
 
 ## Cursor vs OpenCode skill notes
 
