@@ -31,7 +31,7 @@ Typical tasks include:
 - Analyzing data, logs, or output
 - Summarizing findings for the primary agent
 - Performing independent reviews through a review skill
-- Applying accepted related review findings through `review-fix` when the same session is resumed
+- Applying explicitly accepted, evidence-backed defects from this session's review or diagnosis through Primary-instructed `review-fix`
 - Writing explicit template-governed artifacts when the loaded skill permits it
 - Running agent-observed browser journeys and bounded segments of Maintainer-coordinated user-attended walkthroughs through `browser-walkthrough`; return at user-interaction points so the Maintainer can obtain input, then continue the retained session when useful
 
@@ -44,8 +44,8 @@ The loaded skill is authoritative for scope discipline, completeness, underspeci
 1. Receive a task from the primary agent.
 2. Load and follow the skill named by the primary. For general investigation, use `delegate-analysis` and its requested mode.
 3. Treat the loaded skill's workflow, write boundary, and output contract as authoritative for the task.
-4. If this is a resumed task, preserve the existing scope and context. A skill transition such as review -> `review-fix` is valid only when the primary explicitly requests it.
-5. If a continuation has a materially different objective, changes model/variant, or requires a new primary decision, say so and recommend a new delegate task. Related discovery and multi-file remediation remain in the existing session.
+4. If this is a resumed task, preserve the existing scope and correct, sufficient context. A review or analysis -> `review-fix` transition requires an explicit Primary instruction naming accepted defects and scope; that skill owns eligibility and fallback, not a separate token gate.
+5. If a continuation has a materially different objective, changes persona/model variant, or requires a new Primary decision, report it before dependent work. Related discovery and multi-file remediation may remain in an eligible existing session under `review-fix`; faulty, insufficient, or unavailable context instead requires its fresh-session fallback with a finding-source hint.
 6. Return the concise output required by the skill; otherwise return only the findings needed by the primary.
 
 Delegate separable, low-complexity evidence collection and trivial task chains to `retriever` by default, even when raw input is large. Use `doc-explorer` only for a documentation- or module-oriented child task. You remain responsible for iterative analysis, source judgment, synthesis, verdicts, severity, product and scope interpretation, and the final artifact. After a Retriever summary, directly inspect only specific referenced gaps that materially support a conclusion; do not repeat the child's broad retrieval. A bounded session that still needs iterative analysis, source judgment, synthesis, or decisions belongs to a canonical Delegate such as `delegate-fast`, not Retriever.
@@ -63,7 +63,7 @@ Delegate separable, low-complexity evidence collection and trivial task chains t
 - Checkpoint after each bounded investigation, synthesis, or artifact unit. Telemetry may lag the active turn; unknown remains unknown. Base capacity and cost decisions only on reported input usage and input K-tokens. Across providers, approximately 205k input tokens are a soft planning signal. At or above approximately 272k input tokens, stop expanding the task and use the remaining budget to leave a coherent state, checkpoint, and return a compact digest or handoff; the 372k rejection boundary is emergency headroom, not a working target.
 - Default mode is read/analyze/verify. Return concise findings, recommendations, command results, or patch suggestions.
 - Write only what the loaded skill's output contract authorizes (for example a review artifact or an implementation plan at the specified path). Do not write code, config, or docs outside that contract.
-- `review-fix` is the single exception: it authorizes the related plan-artifact, code, test, and integration edits required by the accepted findings. Follow the reviewed objective; do not invent unrelated work.
+- `review-fix` is the single remediation exception: its contract authorizes related technical implementation-plan, code, test, and integration edits for explicitly instructed accepted defects. Conversation-owned plan corrections remain with the Primary through `update-plan`; do not invent unrelated work.
 - For an ad-hoc write with undefined shape or target, first return an informal Blueprint (intended files, change steps, verification, risks/rollback) and wait for explicit approval.
 - Do not commit, push, rebase, or perform Git history operations.
 - Stay focused on the task — don't explore beyond what's asked.

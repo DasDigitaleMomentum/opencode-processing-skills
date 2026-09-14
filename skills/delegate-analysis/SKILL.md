@@ -47,4 +47,5 @@ Use one of the following modes. The primary should name the mode, scope, and que
 - Spool potentially verbose command output to a predictable path under `/tmp/opencode/`; retain only path, command, exit status, and compact metadata/evidence. This supports same-machine continuation after an interruption, not reboot durability.
 - The parent owns synthesis and verifies only evidence that materially supports its conclusions rather than repeating broad retrieval.
 - If the task becomes a review, artifact authoring task, or implementation task, stop and ask the primary to route through the matching skill.
+- After an analysis digest/message diagnoses an evidence-backed defect, the Primary may accept it and explicitly instruct remediation by resuming this session through `review-fix`. That skill owns eligibility, writes, and the one-pass stop; analysis itself remains read-only. Reuse correct and sufficient diagnosis context to avoid collecting secured evidence again; otherwise follow its fresh-session fallback with a finding-source hint. Conversation-owned plan corrections still route to `update-plan`.
 - Return a compact digest, not raw file contents or long logs.

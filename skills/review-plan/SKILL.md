@@ -105,7 +105,7 @@ Primary decides:
 - **Needs Revision**: Do not proceed. Accept or explicitly reject each blocking finding. Apply accepted plan reductions once through the review-remediation mode of `update-plan`.
 - **Major Gaps**: Stop and discuss the missing intent or authorization with the user before restructuring the plan.
 
-Plans remain conversation-owned by the primary. Resume the same reviewer `task_id` only for clarification; apply accepted changes through `update-plan`. The remediation digest closes that pass. Do not automatically re-review or continue until zero findings. A fresh review requires an explicit user/primary decision or materially changed scope.
+Plans remain conversation-owned by the Primary. Resume the same reviewer `task_id` only for clarification; apply accepted changes through `update-plan`, not reviewer edits through `review-fix`. The remediation digest closes that pass. Do not automatically re-review or continue until zero findings. Escalate materially changed scope or new risk/uncertainty to the Primary; a fresh review requires an explicit Primary or user decision.
 
 ---
 
