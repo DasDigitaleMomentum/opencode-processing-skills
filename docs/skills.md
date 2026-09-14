@@ -51,7 +51,7 @@ plans/<name>/
 5. Review Impl    → review-implementation-plan (optional; binding once invoked)
 6. Implement      → execute-work-package (gated: blueprint → approve → execute)
 7. Review Code    → review-implementation (optional)
-8. Fix Findings   → review-fix (resume the reviewer session when available)
+8. Fix Findings   → review-fix (reuse eligible review/diagnosis source sessions)
 9. Update Plan    → update-plan (track progress, transition phases)
 10. Handover      → generate-handover (primary-authored; end of session)
 ```
@@ -194,7 +194,7 @@ The reviewer owns findings and verdicts but does not need to ingest raw verbose 
 
 ### `review-fix`
 
-Applies accepted related findings from an implementation or implementation-plan review in one bounded pass. It verifies only changed or directly affected checks and reports fixed/unresolved finding IDs, edits, verification, and next action. Resume the reviewer session when it is available; otherwise use a fresh lean session. The immutable review plus one remediation digest ends the pass—further review requires an explicit decision, not an automatic loop.
+Applies explicitly accepted, evidence-backed implementation or technical implementation-plan defects in one bounded pass using an eligible existing session that produced the review or diagnosis. A review artifact is one supported finding source, not a prerequisite. Correct and sufficient retained context is reused to avoid collecting secured evidence again; faulty, insufficient, or unavailable context instead starts the appropriate fresh workflow with a finding-source hint and no claim of inheritance. The Primary's explicit instruction naming accepted defects and scope is sufficient—no token is required—and may assign findings across multiple eligible source sessions. A completed-package Implementer may be resumed only for accepted defects of that same package. The digest ends the pass; the Primary decides whether materially new risk warrants independent re-review, which is never automatic.
 
 ```
 > Fix findings F-1 and F-3 from that review in the same delegate session

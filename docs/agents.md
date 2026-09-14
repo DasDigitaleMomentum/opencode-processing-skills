@@ -44,7 +44,7 @@ The one canonical, skill-driven persona and standard choice for normal delegatio
 
 Each phase implementation plan uses one fresh Delegate session. The Maintainer invokes phases sequentially, and each later phase delegate reads completed prior artifacts rather than inheriting an increasingly expensive authoring session.
 
-After an implementation or implementation-plan review, resume the reviewer session through `review-fix` whenever it is available; use a fresh lean session only if it is unavailable. Accepted implementation-plan findings receive one `review-fix` pass that reports fixed/unresolved IDs, edits, changed/directly affected verification, and next action. The review artifact remains unchanged, and no review/fix/re-review loop starts automatically. Plan-review findings instead remain primary-owned through one `update-plan` pass.
+`review-fix` applies explicitly accepted, evidence-backed defects using an eligible existing session that produced the review or diagnosis; a review artifact is supported but not required. Reuse that source session only when its retained context/output is correct and sufficient, so already-secured evidence is not collected again. Faulty, insufficient, or unavailable context routes to a fresh appropriate workflow with the finding source as a hint, never as claimed inherited context. The Primary's explicit instruction naming accepted defects and scope authorizes one bounded pass without a token, may assign bundled findings across multiple eligible source sessions, and decides whether materially new risk warrants an independent re-review. Plan-review findings remain primary-owned through `update-plan`.
 
 For multiple implementation-plan reviews, the maintainer defaults to one reviewer session that is fresh from the authoring work, not one reviewer per phase. The reviewer works sequentially in dependency order, reuses consolidated evidence, writes each per-phase review artifact, records material cross-phase conflicts only in affected artifacts, and returns one compact aggregate digest. Parallel per-phase reviewers and nested phase-oriented retriever fan-out are not defaults; oversized review is divided only into contiguous dependency/domain groups with a central cross-partition interface check.
 
@@ -89,7 +89,7 @@ In BLUEPRINT it uses native parallel reads for compact independent results and `
 
 **Protocol:** BLUEPRINT → GATE → EXECUTE → DIGEST
 
-BLUEPRINT and EXECUTE for that package always use the same compact `task_id`: the second turn depends on the inspection and approval context retained from the first. Only those two calls reuse the session; it retires after the digest and is never carried into another phase, work package, or post-digest continuation.
+BLUEPRINT and EXECUTE for that package always use the same compact `task_id`: the second turn depends on the inspection and approval context retained from the first. The session retires after the digest except for one narrow `review-fix` continuation: it may remediate explicitly accepted defects of that same completed package when retained context/output is correct and sufficient. It may not continue into another phase/package or remain active indefinitely.
 
 **Does:**
 - Proposes step lists (blueprint mode)
@@ -147,7 +147,7 @@ Potentially verbose commands spool their complete output to a predictable path u
 
 ### Stateful delegate reuse
 
-Resume a delegate `task_id` for follow-up on the same thread, a narrower drill-down, small added context, or `review-fix` remediation; otherwise start a fresh lean task. Phase implementation-plan authoring is stricter: start one fresh Delegate per phase, keep phases sequential at the Maintainer, and have later agents read prior artifacts. Work-package execution is also strict: start one fresh Implementer per package, reuse it only for BLUEPRINT → EXECUTE, and retire it after the digest. Start fresh for changed scope, parallel work, model/variant changes, or an independent opinion. `task_id`s are session-local; durable continuity belongs in files when a persistent workflow exists.
+Resume a delegate `task_id` for follow-up on the same thread, a narrower drill-down, small added context, or eligible `review-fix` remediation from that session's review or diagnosis. For remediation, correctness and sufficiency of retained context—not mere availability—control reuse; otherwise start the appropriate fresh workflow with a finding-source hint. Phase implementation-plan authoring remains one fresh Delegate per phase. Work-package execution remains one fresh Implementer per package, with post-digest reuse allowed only for accepted defects of that same completed package through `review-fix`. Changed objectives, model/variant changes, and independent opinions require fresh sessions. `task_id`s are session-local; durable continuity belongs in files when a persistent workflow exists.
 
 Batch implementation-plan review is another deliberate reuse case: the reviewer starts independently from the author, then keeps its session across the ordered phases because shared evidence and cross-phase reasoning are review inputs. Separate reviewers are exceptions for explicit independent perspectives, unrelated domains, specialist requirements, or impractical combined context—not an automatic phase fan-out.
 

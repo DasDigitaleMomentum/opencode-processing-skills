@@ -2,7 +2,7 @@
 type: documentation
 entity: module
 module: "cursor-adapter"
-version: 1.1
+version: 1.2
 ---
 
 # Module: Cursor Adapter
@@ -83,7 +83,7 @@ This module owns Cursor-specific orchestration vocabulary, Task invocation/resum
 2. Installation copies `cursor/task-delegation.md` into the orchestrator package, derives Cursor subagent prompts from selected `agents/*.md` bodies, and optionally installs the AGENTS snippet and `.mdc` project rule.
 3. A matching request activates `ops-orchestrator`. The orchestrator first reads persistent `docs/**` and `plans/**`, then loads the workflow skill that owns the requested operation.
 4. The orchestrator reads the colocated delegation reference, maps the semantic role to `explore`, `generalPurpose`, or `shell`, prefixes the selected canonical persona, and sends the scoped task through Cursor `Task`.
-5. Gated implementation uses the returned agent identifier with `resume` between Blueprint and Execute; accepted review findings likewise resume the reviewer for `review-fix` when the scope is continuous.
+5. Gated implementation uses the returned agent identifier with `resume` between Blueprint and Execute. For `review-fix`, Cursor resumes the assigned review or diagnosis source session only when its retained context/output is correct and sufficient; otherwise it starts the appropriate fresh workflow with a finding-source hint. Post-digest Implementer resumption is limited to accepted defects of that same completed package.
 6. Subagents write only within persona/skill boundaries and return compact digests. The repository artifacts, not Cursor chat state, remain the durable interface.
 
 ## Configuration
