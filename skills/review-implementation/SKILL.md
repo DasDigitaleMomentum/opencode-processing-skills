@@ -30,7 +30,7 @@ Do **not** use this skill to:
 
 - Review the plan itself (use `review-plan`).
 - Review an implementation plan before execution (use `review-implementation-plan`).
-- Fix implementation issues during the independent review pass. After the review is complete, accepted related findings may transition to `review-fix` in the same reviewer session.
+- Fix implementation issues during the independent review pass. After review completion, the Primary may accept defects and explicitly instruct remediation through `review-fix` in the eligible source session.
 
 ## Review Focus
 
@@ -58,7 +58,7 @@ The primary passes the focus via `{{focus}}` in the delegation prompt. If no foc
   - Invokes the review skill after implementation is complete.
   - Delegates to `delegate-strong` (default) or `general` (for same-model perspective).
   - Receives review summary and decides on follow-up actions.
-   - Retains the reviewer `task_id` while deciding whether its reasoning is valuable for possible remediation.
+  - Retains the reviewer `task_id` while deciding on remediation under `review-fix`'s session eligibility rules.
 
 - **Subagent (delegate-strong / general)**
   - Reads plan, phase, implementation plan, and execution digest with **no prior context**.
@@ -114,11 +114,11 @@ Subagent returns:
 
 Primary decides:
 - **Accepted**: Proceed to commit/merge. Update plan via `update-plan`.
-- **Needs Rework**: After accepting findings, resume the same reviewer `task_id` through `review-fix` when it is available; otherwise use a fresh lean session. Related fixes may span multiple files, call sites, tests, and runtime code; size alone does not decide reuse.
-- **Fresh lean work**: Use a fresh session when the reviewer session is unavailable or a fresh context is deliberately wanted. Use a new gated `execute-work-package` when the objective/gated scope changes, a new dependency or primary decision is required, or a fresh implementation context is explicitly chosen.
+- **Needs Rework**: Accept defects and explicitly instruct remediation within scope. Reuse correct and sufficient source-session review/diagnosis context through `review-fix`; that skill owns eligibility, multi-source assignment, and fallback. Related multi-file fixes do not alone require a new work package.
+- **Fresh work**: If retained context/output is faulty, insufficient, or unavailable, start a fresh `execute-work-package` with a finding-source pointer as a hint, not inherited context. A new objective/gated scope also requires a new gated package; resolve new dependency or Primary decisions before dependent work.
 - **Rejected**: Discuss with user. May require replanning via `update-plan`.
 
-The review pass ends before remediation begins. A reviewer that applies fixes is no longer independent; an additional review is optional and requires an explicit primary or user decision. Do not automatically chain review and remediation loops.
+The review pass ends before remediation begins. A reviewer that applies fixes is no longer independent; an additional review is optional and requires an explicit Primary or user decision. Escalate materially new risk/uncertainty to the Primary for that decision. Do not automatically chain review and remediation loops.
 
 ---
 

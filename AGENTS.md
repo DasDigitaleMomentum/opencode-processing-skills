@@ -42,7 +42,7 @@ This is a meta-project for creating agents, skills, tools, and templates that st
 - **File-based interface**: Subagents write skill-/workflow-defined artifacts to the defined file structure (templates). The file structure IS the interface, not return values. Every subagent that produces artifacts writes them to disk; the primary agent receives only a short status summary.
 - **Skill-driven delegate**: `agents/delegate.md` is the standard persona for normal delegation involving reasoning, synthesis, reviews, and skill-defined artifacts. Generated `delegate-*` variants are model aliases; loaded skills own expertise, write boundaries, and output contracts. Delegates hand separable evidence collection to the leaf `retriever` by default while retaining synthesis and artifact ownership.
 - **Workflow-owned writers**: `doc-explorer` is the documentation-specialized Delegate, the canonical delegate handles skill-governed analysis/reviews and explicit artifacts, `retriever` is a disposable non-writing worker for straightforward evidence gathering, and `implementer` performs one gated work package while retaining ownership of any retriever-assisted changes.
-- **Bounded expensive sessions**: Each phase implementation plan uses a fresh Delegate session in Maintainer-coordinated sequence, and each phase/work package uses a fresh Implementer. Only one package's BLUEPRINT -> EXECUTE pair reuses an Implementer session; it retires after the digest. Implementation-plan batch review remains a separate deliberate reuse case, and review-fix reuse remains conditional on retained reasoning value.
+- **Bounded expensive sessions**: Each phase implementation plan uses a fresh Delegate session in Maintainer-coordinated sequence, and each phase/work package uses a fresh Implementer for its BLUEPRINT -> EXECUTE pair. Post-digest Implementer reuse is narrowly allowed through `review-fix` for accepted defects of that same completed package, never a new phase/package or indefinite continuation. Implementation-plan batch review remains a separate deliberate reuse case; `review-fix` owns eligibility and one-pass closure for retained review/diagnosis evidence.
 - **Self-delegation for scale**: When a subagent's workload would exceed comfortable context limits (e.g., documenting a project with many modules), it spawns additional instances of itself, each scoped to a smaller unit of work.
 - **Agent extension over commands**: Skills extend the primary agent's behavior. Subagents handle expensive exploration.
 - **Stack-agnostic**: No assumptions about language or framework
@@ -71,11 +71,11 @@ Earlier iterations had a separate `code-analyzer` (read-only analysis) and write
 
 ### Why one canonical delegate persona?
 
-Task expertise changes more often than generic delegate behavior. Keeping exploration, review, remediation, and artifact contracts in skills avoids persona drift and permits a review `task_id` to move to remediation when retained reasoning materially helps. Model variants copy the canonical persona and differ only in configured model/options, so capacity can change without duplicating workflow rules.
+Task expertise changes more often than generic delegate behavior. Keeping exploration, review, remediation, and artifact contracts in skills avoids persona drift and permits an eligible review or analysis `task_id` to move to accepted remediation without collecting secured evidence again. Model variants copy the canonical persona and differ only in configured model/options, so capacity can change without duplicating workflow rules.
 
-### Why may review fixes stay in the reviewer session?
+### Why may defect fixes stay in the review or diagnosis session?
 
-The reviewer may already hold relevant code, findings, assumptions, and verification context. Resume it for accepted remediation only when that retained reasoning materially helps; a fully specified fix can use a fresh lean path. Review loops are never started automatically.
+Already-secured evidence should not be collected again merely because review or analysis has ended. `review-fix` reuses correct and sufficient retained review/diagnosis context for explicitly accepted and Primary-instructed defect remediation; a review artifact is one source, not a prerequisite. Faulty, insufficient, or unavailable context instead requires a fresh session with a finding-source hint, never claimed inherited context. The skill owns routing and bounded closure, including the same-package Implementer exception. Remediation is not an independent review; new risk goes to the Primary for a re-review decision, never an automatic loop. Conversation-owned plan corrections remain with `update-plan`.
 
 ### Why does doc-explorer self-delegate instead of the primary spawning per-module instances?
 
@@ -94,7 +94,7 @@ The framework deliberately stops at the boundary between planning and coding. Im
 Instead of a generic "implementation" skill that tries to plan-and-code, this framework uses:
 
 - A dedicated **execution protocol** (`execute-work-package`) that is explicitly **gated** (step list -> primary approval -> execute -> digest)
-- A dedicated execution-only **subagent** (`implementer`) that handles exactly one two-call work package and then retires after returning a compact digest
+- A dedicated execution-only **subagent** (`implementer`) that handles exactly one two-call work package and then retires after returning a compact digest, subject only to the bounded same-package `review-fix` exception
 
 This keeps planning and execution responsibilities separated while still standardizing implementation as a repeatable workflow.
 

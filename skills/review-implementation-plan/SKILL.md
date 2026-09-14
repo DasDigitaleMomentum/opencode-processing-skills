@@ -30,7 +30,7 @@ Do **not** use this skill to:
 
 - Review the plan itself (use `review-plan`).
 - Review a completed implementation (use `review-implementation`).
-- Rewrite the implementation plan during the independent review pass. After review completion, accepted related findings may transition to `review-fix` in the same reviewer session.
+- Rewrite the implementation plan during the independent review pass. After review completion, the Primary may accept defects and explicitly instruct technical implementation-plan remediation through `review-fix` in the eligible source session. Conversation-owned plan corrections remain with `update-plan`.
 
 ## Review Focus
 
@@ -108,11 +108,11 @@ For single-phase mode, the subagent returns the same fields for that phase. For 
 
 Primary decides:
 - **Ready**: Proceed to `execute-work-package` only when reduction is not required and no Critical/Major findings remain.
-- **Needs Revision**: Do not execute. Accept or explicitly reject each blocking finding. Apply accepted implementation-plan reductions once through `review-fix`, reusing the reviewer session when it is available; otherwise use a fresh lean path.
-- **New authoring pass**: Re-run `author-and-verify-implementation-plan` only when the objective/gated scope changes, a new primary decision or investigation is required, the reviewer session is unavailable, or the primary explicitly wants a fresh planning context.
+- **Needs Revision**: Do not execute. Accept or explicitly reject each blocking finding. Explicitly instruct accepted technical implementation-plan reductions once through `review-fix`, reusing correct and sufficient source-session review/diagnosis context under that skill's eligibility and assignment rules.
+- **New authoring pass**: Use a fresh `author-and-verify-implementation-plan` session when retained context/output is faulty, insufficient, or unavailable, with a finding-source pointer as a hint, not inherited context. A changed objective/gated scope also requires new authoring; resolve new Primary decisions before dependent work. Conversation-owned plan changes go through `update-plan`.
 - **Major Gaps**: Discuss with user; potentially revise phase scope via `update-plan`.
 
-The remediation digest closes the accepted pass. Do not automatically re-review or continue until zero findings. A fresh review requires an explicit user/primary decision or materially changed scope/risk.
+The remediation digest closes the accepted pass. Do not automatically re-review or continue until zero findings. Escalate materially changed scope or new risk/uncertainty to the Primary; a fresh review requires an explicit Primary or user decision.
 
 ---
 
