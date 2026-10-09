@@ -21,3 +21,8 @@ config.yaml
 
 # Python bytecode caches
 __pycache__/
+
+# Private working artifacts (agent plans, reviews, session notes); keep local only
+/plans/
+/reviews/
+/docs/superpowers/
