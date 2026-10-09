@@ -10,5 +10,15 @@
   "scripts": {
     "inspect": "node ./bin/checkpoint-inspect.js",
     "test": "node --test test/*.test.js"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DasDigitaleMomentum/opencode-processing-skills.git",
+    "directory": "packages/checkpoint-core"
+  },
+  "homepage": "https://www.das-digitale-momentum.de/en/open-source/#opencode-processing-skills",
+  "bugs": {
+    "url": "https://github.com/DasDigitaleMomentum/opencode-processing-skills/issues"
   }
 }
