@@ -100,3 +100,21 @@ jobs:
         run: |
           shellcheck --version
           git ls-files -z '*.sh' | xargs -0 shellcheck --severity=warning --exclude=SC2043
+
+  ci:
+    # Single required status check, enforced by the org ruleset
+    # "public-default-branch". Add every job of this workflow to `needs`.
+    name: ci
+    if: always()
+    needs: [test-node, test-python, lint]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Fail unless all jobs succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for result in $RESULTS; do
+            [ "$result" = "success" ] || exit 1
+          done
