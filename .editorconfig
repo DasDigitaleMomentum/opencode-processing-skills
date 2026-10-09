@@ -1,0 +1,29 @@
+# https://editorconfig.org
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{mjs,js,ts,json}]
+indent_style = space
+indent_size = 2
+
+[*.{yaml,yml}]
+indent_style = space
+indent_size = 2
+
+# Code uses 4-space indentation, but docstrings, hanging alignments and heredoc
+# bodies in existing files do not; indent_size is left unset so nothing here
+# conflicts with existing content.
+[*.{py,sh}]
+indent_style = space
+
+[*.toml]
+indent_style = space
+indent_size = 4
