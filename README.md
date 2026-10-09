@@ -206,3 +206,7 @@ Why phases are separate from implementation plans. Why the primary authors plans
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+Maintained by [Das Digitale Momentum](https://www.das-digitale-momentum.de/en/open-source/#opencode-processing-skills) · Much, Germany · [All our open source projects](https://github.com/DasDigitaleMomentum)
